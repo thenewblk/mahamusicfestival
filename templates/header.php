@@ -1,23 +1,24 @@
-<?php use Roots\Sage\Nav\NavWalker; ?>
+<div class="omaha_gives_slide">
+	<div class="wrapper">
+		<span class="close_button">×</span>
+		<div class="container">
+			<div class="row">
+				<div class="left_image">
+					<img src="<?php bloginfo('template_directory'); ?>/dist/images/donate_slide.png" />
+				</div>
+				<div class="right_content">
+					<p><strong>Maha gets bigger and better every year because of big-hearted donations, large and small.</strong></p>
+					<p>In their third year as Maha’s presenting sponsor, Schnackel Engineers will match 1/3 of every donation through Omaha Gives! up to $10,000.</p>
+					<p>This means your $15 gift turns to $20!</p>
+					<p>Your $60 gift turns to $90!</p>
+					<p>Your $150 gift turns to $200! </p>
+					<p>Schedule your donation NOW and Maha earns additional bonus dollars and prizes on May 20! </p>
+					<p>*The minimum gift is $10.</p>
+				</div>
+			</div>
+			<a class="gives_donate_button" target='_blank' href="https://www.omahagives24.org/index.php?section=organizations&action=newDonation&fwID=1106"><img src="<?php bloginfo('template_directory'); ?>/dist/images/donate_omaha_gives.png" /></a>
+		</div>
+	</div>
+</div>
 
-<header class="banner navbar navbar-default navbar-static-top" role="banner">
-  <div class="container">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
-        <span class="sr-only"><?= __('Toggle navigation', 'sage'); ?></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="<?= esc_url(home_url('/')); ?>"><?php bloginfo('name'); ?></a>
-    </div>
-
-    <nav class="collapse navbar-collapse" role="navigation">
-      <?php
-      if (has_nav_menu('primary_navigation')) :
-        wp_nav_menu(['theme_location' => 'primary_navigation', 'walker' => new NavWalker(), 'menu_class' => 'nav navbar-nav']);
-      endif;
-      ?>
-    </nav>
-  </div>
-</header>
+<div id="content"></div>

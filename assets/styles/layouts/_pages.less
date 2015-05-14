@@ -1,0 +1,370 @@
+body, html {
+	height: 100%;
+	width: 100%;
+	margin: 0;
+	font-family: 'Gotham A', 'Gotham B'; font-weight: 400; font-style: normal;
+}
+
+body {
+	background-image: url(/wp-content/themes/maha2015.v2.1/img/video.png);
+	background-size: cover;
+	background-position: center;
+}
+
+*, *:before, *:after {
+	box-sizing: border-box;
+}
+
+.video-container {
+	height: 100%;
+	width: 100%;
+	position: fixed;
+	overflow: scroll;
+	top: 0;
+	left: 0;
+	background-image: url(/wp-content/themes/maha2015.v2.1/img/video.png);
+	-webkit-background-size: cover;
+	background-size: cover;
+	background-position: center;
+}
+
+.video-wrap {
+  -webkit-transform: translate(-50%,-50%);
+  -ms-transform: translate(-50%,-50%);
+  transform: translate(-50%,-50%);
+  -webkit-transition: opacity .3s ease;
+  transition: opacity .3s ease;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  overflow: hidden;
+  outline: 0;
+  border: 0;
+  min-height: 100%;
+  min-width: 100%;
+}
+
+.content-wrapper {
+	position: relative;
+	display: table;
+	width: 100%;
+	height: 100%;
+}
+
+.content-wrapper.blue, .content-wrapper.yellow {
+	padding: 30px;
+} 
+
+
+.content-wrapper.blue .content-inner {
+	background: rgba(119,215,223, 0.51);
+}
+.content-wrapper.yellow .content-inner {
+	background: rgba(245,240,183, 0.51);
+}
+
+.schnackel_logo {
+	max-width: 125px;
+	margin: 25px auto;
+	display: block;
+}
+
+.content-inner {
+	display: table-cell;
+	vertical-align: middle;
+}
+
+.maha_logo {
+	width: 300px;
+	height: 258px;
+	margin: auto;
+}
+
+.content {
+  width: 100%;
+  margin: auto;
+  color: white;
+  text-align: center;
+  max-width: 675px;
+  padding: 5% 0;
+}
+.date {
+  font-size: 30px;
+}
+
+.description {
+    padding: 30px 0;
+}
+.description h3, .description h4 {
+  margin: 0;
+  font-weight: normal;
+}
+
+h4.aksarben {
+  border-top: rgba(255,255,255,0.5) solid 1px;
+  border-bottom: rgba(255,255,255,0.5) solid 1px;
+  margin: 0;
+  line-height: 2;
+  display: inline-block;
+  padding: 0 15px;
+  margin: 10px 0;
+}
+
+.social {
+  position: fixed;
+  z-index: 111;
+  left: 45px;
+  top: 50%;
+  margin-top: -75px;
+}
+
+.social .link {
+  display: block;
+  padding: 10px 0;
+}
+
+.social .link:hover img {
+   opacity: 0.75;
+}
+
+.social .link img {
+  opacity: 1;
+  transition: 0.15s ease-out;
+  width: 20px;
+  height: 20px;
+}
+
+img#wpstats {
+	display: none;
+}
+
+.home a {
+	color: white;
+	text-decoration: none;
+	border: none;
+}
+
+.ticket_container {
+	position: fixed;
+	z-index: 11;
+	right: 45px;
+	top: 45px;
+}
+
+.ticket.button {
+  width: 300px;
+  position: relative;
+  display: inline-block;
+  img { 
+  	max-width: 100%;
+  }
+}
+
+.button_wrapper {
+	text-align: right;
+	display: inherit;
+}
+
+.ticket.button .content {
+	width: 100%;
+} 
+
+.lineup_header {
+	.schnackel_logo_left {
+
+	}
+
+	.lineup_title {
+		height: 50px;
+	}
+}
+
+a.ticket_link {
+  display: block;
+  border: 1px solid rgba(255,255,255,0.5);
+  padding: 0 30px;
+  line-height: 40px;
+  transition: 0.15s ease-in;
+  margin: 10px 0;
+  color: white;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+a.ticket_link:hover {
+	background: rgba(255,255,255,0.5);
+	border-color: transparent;
+	opacity: 1;
+}
+
+.ticket_link .price {
+	height: 20px;
+	display: inline-block;
+	vertical-align: middle;
+	padding-right: 15px;
+}
+
+.lineup_title {
+	display: table;
+	margin: auto;
+	transition: 0.15s ease-in;
+}
+
+.lineup_title.gone, #lineup .lineup_title {
+	dispaly: none;
+}
+
+ #lineup .lineup_title.super_title {
+ display: title;
+ }
+
+.lineup_title .lineup_content {
+	display: inline-block;
+	vertical-align: middle;
+	height: 100px;
+}
+
+
+
+
+section#apply {
+	background: rgba(255,255,255,0.9);
+	padding: 30px;
+	overflow: scroll;
+	position: fixed;
+	top: 2%;
+	left: 2%;
+	right: 2%;
+	bottom: 2%;
+}
+
+.press_logo {
+	display: table;
+	margin: auto;
+}
+
+a {
+	text-decoration: none;
+	color: black;
+	border-bottom: 1px solid black;
+	transition: 0.15s ease-in; 
+}
+
+a:hover {
+	opacity: 0.7;
+}
+
+.lineup {
+	display: table;
+}
+
+.left_lineup, .right_lineup {
+	display: table-cell;
+	vertical-align: top;
+}
+
+.band {
+  height: 40px;
+  margin: 20px 0;
+  display: block;
+  width: 300px;
+}
+
+.left_thing {
+	max-width: 30px;
+	max-height: 25px;
+	display: inline-block;
+	vertical-align: top;
+}
+
+.top_small_logo {
+	z-index: 11;
+	position: fixed;
+	top: 45px;
+	width: 50px;
+	left: 50%;
+	margin-left: -25px;
+	opacity: 0;
+	transition: 0.25s ease-in;
+}
+
+.top_small_logo.visible {
+	opacity: 1;
+}
+
+
+.fp-viewing-1 .top_small_logo, .fp-viewing-2 .top_small_logo, .fp-viewing-3 .top_small_logo {
+	opacity: 1;
+}
+
+.lineup_title.section_title {
+	margin-bottom: 5%;
+}
+
+.band.allyounggirls {
+	height: 60px;
+}
+
+.schnackel_logo_left {
+	position: absolute;
+	left: 10%;
+	width: 150px;
+}
+
+.sponsors_title {
+	width: 150px;
+	margin-top: 50px;
+}
+
+.sponsors_copy {
+	width: 100%;
+	max-width: 500px;
+	margin: 25px auto;
+}
+
+.mobile_lineup, .mobile_click {
+	display:none;
+}
+
+.mobile_menu {
+	display: none;
+}
+
+// SVG Specifics
+
+img[src*=".svg"] {
+  border: none;
+}
+
+.band {
+  height: 40px;
+  margin: 10px 0;
+  display: inline-block;
+  width: 300px;
+}
+
+.donate, .buytickets {
+	width: 90px;
+	height: 20px;
+	display: block;
+}
+
+
+.underline {
+	width: 90px;
+	height: 7px;
+	display: block;
+}
+
+.sponsors_title {
+  width: 150px;
+  margin-top: 50px;
+  height: 36px;
+}
+
+.sponsors_list {
+	width: 675px;
+	max-width: 100%;
+}

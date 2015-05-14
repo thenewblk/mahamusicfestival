@@ -8,6 +8,13 @@ var lazypipe    = require('lazypipe');
 var merge       = require('merge-stream');
 var runSequence = require('run-sequence');
 
+var browserify = require('browserify'),
+    gbrowserify = require('gulp-browserify'),
+    reactify = require('reactify'),
+    uglify = require('gulp-uglify'),
+    streamify = require('gulp-streamify'),
+    source = require('vinyl-source-stream');
+
 // See https://github.com/austinpray/asset-builder
 var manifest = require('asset-builder')('./assets/manifest.json');
 
@@ -161,7 +168,7 @@ gulp.task('styles', ['wiredep'], function() {
 // ### Scripts
 // `gulp scripts` - Runs JSHint then compiles, combines, and optimizes Bower JS
 // and project JS.
-gulp.task('scripts', ['jshint'], function() {
+gulp.task('scripts', function() {
   var merged = merge();
   manifest.forEachDependency('js', function(dep) {
     merged.add(
@@ -223,8 +230,9 @@ gulp.task('watch', function() {
       blacklist: ['/wp-admin/**']
     }
   });
+  gulp.watch([path.source + 'react/**/*'], ['build-reacts']);
   gulp.watch([path.source + 'styles/**/*'], ['styles']);
-  gulp.watch([path.source + 'scripts/**/*'], ['jshint', 'scripts']);
+  gulp.watch([path.source + 'scripts/**/*'], [ 'scripts']);
   gulp.watch([path.source + 'fonts/**/*'], ['fonts']);
   gulp.watch([path.source + 'images/**/*'], ['images']);
   gulp.watch(['bower.json', 'assets/manifest.json'], ['build']);
@@ -238,6 +246,7 @@ gulp.task('watch', function() {
 // Generally you should be running `gulp` instead of `gulp build`.
 gulp.task('build', function(callback) {
   runSequence('styles',
+              'build-reacts',
               'scripts',
               ['fonts', 'images'],
               callback);
@@ -260,4 +269,13 @@ gulp.task('wiredep', function() {
 // `gulp` - Run a complete build. To compile for production run `gulp --production`.
 gulp.task('default', ['clean'], function() {
   gulp.start('build');
+});
+
+gulp.task('build-reacts', function(){
+
+    return browserify('./assets/react/index.jsx')
+        .transform(reactify)
+        .bundle()
+        .pipe(source('react.js'))
+        .pipe(gulp.dest('./assets/scripts/'));
 });
