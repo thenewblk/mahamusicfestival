@@ -47,11 +47,14 @@
     'home': {
       init: function() {
 
-        var controller = new ScrollMagic.Controller();
+        // var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
 
-        var lineup = new ScrollMagic.Scene({triggerElement: "#lineup"})
-                .setClassToggle(".top_small_logo", "visible")
-                .addTo(controller);
+        // var lineup = new ScrollMagic.Scene({triggerElement: "#lineup"})
+        //         .setClassToggle(".top_small_logo", "visible")
+        //         .addTo(controller); 
+
+
+
 
       },
       finalize: function() {

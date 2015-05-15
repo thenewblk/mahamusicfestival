@@ -58,6 +58,7 @@
     "react": "^0.13.3",
     "reactify": "^1.1.1",
     "run-sequence": "^1.0.2",
+    "scrollmagic": "^2.0.5",
     "superagent": "^1.2.0",
     "traverse": "^0.6.6",
     "vinyl-source-stream": "^1.1.0",

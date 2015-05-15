@@ -1,34 +1,97 @@
 .top-menu {
 	z-index: 111;
-	position: relative;
+	position: fixed;
+	width: 100%;
 	.top_container {
-		background: white;
+		transition: 0.15s ease-out;
+		margin-top: -75px;
+		opacity: 1;
+		background: black;
+		width: 100%;
+		padding-top: 75px;
+		min-height: 100px;
+	}
+	.top_container.hidden {
+		transition: 0.15s ease-out;
+		margin-top: -150px;
+		opacity: 0;
 	}
 	.lineup {
 	  margin: auto;
 	  max-width: 675px;
+	  width: 100%;
+	}
+	.tickets_container {
+		position: relative;
+		padding: 30px;
+	}
+	.tickets_wrap {
+	  display: table;
+	  margin: auto;
+	  .close_tickets {
+	  	color: @tan;
+	  	display: block;
+	  	text-align: right;
+	  	padding: 0 15px;
+	  }
+	  a.ticket_link {
+	  	display: inline-block;
+	  	margin: 10px;
+	  }
 	}
 }
+
+.scrolled {
+	.top-menu .top_container {
+		transition: 0.15s ease-out;
+		margin-top: -50px;
+		padding-top: 50px;
+		opacity: 1;
+		background: black;
+		width: 100%;
+	}
+	.top_container.hidden {
+		transition: 0.5s ease-out;
+		margin-top: -150px;
+		opacity: 0;
+	}
+}
+
 
 .close_band {
 	display: block;
 	background: black;
-	color: #bfa378;
+	color: @tan;
 	text-align: center;
+	font-weight: 100;
+	font-size: 30px;
 	line-height: 50px;
+	cursor: pointer;
+	transition: 0.15s ease-out;
+	&:hover {
+		color: @pink;
+	}
 }
 
-.close_lineup{
+.close_lineup { 
 	position: absolute;
 	top: 0;
 	right: 0;
 	text-align: center;
-	padding: 15px;
+	padding: 0 15px;
+	font-weight: 100;
+	font-size: 30px;
 	line-height: 50px;
+	cursor: pointer;
+	color: @pink;
+	transition: 0.15s ease-out;
+	&:hover {
+		color: @tan;
+	}
 }
 
 .band_card {
-	background: #ee5a4f;
+	background: @pink;
 	.band_top {
 		background-size: cover;
 		background-position: center;
@@ -38,7 +101,6 @@
 		  	width: 400px;
 		  	display: table;
 		  	margin: 0 auto;
-		  	padding: 140px 0;
 		}
 	}
 	.band_content {
@@ -46,13 +108,44 @@
 		width: 100%;
 		text-align: left;
 		text-transform: uppercase;
-		max-width: 675px;
+		max-width: 1000px;
 		margin: auto;
 		color: white;
-		padding: 15px 0;
+		padding: 15px;
+		.video {
+			width: 40%;
+		}
 		.info, .video, .news {
 			display: table-cell;
 			vertical-align: top;
+		}
+		p {
+			font-family: 'Gotham Cond A', 'Gotham Cond B';
+			font-weight: 500;
+			font-style: normal;
+			font-size: 30px;
+			margin: 0;
+			line-height: 1.4;
+		}
+
+		.news {
+			text-transform: none;
+			margin: 0;
+			.news_item {
+				padding: 10px 30px;
+				margin: 0 10px 10px;
+				border-top: 1px solid @tan;
+				border-bottom: 1px solid @tan;
+			}
+			.news_title {
+				font-size: 15px;
+				margin: 0;
+			}
+			.news_source {
+				font-size: 12px;
+				color: black;
+				margin: 0;
+			}
 		}
 	}
 	.video-wrapper {
@@ -60,8 +153,7 @@
 		padding-bottom: 56.25%; /* 16:9 */
 		padding-top: 25px;
 		height: 0;
-		width: 326px;
-		max-width: 100%;
+		width: 100%;
 		background: rgba(0,0,0,0.3);
 	}
 	.video-wrapper iframe {
@@ -86,8 +178,96 @@
 		  width: 0;
 	}
 
-	.band_link {
+	p.band_link {
 		font-weight: bold;
-		font-size: 12px;
+		font-size: 18px;
 	}
+}
+
+.header {
+	width: 100%;
+	text-transform: uppercase;
+	font-weight: 500;
+	transition: 0.15s ease-out;
+	height: 75px;
+	position: relative;
+	z-index: 11;
+	a {
+		border: none;
+	}
+	.header_container {
+		max-width: 1000px;
+		margin: auto;
+	}
+	.link {
+		transition: 0.15s ease-in;
+		line-height: 75px;
+		color: @tan;
+		margin: 0 20px;
+		cursor: pointer;
+	}
+	.link:hover {
+		color: white;
+	}
+	.right_header {
+		float: right;
+	}
+	.small_bird_logo {
+		opacity: 0;
+		margin-top: -100px;
+		transition: 0.3s ease-in;
+		height: 50px;
+		width: 50px;
+		position: absolute;
+		left: 50%;
+		margin-left: -25px;
+	}
+}
+
+.lineup_container {
+	position: relative;
+}
+
+.scrolled .header {
+	background: @tan;
+	color: black;
+	height: 50px;
+	.link {
+		line-height: 50px;
+		color: black;
+		margin: 0 20px;
+	}
+	.link:hover {
+		color: white;
+	}
+	.small_bird_logo {
+		opacity: 1;
+		margin-top: 0px;
+	}
+}
+
+.lineup_image {
+	margin: 20px 0;
+}
+
+.band_lineup_link.tan {
+	fill: @tan;
+	background: @pink;
+	transition: 0.15s ease-out;
+	cursor: pointer;
+}
+
+.band_lineup_link rect {
+	fill: transparent;
+}
+
+.band_lineup_link.pink {
+	fill: @pink;
+	background: @pink;
+	transition: 0.15s ease-out;
+	cursor: pointer;
+}
+
+.band_lineup_link:hover {
+	fill: white;
 }

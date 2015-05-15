@@ -18,7 +18,7 @@ body {
 .video-container {
 	height: 100%;
 	width: 100%;
-	position: fixed;
+	position: absolute;
 	overflow: scroll;
 	top: 0;
 	left: 0;
@@ -34,7 +34,7 @@ body {
   transform: translate(-50%,-50%);
   -webkit-transition: opacity .3s ease;
   transition: opacity .3s ease;
-  position: fixed;
+  position: absolute;
   top: 50%;
   left: 50%;
   overflow: hidden;
@@ -46,9 +46,8 @@ body {
 
 .content-wrapper {
 	position: relative;
-	display: table;
-	width: 100%;
-	height: 100%;
+	display: block;
+	padding: 0 50px;
 }
 
 .content-wrapper.blue, .content-wrapper.yellow {
@@ -70,8 +69,11 @@ body {
 }
 
 .content-inner {
-	display: table-cell;
+	display: block;
 	vertical-align: middle;
+	border-left: 1px solid @tan;
+	border-right: 1px solid @tan;
+	padding: 15px;
 }
 
 .maha_logo {
@@ -112,10 +114,13 @@ h4.aksarben {
 
 .social {
   position: fixed;
-  z-index: 111;
-  left: 45px;
+  z-index: 11;
+  left: 15px;
   top: 50%;
   margin-top: -75px;
+  a {
+  	border: none;
+  }
 }
 
 .social .link {
@@ -141,7 +146,6 @@ img#wpstats {
 .home a {
 	color: white;
 	text-decoration: none;
-	border: none;
 }
 
 .ticket_container {
@@ -248,7 +252,7 @@ section#apply {
 a {
 	text-decoration: none;
 	color: black;
-	border-bottom: 1px solid black;
+	border-bottom: 1px dashed white;
 	transition: 0.15s ease-in; 
 }
 
@@ -313,17 +317,6 @@ a:hover {
 	width: 150px;
 }
 
-.sponsors_title {
-	width: 150px;
-	margin-top: 50px;
-}
-
-.sponsors_copy {
-	width: 100%;
-	max-width: 500px;
-	margin: 25px auto;
-}
-
 .mobile_lineup, .mobile_click {
 	display:none;
 }
@@ -351,20 +344,52 @@ img[src*=".svg"] {
 	display: block;
 }
 
+.top-section {
+	height: 100%;
+	padding-top: 1px;
+	.content-inner {
+		margin-top: 100px;
+		height: 100%;
+		position: relative;
 
-.underline {
-	width: 90px;
-	height: 7px;
-	display: block;
+	}
 }
 
-.sponsors_title {
-  width: 150px;
-  margin-top: 50px;
-  height: 36px;
+.schnakel_logo_container {
+	display: table;
+	width: 100%;
+	margin-left: -15px;
+	margin-right: -15px;
+	position: absolute;
+	top: -51px;
+	.schnakel_logo_line {
+		display: table-cell;
+		border-bottom: 1px solid @tan;
+	}
+	.schnakel_logo {
+		color: @tan;
+		display: table-cell;
+		margin: auto;
+		position: relative;
+		width: 375px;
+		padding: 0 30px;
+		text-align: center;
+		max-width: 100%;
+		.schnakel_logo_image, .schnakel_presents {
+			display: inline-block;
+			vertical-align: middle;
+			margin-bottom: -15%;
+		}
+	}
 }
 
-.sponsors_list {
-	width: 675px;
-	max-width: 100%;
+.top-tape {
+	display: table;
+	margin: 100px auto 50px;
+}
+
+.top.ticket.button {
+	display: table;
+	margin: auto;
+	width: 150px;
 }

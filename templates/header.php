@@ -21,4 +21,4 @@
 	</div>
 </div>
 
-<div id="content"></div>
+<div id="menu"></div>

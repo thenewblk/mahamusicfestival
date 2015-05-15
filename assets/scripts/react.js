@@ -8,37 +8,138 @@ var React = require('react'),
 
 var Header = require('./header.jsx'),
 	Band = require('./band.jsx'),
-	Lineup = require('./lineup.jsx');
+	Lineup = require('./lineup.jsx'),
+	Tickets = require('./tickets.jsx');
+
 
 var TopMenu = React.createClass({displayName: "TopMenu",  
 	getInitialState: function(){
-		return { lineup: false };
+		return { lineup: false, tickets: false, content: null };
 	},
 
 	componentWillMount: function(){
 	},
 
+	componentDidMount: function(){
+		window.addEventListener('scroll', this.handleScroll);
+	},
+
+	handleScroll: function(event) {
+		this.setState({content: null, lineup: false, tickets: false})
+	},
+
 	toggleLineup: function() {
-		this.setState({lineup: !this.state.lineup})
+		var self = this;
+		if ( self.state.lineup ) {
+			var content = null;
+			self.setState({lineup: false, content: content})
+		} else {
+			var content = React.createElement(Lineup, {lineup: self.toggleLineup});
+			self.setState({lineup: true, content: content, tickets: false})
+		}
+	},
+
+	toggleTickets: function() {
+		var self = this;
+		if ( self.state.tickets ) {
+			var content = null;
+			self.setState({tickets: false, content: content})
+		} else {
+			var content = React.createElement(Tickets, {tickets: self.toggleTickets});
+			self.setState({tickets: true, content: content, lineup: false})
+		}
 	},
 
 	render: function() {
 		var self = this;
 
+		var content = self.state.content;
+		if (content) {
+			var content_class = "top_container";
+		} else {
+			var content_class = "top_container hidden";
+		}
+
 		return (
 			React.createElement("div", {className: "top-menu"}, 
-				React.createElement(Header, {lineup: self.toggleLineup}), 
+				React.createElement(Header, {lineup: self.toggleLineup, tickets: self.toggleTickets}), 
 
-				 self.state.lineup ? React.createElement(Lineup, {lineup: self.toggleLineup}) : null
+				React.createElement("div", {className: content_class},  content )
 
 			)
 		)
 	}
 });
 
-React.render(React.createElement(TopMenu, null), document.getElementById('content')); 
 
-},{"./band.jsx":2,"./header.jsx":3,"./lineup.jsx":4,"react":160,"superagent":161}],2:[function(require,module,exports){
+var Sponsors = React.createClass({displayName: "Sponsors",  
+	getInitialState: function(){
+		return { sponsors: [] };
+	},
+
+	componentWillMount: function(){
+		this.loadSponsors();
+	},
+
+	loadSponsors: function(){
+	    var self = this;
+	      request
+	        .get('http://www.mahamusicfestival.com/wp-json/posts')
+	        .query('type[]=sponsor&filter[posts_per_page]=-1')
+	        .end(function(err, res) {
+	      if (res.ok) {
+	        var sponsors = res.body;
+	        console.log(sponsors);
+	        self.setState({sponsors: sponsors});
+
+	      } else {
+	        console.log('Oh no! error ' + res.text);
+	      }
+	        }.bind(self));  
+	  },
+
+	render: function() {
+		var self = this;
+
+		var sponsors = self.state.sponsors.map(function(object){
+			return React.createElement("img", {className: "spimage", src: object.meta.image.url})
+		});
+
+		var tier = [];
+		for (var i=1; i < 8; i++) {
+			tier[i] = self.state.sponsors.filter(function(object){
+				return object.meta.tier == i.toString();
+			});
+		}
+
+		var sponsors = [];
+		for (var i=1; i < 8; i++) {
+			sponsors[i] = tier[i].map(function(object){
+				return React.createElement("img", {className: "spimage", src: object.meta.image.url})
+			});
+		}
+
+		return (
+			React.createElement("div", {className: "sponsors_list"}, 
+				React.createElement("img", {className: "sponsors_title", src: "/wp-content/themes/maha2015.v2.1/svg/sponsors.svg"}), 
+					React.createElement("p", {className: "sponsors_copy"}, "We`re grateful to our partners who make Maha possible. To join this mix and support the party that makes Omaha proud, contact us at ", React.createElement("a", {href: "mailto:sponsor@mahamusicfestival.com"}, "sponsor@mahamusicfestival.com"), ". "), 
+				React.createElement("div", {className: "sponsors_tier"},  sponsors[1] ), 
+				React.createElement("div", {className: "sponsors_tier"},  sponsors[2] ), 
+				React.createElement("div", {className: "sponsors_tier"},  sponsors[3] ), 
+				React.createElement("div", {className: "sponsors_tier"},  sponsors[4] ), 
+				React.createElement("div", {className: "sponsors_tier"},  sponsors[5] ), 
+				React.createElement("div", {className: "sponsors_tier"},  sponsors[6] ), 
+				React.createElement("div", {className: "sponsors_tier"},  sponsors[7] )
+			)
+		)
+	}
+});
+
+React.render(React.createElement(TopMenu, null), document.getElementById('menu')); 
+
+React.render(React.createElement(Sponsors, null), document.getElementById('sponsors')); 
+
+},{"./band.jsx":2,"./header.jsx":3,"./lineup.jsx":4,"./tickets.jsx":5,"react":161,"superagent":163}],2:[function(require,module,exports){
 /**
  * @jsx React.DOM
  */
@@ -60,6 +161,14 @@ var Band = React.createClass({displayName: "Band",
         backgroundImage: 'url(' + self.state.band.meta.background_image.url + ')',
       };
 
+      var news = self.props.news.map(function(object){
+        return React.createElement("div", {className: "news_item"}, 
+                  React.createElement("h3", {className: "news_title"}, React.createElement("a", {href: object.meta.link_url, target: "_blank"}, object.title)), 
+                  React.createElement("h5", {className: "news_source"}, object.meta.source_name)
+                );
+
+      })
+
       return (
         React.createElement("div", {className: "band_card"}, 
         	React.createElement("div", {className: "band_top", style: topImage}, 
@@ -67,19 +176,23 @@ var Band = React.createClass({displayName: "Band",
         	), 
         	React.createElement("div", {className: "band_content"}, 
         		React.createElement("div", {className: "info"}, 
-        			React.createElement("p", null, self.state.band.meta.genre), 
-        			React.createElement("p", null, self.state.band.meta.record_label), 
-        			React.createElement("p", null, self.state.band.meta.hometown), 
-        			React.createElement("p", {className: "band_link"}, React.createElement("a", {href: self.state.band.meta.url_link}, self.state.band.meta.url_title))
+        			 self.state.band.meta.genre ? React.createElement("p", null, self.state.band.meta.genre) : null, 
+        			 self.state.band.meta.record_label ? React.createElement("p", null, self.state.band.meta.record_label) : null, 
+        			 self.state.band.meta.hometown ? React.createElement("p", null, self.state.band.meta.hometown) : null, 
+        			 (self.state.band.meta.url_link && self.state.band.meta.url_title) ? React.createElement("p", {className: "band_link"}, React.createElement("a", {href: self.state.band.meta.url_link}, self.state.band.meta.url_title)) : null
         		), 
-        		React.createElement("div", {className: "video"}, 
-              React.createElement("div", {className: "video-wrapper"}, 
-                React.createElement("iframe", {src: self.state.band.meta.video_link, frameBorder: "0", allowfullscreen: true})
-              )
-        		), 
-        		React.createElement("div", {className: "news"}, 
-        			React.createElement("p", null, "news")
-        		)
+             self.state.band.meta.video_link ?
+          		React.createElement("div", {className: "video"}, 
+                React.createElement("div", {className: "video-wrapper"}, 
+                  React.createElement("iframe", {src: self.state.band.meta.video_link, frameBorder: "0", allowfullscreen: true})
+                )
+          		)
+            : null, 
+             news ?
+          		React.createElement("div", {className: "news"}, 
+          			news
+          		)
+            : null
         	)
         )
       )
@@ -89,23 +202,55 @@ var Band = React.createClass({displayName: "Band",
 
 module.exports = Band; 
 
-},{"react":160,"superagent":161}],3:[function(require,module,exports){
+},{"react":161,"superagent":163}],3:[function(require,module,exports){
 /**
  * @jsx React.DOM
  */
 
 var React = require('react'),
-    request = require('superagent');
+    request = require('superagent'),
+    ScrollMagic = require('scrollmagic');
 
 var Header = React.createClass({displayName: "Header",
 	toggleLineup: function(){
 		this.props.lineup();
 	},
+	toggleDonate: function(){
+		// this.props.donate();
+	},
+
+	toggleTickets: function(){
+		this.props.tickets();
+	},
+	toggleFestival: function(){
+		// this.props.festival();
+		console.log("festival")
+	},
+
+	componentDidMount: function(){
+		var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
+        var top = new ScrollMagic.Scene({
+                    triggerElement: "#top",
+                    offset: 1 
+                })
+                .setClassToggle("body", "scrolled")
+                .addTo(controller); 
+	},
 
   render: function() {
     return (
       React.createElement("div", {className: "header"}, 
-      	React.createElement("span", {onClick: this.toggleLineup, className: "link"}, "Lineup")
+      	React.createElement("div", {className: "header_container"}, 
+      		React.createElement("span", {className: "left_header"}, 
+	      		React.createElement("span", {onClick: this.toggleFestival, className: "link"}, "Festival"), 
+	      		React.createElement("span", {onClick: this.toggleLineup, className: "link"}, "Lineup")
+      		), 
+      		React.createElement("img", {className: "small_bird_logo", src: "//localhost:3000/wp-content/themes/maha2015.v2.1/svg/bird_logo.svg"}), 
+      		React.createElement("span", {className: "right_header"}, 
+	      		React.createElement("span", {className: "link", onClick: this.toggleTickets}, "Tickets"), 
+	      		React.createElement("a", {href: "https://www.omahagives24.org/index.php?section=organizations&action=newDonation&fwID=1106", className: "link", target: "_blank"}, "Donate")
+      		)
+      	)
       )
     )
   }
@@ -113,7 +258,7 @@ var Header = React.createClass({displayName: "Header",
 
 module.exports = Header;
 
-},{"react":160,"superagent":161}],4:[function(require,module,exports){
+},{"react":161,"scrollmagic":162,"superagent":163}],4:[function(require,module,exports){
 /**
  * @jsx React.DOM
  */
@@ -147,13 +292,14 @@ var Lineup = React.createClass({displayName: "Lineup",
 	
 	componentWillMount: function(){
 		this.loadBands();
+		this.loadNews();
 	},
 	
 	loadBands: function(){
-		var self = this;
+		var self = this; 
 	    request
-	      .get('/wp-json/posts')
-	      .query({ type: 'band' })
+	      .get('http://www.mahamusicfestival.com/wp-json/posts')
+	      .query('type[]=band&filter[posts_per_page]=-1')
 	      .end(function(err, res) {
 			if (res.ok) {
 				var bands = res.body;
@@ -166,38 +312,2432 @@ var Lineup = React.createClass({displayName: "Lineup",
 	      }.bind(self));  
 	},
 
+	loadNews: function(){
+	    var self = this;
+	      request
+	        .get('http://www.mahamusicfestival.com/wp-json/posts')
+	        .query({ type: 'band_news_link' })
+	        .end(function(err, res) {
+	      if (res.ok) {
+	        var news = res.body;
+
+	        self.setState({news: news});
+
+	      } else {
+	        console.log('Oh no! error ' + res.text);
+	      }
+	        }.bind(self));  
+	  },
+
 
   render: function() {
   	var self = this;
 	if (self.state.current_band) {
 		var current_band = self.state.current_band;
 		console.log("current_band: " + current_band);
+
+		var current_news = self.state.news.filter(function(news){
+			return news.meta.band.ID == current_band.ID;
+		});
+
 		return (
-			React.createElement("div", {className: "top_container"}, 
-				React.createElement("span", {className: "close_band", onClick: self.closeBand}, "close"), 
-		  		React.createElement(Band, {band: current_band})
+			React.createElement("div", {className: "lineup_container"}, 
+				React.createElement("span", {className: "close_band", onClick: self.closeBand}, "×"), 
+		  		React.createElement(Band, {band: current_band, news: current_news})
 	  		)
   		)
 	} else {
 	    return (
-	    	React.createElement("div", {className: "top_container"}, 
-	    		React.createElement("span", {className: "close_lineup", onClick: self.toggleLineup}, "close"), 
+	    	React.createElement("div", {className: "lineup_container"}, 
+	    		React.createElement("span", {className: "close_lineup", onClick: self.toggleLineup}, "×"), 
 				React.createElement("div", {className: "lineup"}, 
-					React.createElement("div", {className: "left_lineup"}, 
-						React.createElement("img", {onClick: self.openBand.bind(this, "Modest Mouse"), className: "band modestmouse", src: "/wp-content/themes/maha2015.v2.1/svg/modestmouse.svg"}), 
-						React.createElement("img", {className: "band purityring", src: "/wp-content/themes/maha2015.v2.1/svg/purityring.svg"}), 
-						React.createElement("img", {className: "band always", src: "/wp-content/themes/maha2015.v2.1/svg/alvvays.svg"}), 
-						React.createElement("img", {className: "band thegoodlife", src: "/wp-content/themes/maha2015.v2.1/svg/thegoodlife.svg"}), 
-						React.createElement("img", {className: "band speedyortiz", src: "/wp-content/themes/maha2015.v2.1/svg/speedyortiz.svg"}), 
-						React.createElement("img", {className: "band allyounggirls", src: "/wp-content/themes/maha2015.v2.1/svg/allyounggirls.svg"})
-					), 
-					React.createElement("div", {className: "right_lineup"}, 
-						React.createElement("img", {className: "band atmosphere", src: "/wp-content/themes/maha2015.v2.1/svg/atmosphere.svg"}), 
-						React.createElement("img", {className: "band wavves", src: "/wp-content/themes/maha2015.v2.1/svg/wavves.svg"}), 
-						React.createElement("img", {className: "band thejayhawks", src: "/wp-content/themes/maha2015.v2.1/svg/thejayhawks.svg"}), 
-						React.createElement("img", {className: "band exhex", src: "/wp-content/themes/maha2015.v2.1/svg/exhex.svg"}), 
-						React.createElement("img", {className: "band freakabout", src: "/wp-content/themes/maha2015.v2.1/svg/freakabout.svg"}), 
-						React.createElement("img", {className: "band both", src: "/wp-content/themes/maha2015.v2.1/svg/both.svg"})
+					React.createElement("svg", {className: "lineup_image", x: "0px", y: "0px", viewBox: "0 0 899.6 429.3", "enable-background": "new 0 0 899.6 429.3"}, 
+						React.createElement("g", {id: "background"}, 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "0", y1: "69.5", x2: "428.2", y2: "69.5"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "0", y1: "128.7", x2: "428.2", y2: "128.7"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "0", y1: "187.8", x2: "428.2", y2: "187.8"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "0", y1: "247", x2: "428.2", y2: "247"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "0", y1: "306.1", x2: "428.2", y2: "306.1"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "0", y1: "365.3", x2: "428.2", y2: "365.3"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "0", y1: "423.6", x2: "428.2", y2: "423.6"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "471.5", y1: "128.7", x2: "899.6", y2: "128.7"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "471.5", y1: "187.8", x2: "899.6", y2: "187.8"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "471.5", y1: "247", x2: "899.6", y2: "247"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "471.5", y1: "306.1", x2: "899.6", y2: "306.1"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "471.5", y1: "365.3", x2: "899.6", y2: "365.3"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "471.5", y1: "424.4", x2: "899.6", y2: "424.4"}), 
+							React.createElement("path", {fill: "#F0594A", d: "M22.9,414.5c0.6,0.6,1.3,1,1.7,1.8c0.2,0.3,0.5,0.6,0.7,0.9c0.3,0.4,0.5,0.9,0.8,1.4" + ' ' +
+								"c-0.1,0.7-0.9,0.8-0.9,1.5c-0.5-0.1-1,0.2-1.5,0c-0.1-0.1-0.3-0.1-0.4-0.2c-0.5-0.5-1-0.9-1.5-1.4c-0.1-0.1-0.3-0.2-0.6-0.3" + ' ' +
+								"c0.1,0.1,0.1,0.2,0.2,0.3c0.4,0.5,0.9,1,1.3,1.6c0.1,0.2,0.2,0.3,0.3,0.5c0.1,0.5-0.2,0.9-0.7,0.9c-0.6,0-1.1-0.1-1.5-0.5" + ' ' +
+								"c-0.2-0.2-0.4-0.3-0.7-0.4c0.3,0.4,0.6,0.7,0.9,1.1c0.3,0.4,0.7,0.8,0.9,1.2c0.4,0.7,0.7,1.5,0.6,2.4c0,0.3-0.2,0.6-0.5,0.6" + ' ' +
+								"c-0.7,0.2-1.4,0-2-0.5c-0.6-0.5-1.2-1-1.8-1.5c-0.1-0.1-0.2-0.1-0.2-0.2c-0.2-0.3-0.5-0.5-0.8-0.5c-0.1-0.2-0.2-0.4-0.4-0.6" + ' ' +
+								"c-0.1,0-0.2,0-0.4,0c0,0.1,0,0.1,0,0.2c0.1,0.2,0.3,0.5,0.5,0.7c0.7,0.6,1.3,1.3,1.9,2c0.1,0.1,0.2,0.2,0.3,0.3" + ' ' +
+								"c0.3,0.3,0.5,0.5,0.7,0.8c0.2,0.2,0.3,0.4,0.6,0.6c0.3,0.2,0.6,0.5,0.6,1c-0.1,0.3-0.2,0.6-0.6,0.6c-0.1,0-0.3,0.1-0.4,0.1" + ' ' +
+								"c-0.6-0.2-1.2-0.5-1.6-1c-0.4-0.4-0.9-0.8-1.2-1.3c-0.2-0.2-0.5-0.2-0.7,0.1c-0.6,0.9-1.4,1.5-2.3,2c-0.5,0.3-1.1,0.5-1.7,0.5" + ' ' +
+								"c-0.8,0.1-1.4-0.2-1.9-0.6c-0.5-0.9-0.3-1.8-0.5-2.7c-0.1,0-0.1,0-0.2,0.1c-0.1,0.1-0.2,0.4-0.4,0.4c-0.2,0.1-0.5,0.1-0.7,0.1" + ' ' +
+								"c-0.4-0.1-0.7-0.5-0.8-0.9c-0.1-0.4,0-0.8,0.2-1.1c0.1-0.4,0.3-0.7,0.4-1.1c-0.3-0.4-0.6-0.6-1.1-0.8c-0.5-0.1-0.9-0.3-1.3-0.5" + ' ' +
+								"c-0.4-0.2-0.7-0.5-1-0.8c-0.4-0.3-0.9-0.6-1.3-1c-0.1-0.1-0.3-0.2-0.4-0.3c-0.5-0.4-0.9-0.8-1.4-1.2c-0.5-0.4-0.8-0.8-0.8-1.4" + ' ' +
+								"c0,0,0-0.1,0-0.1c0.3-0.5,0-0.9-0.1-1.4c0,0,0-0.1,0-0.1c0.1,0,0.2-0.1,0.3-0.1c-0.1-0.1-0.2-0.2-0.3-0.2c0-0.3,0.1-0.3,0.5-0.3" + ' ' +
+								"c0-0.1,0.1-0.2,0.1-0.2c0,0,0.1,0,0.1,0c0.5,0.2,1,0.5,1.4,0.9c0.4,0.4,0.9,0.8,1.5,1.2c0-0.3-0.1-0.5-0.1-0.6" + ' ' +
+								"c-0.2-0.1-0.4-0.2-0.5-0.3c-0.8-0.9-1.7-1.8-2.5-2.8c-0.3-0.4-0.5-0.8-0.4-1.3c0.1-0.2,0.1-0.4,0.3-0.6c0.3-0.2,0.4-0.5,0.4-0.8" + ' ' +
+								"c0-0.6,0.2-0.7,0.7-0.7c0.3,0,0.5,0,0.8-0.1c0.2-0.4,0.3-0.7,0.8-0.8c-0.1-0.2-0.1-0.3-0.2-0.4c-0.6-0.6-0.6-0.8-0.2-1.6" + ' ' +
+								"c-0.1-0.1-0.2-0.3-0.3-0.5c-0.2-0.3-0.5-0.7-0.7-1c-0.2-0.3-0.4-0.5-0.6-0.8c-0.4-0.5-0.9-1-1.3-1.4c-0.3-0.3-0.3-0.6-0.1-0.9" + ' ' +
+								"c0.1-0.2,0.2-0.5,0.3-0.7c0.4-0.1,0.8,0.1,1.1,0.2c0.6,0.3,1.2,0.7,1.7,1.1c0.2,0.1,0.4,0.3,0.6,0.4c0.3,0.2,0.5,0.3,0.8,0.5" + ' ' +
+								"c0.4,0.3,0.7,0.4,1.2,0.2c0.5-0.3,0.8,0,1.2,0.2c0.6,0.4,1.3,0.7,1.9,1.1c0.2,0.1,0.4,0.3,0.6,0.4c0.2,0.1,0.3,0.1,0.5,0.2l0,0" + ' ' +
+								"c-0.4-0.5-0.8-0.9-1.3-1.4c-0.4-0.4-0.8-0.7-1.2-1c-0.4-0.3-0.7-0.7-1.2-1c-0.4-0.2-0.6-0.6-0.7-1c0-0.6,0.5-1,1.1-0.8" + ' ' +
+								"c0.5,0.1,0.9,0.4,1.3,0.8c0.3,0.3,0.5,0.6,0.8,0.8c0.2,0.2,0.5,0.5,0.8,0.7c0.7,0.6,1.4,1.2,2.1,1.7c0.1,0.1,0.2,0.1,0.3,0.2" + ' ' +
+								"c0.2-0.1,0.4-0.3,0.7-0.4c0.3,0,0.5,0,0.9,0c0.1,0.1,0.3,0.2,0.4,0.3c0.3,0.2,0.4,0.5,0.4,0.9c0,0.3-0.1,0.7-0.1,1" + ' ' +
+								"c0.2,0.1,0.3,0.3,0.5,0.4c0.2,0.1,0.4,0.2,0.6,0.3c1-0.5,2-0.7,3,0.2c0.5,0.6,0.1,1.2-0.1,1.9c-0.1,0.2-0.1,0.4-0.2,0.6" + ' ' +
+								"c0.3,0.3,0.6,0.7,0.9,1c0.5,0.5,1,0.9,1.5,1.3c0.6,0.6,1.3,1.2,1.9,1.9C22.8,414.3,22.8,414.4,22.9,414.5c0,0-0.1,0.1-0.1,0.1" + ' ' +
+								"c0,0,0,0,0.1,0.1C22.9,414.6,22.9,414.6,22.9,414.5z M21.6,413.5L21.6,413.5L21.6,413.5z M2.9,414.6L2.9,414.6L2.9,414.6z" + ' ' +
+								 "M18.3,425.5L18.3,425.5L18.3,425.5z M3.6,404.2L3.6,404.2L3.6,404.2z M5.1,407.1L5.1,407.1L5.1,407.1z M10.8,426.2L10.8,426.2" + ' ' +
+								"C10.8,426.2,10.8,426.3,10.8,426.2C10.8,426.3,10.8,426.2,10.8,426.2z M18,425.9c0,0,0.1-0.1,0.1-0.1c0,0-0.1,0-0.1-0.1" + ' ' +
+								"C18,425.8,18,425.9,18,425.9C17.9,426,17.9,426,18,425.9C17.9,426,18,426,18,425.9z M5,417c0,0,0.1,0.1,0.1,0.1c0,0,0,0,0.1-0.1" + ' ' +
+								"C5.1,417,5,417,5,417L5,417z M3.3,406.3L3.3,406.3c0.1-0.1,0.2-0.2,0.1-0.4C3.4,406,3.4,406.1,3.3,406.3z M12.3,422" + ' ' +
+								"c-0.1-0.1-0.2-0.1-0.3-0.2c-0.2,0.5,0,0.9,0.3,1.2c0.1,0.5,0.3,1-0.1,1.5c-0.6,0.3-0.8,0.8-0.5,1.5c0.8,0.3,1.5,0.3,2.2-0.3" + ' ' +
+								"c0.3-0.3,0.7-0.6,1.1-0.8c0-0.1,0-0.3-0.1-0.3c-0.2-0.3-0.5-0.5-0.7-0.8c-0.5-0.6-1.1-1.1-1.6-1.7c0.1,0,0.1,0,0.2-0.1" + ' ' +
+								"c-0.1-0.1-0.2-0.2-0.4-0.3C12.4,421.9,12.4,421.9,12.3,422z M5,406.4c0,0,0,0.1,0,0.1c0.6-0.2,0.8,0.2,1.1,0.6" + ' ' +
+								"c0.1,0.2,0.3,0.4,0.5,0.6c0.2,0.2,0.5,0.5,0.6,0.7c0.3,0.5,0.7,0.7,1.2,1c0.1,0.1,0.2,0,0.4,0c0,0,0.1-0.1,0.1-0.1" + ' ' +
+								"c-0.1-0.1-0.2-0.1-0.3-0.2c-0.1-0.3-0.1-0.6-0.2-0.9c-0.2-0.1-0.4-0.2-0.5-0.3c-0.4-0.5-1-0.9-1.6-1.3c-0.2-0.1-0.3-0.3-0.3-0.5" + ' ' +
+								"c0,0,0,0-0.1-0.1c-0.1,0-0.1,0.1-0.2,0.1c-0.1-0.1-0.2-0.1-0.4-0.2C5.2,406.2,5.1,406.3,5,406.4z M15.6,421.7" + ' ' +
+								"c0.1,0.4,0.1,0.4,0.4,0.3C15.9,421.9,15.8,421.9,15.6,421.7z M3.6,415.3c0.1,0.4,0.1,0.4,0.4,0.6C3.9,415.7,3.8,415.5,3.6,415.3z" + ' ' +
+								 "M7.5,411.3c-0.2-0.1-0.3-0.2-0.5-0.3C7,411.3,7.1,411.4,7.5,411.3z M19.9,412.8C19.9,412.7,19.9,412.7,19.9,412.8" + ' ' +
+								"c-0.1,0-0.2,0.1-0.2,0.2c0,0,0.1,0,0.1,0C19.9,412.9,19.9,412.8,19.9,412.8z M2.9,404.8c0,0,0-0.1-0.1-0.1c-0.1,0-0.1,0.1-0.2,0.1" + ' ' +
+								"c0,0,0,0,0,0.1C2.8,404.8,2.9,404.8,2.9,404.8z M9.9,404.7C9.9,404.7,9.9,404.7,9.9,404.7c0-0.1,0-0.1,0-0.1" + ' ' +
+								"C9.8,404.6,9.8,404.7,9.9,404.7C9.8,404.7,9.9,404.7,9.9,404.7z M8.1,402.6c0.1,0.1,0.1,0.1,0.2,0.2c0,0,0.1-0.1,0.1-0.1" + ' ' +
+								"c-0.1-0.1-0.1-0.1-0.2-0.2C8.1,402.6,8.1,402.6,8.1,402.6z M18.4,410.7C18.4,410.7,18.4,410.7,18.4,410.7c0.1-0.1,0-0.1,0-0.1" + ' ' +
+								"C18.4,410.6,18.3,410.6,18.4,410.7C18.3,410.7,18.4,410.7,18.4,410.7z M20.5,413.1C20.4,413.1,20.4,413.2,20.5,413.1" + ' ' +
+								"c-0.1,0.1,0,0.1,0,0.2c0,0,0.1,0,0.1,0C20.5,413.2,20.5,413.2,20.5,413.1z M13.8,428.2C13.8,428.2,13.7,428.2,13.8,428.2" + ' ' +
+								"c-0.1-0.1-0.1,0-0.1,0C13.7,428.2,13.7,428.3,13.8,428.2C13.7,428.3,13.7,428.2,13.8,428.2z M19,427.9C19,427.9,19,428,19,427.9" + ' ' +
+								"C19,428,19,428,19,427.9C19.1,427.9,19,427.9,19,427.9C19,427.9,19,427.9,19,427.9z M19.1,419.2C19.1,419.2,19.1,419.2,19.1,419.2" + ' ' +
+								"c0-0.1,0-0.1,0-0.1C19,419.1,19,419.2,19.1,419.2C19,419.2,19.1,419.2,19.1,419.2z M5.3,417.4C5.3,417.4,5.2,417.4,5.3,417.4" + ' ' +
+								"c-0.1,0.1,0,0.1,0,0.1C5.3,417.5,5.3,417.4,5.3,417.4C5.3,417.4,5.3,417.4,5.3,417.4z M2.9,405.3C3,405.3,3,405.2,2.9,405.3" + ' ' +
+								"c0.1-0.1,0-0.1,0-0.1C3,405.2,2.9,405.2,2.9,405.3C2.9,405.2,2.9,405.2,2.9,405.3z M22.6,420.4C22.6,420.4,22.6,420.5,22.6,420.4" + ' ' +
+								"C22.6,420.5,22.6,420.5,22.6,420.4C22.7,420.5,22.7,420.5,22.6,420.4C22.7,420.4,22.6,420.4,22.6,420.4z M16,422.6" + ' ' +
+								"C16,422.6,16,422.6,16,422.6C16,422.6,16,422.6,16,422.6C15.9,422.6,15.9,422.6,16,422.6C15.9,422.6,16,422.6,16,422.6z" + ' ' +
+								 "M13.7,421.9C13.7,421.8,13.7,421.8,13.7,421.9C13.7,421.8,13.7,421.9,13.7,421.9C13.7,421.9,13.7,421.9,13.7,421.9" + ' ' +
+								"C13.7,421.9,13.7,421.9,13.7,421.9z M8.8,424.5C8.8,424.5,8.8,424.5,8.8,424.5C8.8,424.4,8.8,424.4,8.8,424.5" + ' ' +
+								"C8.8,424.4,8.8,424.4,8.8,424.5C8.8,424.4,8.8,424.4,8.8,424.5z M8.7,425.3C8.7,425.3,8.7,425.3,8.7,425.3" + ' ' +
+								"C8.6,425.3,8.6,425.3,8.7,425.3C8.6,425.4,8.7,425.4,8.7,425.3C8.7,425.4,8.7,425.3,8.7,425.3z M5.5,407C5.5,407,5.5,407,5.5,407" + ' ' +
+								"C5.5,407,5.5,407,5.5,407C5.5,407,5.5,407,5.5,407z M5.4,409.9C5.4,409.9,5.4,409.9,5.4,409.9c0,0,0-0.1,0-0.1c0,0,0,0,0,0" + ' ' +
+								"C5.4,409.8,5.4,409.8,5.4,409.9z M5,405.8C5,405.8,5,405.8,5,405.8C5,405.8,5,405.8,5,405.8C5,405.8,5,405.8,5,405.8" + ' ' +
+								"C5,405.8,5,405.8,5,405.8z M4.4,405.4C4.4,405.4,4.5,405.4,4.4,405.4c0,0,0.1-0.1,0.1-0.1c0,0,0,0,0,0" + ' ' +
+								"C4.5,405.3,4.4,405.3,4.4,405.4z M3.9,406.3C3.9,406.2,3.9,406.2,3.9,406.3C3.9,406.2,3.9,406.2,3.9,406.3" + ' ' +
+								"C3.9,406.2,3.9,406.2,3.9,406.3z M2.2,405C2.3,405,2.3,405,2.2,405C2.3,405,2.3,405,2.2,405C2.3,405,2.3,404.9,2.2,405" + ' ' +
+								"C2.3,404.9,2.3,405,2.2,405z M21.9,414.1C21.9,414.1,21.9,414.1,21.9,414.1C21.9,414,21.9,414,21.9,414.1" + ' ' +
+								"C21.9,414,21.9,414.1,21.9,414.1C21.9,414.1,21.9,414.1,21.9,414.1z M24.8,419.8C24.8,419.8,24.8,419.8,24.8,419.8" + ' ' +
+								"C24.8,419.7,24.8,419.7,24.8,419.8C24.8,419.7,24.8,419.7,24.8,419.8C24.8,419.7,24.8,419.8,24.8,419.8z M13.3,422.6L13.3,422.6" + ' ' +
+								"L13.3,422.6L13.3,422.6z M15.4,422.2C15.4,422.2,15.4,422.2,15.4,422.2C15.4,422.2,15.4,422.2,15.4,422.2" + ' ' +
+								"C15.3,422.2,15.3,422.2,15.4,422.2C15.3,422.2,15.4,422.2,15.4,422.2z M4.7,406.2C4.7,406.2,4.7,406.2,4.7,406.2" + ' ' +
+								"C4.7,406.2,4.7,406.2,4.7,406.2C4.7,406.2,4.7,406.2,4.7,406.2C4.7,406.2,4.7,406.2,4.7,406.2z M3.4,405.3L3.4,405.3L3.4,405.3" + ' ' +
+								"L3.4,405.3z M4.6,416.1C4.7,416.1,4.7,416.1,4.6,416.1C4.7,416.1,4.7,416.1,4.6,416.1C4.7,416.1,4.6,416.1,4.6,416.1z M12.7,427.7" + ' ' +
+								"L12.7,427.7L12.7,427.7L12.7,427.7z"}), 
+							React.createElement("line", {fill: "none", stroke: "#D3BE8B", "stroke-width": "0.7059", "stroke-miterlimit": "10", x1: "471.5", y1: "69.5", x2: "899.6", y2: "69.5"})
+						), 
+						React.createElement("g", {id: "modest_mouse", className: "band_lineup_link tan", onClick: self.openBand.bind(this, "Modest Mouse")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M262.5,50.9c0-0.3-0.1-0.6-0.1-0.9c-0.3,0.1-0.5,0.2-0.7,0.3c-0.7,0-1.1-0.4-1.4-1" + ' ' +
+									"c-0.7-1.7-1.4-3.4-1.8-5.1c-0.3-1.1-0.7-2.1-1-3.2c-0.1-0.4-0.2-0.8-0.3-1.2c-0.4-1.7-0.8-3.4-1.3-5c-0.4-1.4-0.7-2.8-1.1-4.2" + ' ' +
+									"c-0.1-0.4-0.3-0.8-0.5-1.5c-0.3,0.9-0.3,1.6-0.3,2.2c-0.2,2.7-0.3,5.5-0.4,8.2c-0.1,2.8-0.1,5.5-0.3,8.3c-0.1,2.6-0.1,5.2-0.2,7.8" + ' ' +
+									"c-0.1,2.4-0.2,4.7-0.3,7.1c-0.1,1.9,0,3.7-0.1,5.6c0,0.3,0,0.6,0,0.9c-0.1,0.8-0.4,1.3-1.1,1.6c-0.7,0-0.8-0.7-1.1-1.1" + ' ' +
+									"c-0.4,0.3-0.7,0.6-1.1,0.9c-0.5-0.2-1-0.3-1.5-0.5c-0.2-0.4-0.5-0.8-0.7-1.1c-0.1,0.1-0.3,0.2-0.3,0.3c-0.3,0.4-0.7,0.6-1.2,0.3" + ' ' +
+									"c-0.5-0.3-0.8-0.7-0.7-1.3c0-0.2,0.1-0.3,0.1-0.5c0.2-0.6,0.2-1.3,0.2-2c0.1-1.5,0.2-3,0.2-4.5c0.1-2.9,0.2-5.7,0.3-8.6" + ' ' +
+									"c0.1-2.1,0.1-4.1,0.2-6.2c0.1-2.6,0.2-5.3,0.3-7.9c0.1-1.8,0.2-3.5,0.3-5.3c0.1-1.1,0.1-2.1,0.2-3.2c0.1-1.4,0.1-2.8,0.3-4.2" + ' ' +
+									"c0.3-2.3,0.3-4.6,0.7-6.9c0.2-0.8,0.3-1.6,0.5-2.3c0.2-0.7,0.6-1.3,1.1-1.7c0.2-0.1,0.4-0.2,0.7-0.3c0.3,0,0.7,0,1,0" + ' ' +
+									"c1-0.8,2.3-1.1,3.6-1.4c0.3,0.2,0.6,0.4,1,0.7c0.6,0,1.4-0.1,1.9,0.6c1.2,3,2.2,6.1,3,9.3c0.8,3,1.7,6.1,2.4,9.1" + ' ' +
+									"c0.6,2.7,1.5,5.4,2.2,8.1c0.3,0,0.4-0.2,0.4-0.4c0.8-2.2,1.6-4.3,2.5-6.5c0.6-1.5,1.3-2.9,2.2-4.3c0.6-0.8,0.9-1.8,1.4-2.6" + ' ' +
+									"c0.7-1.3,1.5-2.5,2.2-3.7c0.6-0.9,1.1-1.8,1.7-2.7c0.5-0.8,1-1.6,1.7-2.2c0.3-0.3,0.6-0.5,0.9-0.8c0.3,0,0.5,0.1,0.8,0.1" + ' ' +
+									"c0.1,0,0.1-0.1,0.2-0.1c0.4-0.5,0.7-1,0.8-1.7c0.1-0.9,0.4-1.8,0.6-2.7c0.1-0.7,0.6-1.2,1.1-1.6c0.3,0.1,0.5,0.3,0.8,0.4" + ' ' +
+									"c0.7-0.9,1.8-1.1,2.7-2c0.2,0.2,0.3,0.3,0.4,0.5c0.2,0.4,0.4,0.8,0.6,1.2c0.3-0.2,0.6-0.4,1-0.6c0.2,0.1,0.4,0.2,0.6,0.3" + ' ' +
+									"c0.4,0.8,0.5,1.6,0.4,2.4c-0.1,1.2-0.2,2.5-0.5,3.7c-0.3,1.1-0.4,2.3-0.5,3.4c-0.2,1.8-0.4,3.7-0.6,5.5c-0.1,0.6-0.2,1.2-0.3,1.8" + ' ' +
+									"c-0.3,2.8-0.6,5.5-0.8,8.3c-0.3,2.7-0.5,5.4-0.7,8c-0.1,1.5-0.2,3-0.4,4.5c-0.2,2.8-0.5,5.7-0.7,8.5c-0.1,1.7-0.2,3.5-0.3,5.2" + ' ' +
+									"c-0.1,1.7-0.2,3.3-0.3,5c0,0.3,0,0.6,0,0.9c0.1,0.6-0.3,1.1-0.6,1.6c-0.2,0.3-0.5,0.2-1-0.1c-0.2-0.5,0.1-1.1-0.3-1.6" + ' ' +
+									"c-0.5,0.3-0.5,1-1,1.4c-0.6,0.4-1.1,0.3-1.5-0.3c-0.2-0.3-0.4-0.5-0.6-0.8c-0.2-0.3-0.4-0.5-0.6-0.9c-0.4,0.4-0.5,0.9-1.1,0.9" + ' ' +
+									"c-0.3-0.6-0.3-0.9-0.3-1.4c0-0.4,0.1-0.8,0.1-1.2c0.1-1.1,0.3-2.2,0.3-3.3c0-0.5,0-0.9-0.3-1.4c-0.2-0.3-0.1-0.8-0.1-1.2" + ' ' +
+									"c0.1-1.5,0.2-3,0.3-4.5c0-0.7,0.1-1.3,0.1-2c0.2-2.7,0.3-5.4,0.5-8c0.1-1.1,0-2.2,0.3-3.3c0.2-0.7,0.2-1.4,0.1-2.1" + ' ' +
+									"c-0.1-0.5,0.1-1,0.2-1.5c0.1-0.4,0.2-0.7,0.2-1.1c-0.2-2.3,0.2-4.5,0.3-6.8c0-0.1,0-0.2,0-0.4c-0.2-0.1-0.3,0.1-0.3,0.2" + ' ' +
+									"c-1,2-2.1,4-3,6c-1.1,2.3-2,4.6-3,6.9c-0.5,1.2-1.1,2.4-1.6,3.7c-0.5,1.2-0.8,2.3-1.3,3.5c-0.4,1.1-0.7,2.2-1.3,3.1" + ' ' +
+									"c-0.4,0.3-0.7,0.2-1.1,0.1c0-0.4,0-0.8-0.1-1.2c-0.7,0-1,0.7-1.5,1c-0.4-0.1-0.8-0.2-1.1-0.2c-0.5-0.3-0.6-0.8-0.8-1.3" + ' ' +
+									"c-0.2-0.4-0.1-0.8,0.1-1.2c0.1-0.3,0.3-0.5,0-0.9C262.9,50.8,262.7,50.8,262.5,50.9L262.5,50.9z M259.7,41.7L259.7,41.7" + ' ' +
+									"L259.7,41.7L259.7,41.7L259.7,41.7z M249.3,23.8c-0.1,0.2-0.2,0.3,0,0.6C249.2,24.1,249.2,23.9,249.3,23.8" + ' ' +
+									"c0.3-0.2,0.2-0.4,0.1-0.8C249.3,23.3,249.3,23.5,249.3,23.8z M266.7,42.4c0.1-0.1,0.3-0.2,0-0.4C266.7,42.2,266.7,42.3,266.7,42.4" + ' ' +
+									"c-0.2,0.2-0.4,0.4-0.4,0.8C266.7,43.1,266.6,42.7,266.7,42.4z M281.9,57.8c-0.3,0.2-0.3,0.5,0,0.9" + ' ' +
+									"C281.8,58.3,281.8,58.1,281.9,57.8c0.1-0.2,0.2-0.4,0.2-0.5c0.1-0.4,0.1-0.9,0.2-1.3c0-0.2-0.1-0.3-0.3-0.3" + ' ' +
+									"c-0.2,0.3-0.3,0.7-0.2,1C281.8,57.1,281.8,57.5,281.9,57.8z M247.8,54.4c-0.1,0.2-0.2,0.4-0.2,0.6c0,1,0,1.9-0.1,2.9" + ' ' +
+									"c0,0.1,0.1,0.2,0.2,0.6c0.1-1.4,0.1-2.5,0.2-3.6C247.9,54.6,247.8,54.5,247.8,54.4c0.1-0.2,0.2-0.4,0.2-0.5c0-1.1,0-2.2,0-3.2" + ' ' +
+									"c0-0.7,0.1-1.3,0.1-2c0.1-1.1,0.1-2.2,0.2-3.3c0-1.1-0.1-2.2,0-3.3c0.1-1.2,0.2-2.5,0.2-3.7c0-0.5,0-0.9,0-1.4" + ' ' +
+									"c0.1-1.2,0.1-2.3,0.2-3.5c0-0.2,0-0.4-0.2-0.5c-0.1,0-0.2,0.1-0.2,0.1c-0.1,0.7-0.3,1.4-0.2,2.1c0,0.5,0,1-0.1,1.5" + ' ' +
+									"c-0.1,0.3-0.1,0.6-0.1,0.9c-0.1,1.6,0,3.3,0.1,4.9c0,0.4,0,0.8,0,1.1c-0.4,1.5-0.4,3-0.2,4.5c0.1,1.4,0,2.8-0.1,4.2" + ' ' +
+									"C247.6,52.9,247.5,53.6,247.8,54.4z M281,30.8c-0.2,0.2-0.3,0.3-0.3,0.4c-0.1,0.5-0.2,1.1-0.3,1.6c-0.2,1.5-0.3,3-0.5,4.5" + ' ' +
+									"c-0.1,1.2-0.3,2.5-0.3,3.7c0,1.5-0.2,2.9-0.4,4.3c-0.1,0.9-0.3,1.7-0.3,2.6c0,0.5,0,0.9,0,1.3c-0.1,1-0.2,2-0.3,3.1" + ' ' +
+									"c-0.1,0.8-0.2,1.6-0.2,2.3c-0.1,1.5-0.3,3-0.4,4.4c0,0.3,0,0.5,0.4,0.6c0.1-0.2,0.2-0.4,0.2-0.7c0.2-2.2,0.4-4.4,0.5-6.5" + ' ' +
+									"c0.1-1.4,0.1-2.7,0.3-4.1c0.3-2.2,0.5-4.3,0.6-6.5c0-0.3,0.1-0.7,0.1-1c0.1-1,0.3-2,0.4-3.1c0.2-1.9,0.3-3.8,0.4-5.6" + ' ' +
+									"C280.9,31.8,280.9,31.3,281,30.8z M282,55c0.1,0,0.1,0,0.2,0c0-0.1,0.1-0.2,0.1-0.3c0-1.6,0.2-3.1,0.4-4.7" + ' ' +
+									"c0.1-0.6,0.2-1.1,0.3-1.7c0-0.4-0.1-0.9,0-1.3c0.1-0.4-0.1-0.9,0.3-1.3c0.1-0.1,0-0.2,0-0.4c-0.1-0.4,0-0.7,0-1.1" + ' ' +
+									"c0.1-0.7,0.3-1.4,0.2-2.2c-0.1-0.4,0-0.9,0.1-1.2c0.2-0.3,0.2-0.6,0.2-0.9c0.1-0.9,0-1.8,0.2-2.7c0-0.1,0-0.2,0-0.4" + ' ' +
+									"c-0.1-1.1-0.1-2.3,0.2-3.4c0.1-0.3,0-0.5-0.3-0.7c-0.1,1-0.3,2-0.4,2.9c-0.1,0.7-0.1,1.4-0.2,2.1c-0.1,1.2-0.2,2.3-0.3,3.5" + ' ' +
+									"c-0.1,0.6-0.1,1.1-0.2,1.7c0,0.4-0.1,0.8-0.1,1.2c0,0.2,0,0.5-0.1,0.7c-0.1,0.6-0.1,1.1-0.2,1.7c-0.1,1.4-0.2,2.8-0.3,4.2" + ' ' +
+									"c-0.1,1.3-0.2,2.5-0.4,3.8C281.9,54.7,282,54.8,282,55z M278.1,60.2c0,0.2,0,0.5,0,0.7c-0.4,2-0.3,4-0.6,6c0,0.2,0,0.4,0.4,0.5" + ' ' +
+									"c0.1-0.8,0.1-1.6,0.2-2.4c0.1-0.8,0.3-1.6,0.2-2.3C278.1,61.8,278.6,61,278.1,60.2z M248.6,31.9c0.1-0.3,0.2-0.4,0.2-0.5" + ' ' +
+									"c0.1-1,0.1-2.1,0.2-3.1c0.1-0.6,0.1-1.2,0.2-1.8c0.1-0.5,0.1-1-0.1-1.7c-0.4,1.7-0.4,3.2-0.6,4.8C248.5,30.3,248.4,31,248.6,31.9z" + ' ' +
+									 "M247.5,60.6C247.5,60.6,247.4,60.6,247.5,60.6c-0.1,0.5-0.2,1.1-0.2,1.6c0,0.5,0,1.1,0.1,1.6c0,0,0.1,0,0.1,0" + ' ' +
+									"C247.5,62.7,247.5,61.7,247.5,60.6z M251.2,58.7c0.1-0.4,0.1-0.6,0.1-0.9c0-0.6,0-1.2-0.1-1.8c0,0-0.1-0.1-0.2-0.2" + ' ' +
+									"C251.2,56.8,250.9,57.7,251.2,58.7z M284.4,29.6c-0.3,0.9-0.3,1,0,1.8C284.4,30.7,284.4,30.2,284.4,29.6z M281.2,26.6" + ' ' +
+									"c-0.1,0.7-0.1,1.1,0.1,1.6C281.2,27.8,281.5,27.3,281.2,26.6z M284.8,25.7c0.2-0.3,0.2-0.3,0.1-0.9" + ' ' +
+									"C284.8,25,284.8,25.3,284.8,25.7C284.7,25.6,284.8,25.6,284.8,25.7z M251.4,50.3C251.4,50.3,251.4,50.3,251.4,50.3" + ' ' +
+									"c-0.1,0.3-0.1,0.7-0.1,1c0,0,0,0,0.1,0C251.4,51,251.4,50.7,251.4,50.3z M281.6,61.3c0,0-0.1,0-0.1,0c0,0.3,0,0.6,0,0.9" + ' ' +
+									"c0,0,0.1,0.1,0.2,0.1C281.6,62,281.6,61.6,281.6,61.3z M284.4,28.8c0.2-0.4,0.2-0.4,0-0.7C284.4,28.3,284.4,28.6,284.4,28.8z" + ' ' +
+									 "M247.5,59.5c0.2-0.3,0.2-0.3,0-0.6C247.6,59.1,247.3,59.2,247.5,59.5z M281,29.1c-0.2,0.2-0.2,0.4,0,0.8" + ' ' +
+									"C281,29.6,281,29.4,281,29.1z M284.8,26.3c0,0-0.1,0-0.1,0c0,0.2,0,0.4,0,0.6c0,0,0.1,0,0.1,0C284.8,26.6,284.8,26.5,284.8,26.3z" + ' ' +
+									 "M251.5,49.2C251.4,49.2,251.4,49.2,251.5,49.2c-0.1,0.2-0.1,0.3-0.1,0.5c0,0,0,0,0.1,0C251.4,49.5,251.5,49.3,251.5,49.2z" + ' ' +
+									 "M251.4,47.4c0,0,0.1,0,0.1,0c0-0.2,0-0.4,0-0.5c0,0-0.1,0-0.1,0C251.4,47.1,251.4,47.2,251.4,47.4z M251.7,39.7" + ' ' +
+									"C251.7,39.7,251.6,39.7,251.7,39.7c-0.1,0.2-0.1,0.4-0.1,0.5c0,0,0.1,0,0.1,0C251.7,40.1,251.7,39.9,251.7,39.7z M251.5,45.9" + ' ' +
+									"C251.4,45.9,251.4,45.9,251.5,45.9c-0.1,0.1-0.1,0.2-0.1,0.3c0,0,0,0,0.1,0C251.5,46.1,251.5,46,251.5,45.9z M259.4,40.8" + ' ' +
+									"C259.4,40.8,259.4,40.7,259.4,40.8c0.1-0.1,0-0.1,0-0.2C259.4,40.6,259.3,40.7,259.4,40.8C259.3,40.7,259.4,40.8,259.4,40.8z" + ' ' +
+									 "M247.7,59.9L247.7,59.9L247.7,59.9L247.7,59.9z"}), 
+								React.createElement("path", {d: "M20.6,28c0-0.2,0-0.4,0.1-0.6c0.6-2.1,1.1-4.1,1.7-6.2c0.4-1.5,1-2.9,1.5-4.3c0.5-1.3,1-2.5,1.4-3.8" + ' ' +
+									"c0.2-0.6,0.3-1.3,0.5-2c1.1-0.9,2.4-1.6,3.9-1.8c0.1,0,0.3-0.1,0.4,0c1.3,0.4,2.5-0.2,3.8-0.3c0.9,0.3,1.4,1.3,2.4,1.1" + ' ' +
+									"c0.5,0.3,0.7,0.7,0.7,1.1c0.1,1.1,0.6,2.2,0.9,3.2c1.1,3.3,2.3,6.6,3.4,9.9c0.5,1.5,1,2.9,1.6,4.3c0.2,0.5,0.4,0.9,0.6,1.4" + ' ' +
+									"c0.6-0.1,0.7-0.7,1.1-0.9c0,0,0,0,0.1,0.1c0,0-0.1,0-0.1,0c0.7-1.7,1.7-3.2,2.6-4.8c0.7-1.2,1.6-2.3,2.1-3.6" + ' ' +
+									"c0.1-0.4,0.4-0.7,0.7-1c0.7-0.9,1-2,1.3-3c0.4-0.4,0.7-0.9,1.2-1.4c0.8-0.2,1.8-0.6,2.7-0.7c0.7-0.1,1.3,0,2,0c1,0,2,0.2,3-0.5" + ' ' +
+									"c0.5,0.7,0.9,1.4,1.4,2.1c0.1-0.1,0.3-0.2,0.4-0.3c0.1-0.1,0.2-0.1,0.3-0.2c0.5,0.1,0.6,0.4,0.5,0.7c-0.4,1.7-0.1,3.3-0.3,5" + ' ' +
+									"c-0.1,0.8,0,1.7-0.1,2.5c-0.2,3.5-0.2,7-0.3,10.5c0,1.2-0.1,2.3-0.1,3.5c0,0.9,0,1.8,0,2.7c0,3.3,0,6.6,0,9.9" + ' ' +
+									"c0,2.6,0.1,5.2,0.2,7.8c0,1.4,0.1,2.7,0.2,4.1c0.2,2.3,0.4,4.6,0.6,6.8c0.1,0.7,0.2,1.5,0.4,2.2c0.1,0.6,0.2,1.3,0,1.9" + ' ' +
+									"c-0.1,0.3-0.3,0.6-0.6,0.8c-0.1,0.1-0.3,0-0.5,0c-0.4-0.5,0-1.2-0.6-1.6c-0.6,0.3-0.8,1-1.2,1.5c-0.6,0.2-1.1,0.1-1.7-0.2" + ' ' +
+									"c-0.6-0.3-0.4-1.1-1-1.5c-0.2,0.4-0.3,0.8-0.5,1.2c-1.4,0.1-2.7,0.3-3.8-0.8c0-0.9,0-1.8-0.1-2.7c0-0.1,0-0.2,0-0.3" + ' ' +
+									"c-0.6-1.4-0.3-3-0.8-4.4c-0.1-0.1-0.2-0.2-0.4-0.3c0.1-0.5-0.3-1,0.2-1.4c0,0,0,0.1,0.1,0.1c0,0-0.1,0-0.1-0.1" + ' ' +
+									"c0-0.2-0.1-0.4-0.1-0.5c0.5-0.7,0.2-1.2-0.2-1.5c0-0.4,0-0.7,0-1.1c0,0,0.1-0.2,0.3-0.4c0-0.3-0.1-0.7-0.2-1" + ' ' +
+									"c0-0.2-0.2-0.3-0.2-0.5c0.1-0.4-0.1-0.9,0.2-1.3c-0.2-0.5-0.4-0.9-0.4-1.4c0-0.5,0-0.9,0-1.4c0-0.5,0-0.9,0-1.4" + ' ' +
+									"c0.3,0.1,0.5,0.4,0.6-0.2c-0.2-0.3-0.4-0.6-0.6-0.9c0.2-0.4,0.5-0.8,0.7-1.2c-0.3-0.9-0.5-1.8-0.3-2.8c0.1-0.7,0-1.4,0-2.1" + ' ' +
+									"c0-0.4-0.6-0.5-0.3-0.8c0.2-0.3-0.1-0.5-0.1-0.7c-0.1-0.6,0-1.1,0-1.7c0,0,0.1,0,0.1,0c0,0,0,0.1,0,0.1c0,0.1,0.1,0.2,0.2,0.4" + ' ' +
+									"c0.2-1.4,0.2-1.4-0.2-1.9c0.1-0.4,0.2-0.8,0.3-1.2c-0.2,0-0.3,0-0.5,0c0-0.8,0-1.6,0-2.4c0.2-0.2,0.3-0.3,0.5-0.5" + ' ' +
+									"c-0.2-0.3-0.4-0.6-0.4-0.9C52,36.2,52,35.9,52,35.6c-0.1,0-0.1,0-0.2,0c0,0-0.1,0-0.1,0.1c-0.7,1.4-1.3,2.8-2,4.2" + ' ' +
+									"c-1,2.2-1.9,4.4-2.9,6.6c-0.3,0.3-0.8,0.3-1.2,0.4c-0.2-0.2-0.4-0.3-0.5-0.5c-0.1,0-0.2,0-0.3,0.1c-0.3,0.2-0.6,0.4-1,0.6" + ' ' +
+									"c-0.8,0.4-2,0.2-2.5-0.6c-0.1-0.1-0.1-0.2-0.2-0.4c-0.1-0.1-0.1-0.1-0.3-0.2c-0.1,0.1-0.2,0.1-0.3,0.2c-0.4,0.5-0.8,0.6-1.4,0.5" + ' ' +
+									"c-0.6,0-1.2-0.3-1.6-0.8c-0.3-0.4-0.4-0.8-0.1-1.2c0.2-0.4,0.5-0.7,0.5-1.2c-0.2-0.2-0.4-0.5-0.8-0.8c-0.1-0.7-0.3-1.5-0.5-2.3" + ' ' +
+									"c-0.6-1.9-1.3-3.7-2-5.5c-1-2.7-2-5.3-3-8c-0.1-0.2-0.2-0.3-0.4-0.6c-0.2,0.6-0.4,1.1-0.5,1.6c-0.6,2.6-1.2,5.3-1.7,7.9" + ' ' +
+									"c-0.9,4.8-1.8,9.6-2.8,14.4c-0.4,1.9-0.8,3.8-1.2,5.7c-0.4,1.5-0.9,2.9-1.4,4.4c-0.2,0.7-0.7,1.2-1.5,1.3" + ' ' +
+									"c-0.3-0.1-0.4-0.3-0.4-0.6c0-0.3,0-0.5-0.1-0.9c-0.6,0.4-0.6,1.1-1.3,1.4c-0.5,0.1-1.2,0.1-1.9-0.1c-0.2-0.3-0.5-0.7-0.8-1.1" + ' ' +
+									"c-0.3,0.3-0.7,0.5-1,0.8c-1.7,0-3.1-0.3-4.1-2c0.3-0.4,0.6-0.7,1-1.1c0-0.2,0.1-0.6,0.2-1c0.6-0.5,1.1-1.1,0.8-2" + ' ' +
+									"c0.2-0.5,0.2-1,0.2-1.5c0-0.5,0.2-1,0.6-1.4c0.2-0.3,0.4-0.6,0.5-1c0.3-1.1,0.5-2.2,0.7-3.3c0.1-0.2,0.1-0.4,0.2-0.7" + ' ' +
+									"c-0.4-0.9-0.5-1.7,0.4-2.4c0.3-0.3,0.3-0.3,0.3-1.2c-0.1-0.1-0.2-0.1-0.4-0.3c0.1-0.9,0.3-1.9,1-2.6c-0.1-0.3-0.1-0.5-0.2-0.8" + ' ' +
+									"c0.1-0.2,0.3-0.4,0.4-0.7c0-0.1,0-0.3,0-0.4c-0.4-1.2,0.1-2.4,0.3-3.6c0.6-0.5,0.7-1.1,0.8-1.8c-0.1-0.1-0.1-0.2-0.3-0.5" + ' ' +
+									"c-0.1-1.1,0.3-2.3,1-3.3C20.7,29,20.2,28.5,20.6,28c0.1,0,0.1,0,0.1,0.1C20.6,28.1,20.6,28,20.6,28z M22,44.6" + ' ' +
+									"c0-0.1,0.1-0.2,0.1-0.1C22.1,44.4,22,44.5,22,44.6c0,0.1-0.1,0.2,0,0.1C21.9,44.8,22,44.7,22,44.6z M27.9,33.6" + ' ' +
+									"c0.2-0.3,0.3-0.5,0-1.1C27.9,33.1,27.9,33.4,27.9,33.6c-0.4,0.6-0.4,1.3-0.5,2.1C27.8,35,27.8,34.3,27.9,33.6z M41.6,28.3" + ' ' +
+									"c0.1,1.2,0.6,2.3,1.3,3.5c0.2-1.1-0.6-1.8-0.8-2.6C42.1,28.9,42,28.5,41.6,28.3c0-0.2,0-0.5-0.3-0.6c0.2-0.4,0-0.8-0.2-1.2" + ' ' +
+									"c-0.4-1.1-0.8-2.2-1.1-3.3c-0.8-2.7-1.8-5.4-2.8-8c0-0.1-0.2-0.1-0.4-0.3c0.3,1.4,0.7,2.6,1.1,3.8c0.2,0.4,0.3,0.8,0.5,1.2" + ' ' +
+									"c0.7,2.6,1.8,5.1,2.7,7.6c0,0.1,0.2,0.2,0.3,0.3C41.4,27.9,41.3,28.2,41.6,28.3z M61.3,68.7c0,0,0.1,0,0.1,0c0-0.3,0-0.5,0.1-0.8" + ' ' +
+									"c0.1-0.9-0.2-1.8-0.2-2.6c0-1.3,0-2.6,0-3.9c0-0.5,0-0.9-0.1-1.4c-0.1-0.6-0.1-1.3-0.2-1.9c-0.2-1.1,0.1-2.2,0-3.3" + ' ' +
+									"c0-0.6-0.1-1.2-0.1-1.8c0-1.2,0-2.4,0.1-3.6c0.1-1.4,0.1-2.8,0.2-4.2c0-0.7,0.1-1.4-0.1-2.1c-0.1-0.3-0.2-0.6-0.1-0.8" + ' ' +
+									"c0.3-0.8,0.2-1.6,0.2-2.3c0.1-2.2,0.1-4.4,0.2-6.6c0.1-3.7,0-7.5,0.3-11.2c0-0.6,0-1.1,0.1-1.7c0.1-1,0.1-1.2-0.3-2.4" + ' ' +
+									"c-0.1,0.4-0.2,0.7-0.3,1c-0.1,1.8-0.3,3.5-0.4,5.3c-0.1,2.3-0.1,4.6-0.2,6.9c-0.1,3.2-0.1,6.3-0.2,9.5c0,3.9,0.1,7.8,0.1,11.8" + ' ' +
+									"c0,2.9,0.1,5.8,0.2,8.7c0.1,1.1,0.2,2.2,0.3,3.3C61.1,65.8,61.2,67.2,61.3,68.7z M57.5,66.6c0.1-0.9,0.1-1.4,0-1.9" + ' ' +
+									"c-0.1-0.6-0.2-1.2-0.2-1.8c0.1-2-0.1-3.9-0.1-5.9c-0.1-3.7-0.1-7.4-0.1-11.1c0-4.2,0-8.4,0-12.6c0-0.4,0-0.8-0.1-1.2" + ' ' +
+									"c-0.2,0.3-0.2,0.6-0.2,1c0,2.5-0.2,5-0.2,7.5c0,1.3-0.1,2.7-0.1,4c0,2.6,0,5.1,0,7.7c0,2.5,0.1,4.9,0.2,7.4c0,0.7,0,1.5,0.1,2.2" + ' ' +
+									"c0.1,1.3,0.2,2.6,0.3,3.9C57.1,66.1,57.3,66.2,57.5,66.6z M57.2,67c-0.1,0.9,0.1,2.1,0.5,2.8c0-1-0.1-1.8-0.3-2.7" + ' ' +
+									"C57.4,67.1,57.3,67,57.2,67z M57,30.2c0-0.6,0-1.1,0-1.6c-0.1,0.5-0.2,0.9-0.2,1.4C56.8,30.1,56.9,30.1,57,30.2z M30.2,23.5" + ' ' +
+									"c0,0.3-0.1,0.5-0.1,0.8c0,0.2-0.3,0.4,0,0.8C30.4,24.5,30.3,24,30.2,23.5z M29.2,28c0.4-0.2,0.4-0.5,0.5-0.7" + ' ' +
+									"c0.1-0.2,0.1-0.4,0.1-0.7C29.3,26.9,29.2,27.4,29.2,28z M23.5,36.4C23.5,36.4,23.5,36.4,23.5,36.4c0-0.2,0-0.3,0-0.5c0,0,0,0,0,0" + ' ' +
+									"C23.5,36.1,23.5,36.2,23.5,36.4z M52.5,38.4c0,0-0.1,0-0.1,0c0,0.1,0,0.3,0,0.4c0,0,0.1,0,0.1,0C52.5,38.6,52.5,38.5,52.5,38.4z" + ' ' +
+									 "M56.9,31.5C56.9,31.5,56.9,31.5,56.9,31.5c0.1-0.1,0.1-0.3,0.1-0.4c0,0-0.1,0-0.1,0C56.9,31.2,56.9,31.3,56.9,31.5z M25.6,27" + ' ' +
+									"c0,0,0-0.1,0-0.1c0,0-0.1,0.1-0.1,0.1c0,0,0,0.1,0,0.1C25.5,27.1,25.5,27.1,25.6,27z M23.8,34.6C23.8,34.5,23.9,34.5,23.8,34.6" + ' ' +
+									"c0-0.1,0-0.1,0-0.1C23.8,34.5,23.8,34.5,23.8,34.6C23.8,34.5,23.8,34.5,23.8,34.6z M52.5,36.2l0-0.1L52.5,36.2L52.5,36.2z" + ' ' +
+									 "M22.4,41.9C22.4,41.9,22.5,41.9,22.4,41.9c0.1-0.1,0.1-0.1,0.1-0.1c0,0-0.1,0-0.1,0C22.4,41.8,22.4,41.9,22.4,41.9z"}), 
+								React.createElement("path", {d: "M175.4,54.9c0.3-0.5,0.3-1,0.2-1.5c-0.3-1.5,0.1-2.9,0.2-4.3c0.3-0.2,0.6-0.3,0.9-0.5" + ' ' +
+									"c0.4,0.1,0.8,0.2,1.3,0.3c0.6,1,0.7,2.1,0.9,3.3c0.2-0.4,0.4-0.7,0.5-1.1c0.1-0.4,0.2-0.8,0.3-1.2c0.1-0.4,0.2-0.7,0.3-1.1" + ' ' +
+									"c0.5,0,0.4,0.4,0.4,0.6c0.1,1,0.1,2.1,0.2,3.1c0.3,2.4,1,4.7,2.3,6.8c0.3,0.4,0.5,0.9,1,1.1c0.1,0,0.2,0,0.2-0.1" + ' ' +
+									"c0.9-1,1.8-2,2.6-3.1c0.8-1.1,1.1-2.4,1.4-3.6c0.1-0.4,0.2-0.8,0.5-1.1c0.6-0.6,0.6-1.3,0.6-2.1c-0.2-3.5-1.7-6.3-4.2-8.7" + ' ' +
+									"c-2.4-2.2-5.1-3.8-8.1-4.8c-0.4-0.1-0.7-0.3-1-0.4c-0.6-0.2-1.2-0.5-1.8-0.7c-1.9-0.6-3.7-1.5-5.6-2.3c-1-0.4-1.7-1.2-2-2.2" + ' ' +
+									"c-0.1-0.4-0.2-0.8-0.3-1.1c0.1-1.1,0.1-2.1,0.2-3.1c0-0.6,0.1-1.1,0.2-1.7c0.1-0.5,0.2-0.9,0.4-1.3c0.3-0.8,0.5-1.7,0.9-2.5" + ' ' +
+									"c0.6-1.4,1.5-2.5,2.1-3.8c0.2-0.4,0.6-0.7,1-1c2.5-2.4,5.5-3.6,8.8-4.1c0.3,0,0.5,0,0.8,0.1c0.9,0.1,1.8,0.2,2.8-0.1" + ' ' +
+									"c0.6-0.2,1.3-0.1,1.9,0.1c1.4,0.4,2.7,0.9,4,1.6c0.3,0.2,0.6,0.3,0.8,0.6c2,1.8,3.6,3.9,4.7,6.4c0.1,0.2,0.2,0.3,0.2,0.5" + ' ' +
+									"c0.3,0.2,0.6,0.2,1,0.1c0.8-0.3,1.6-0.6,2.4-0.8c0.5-0.1,1-0.2,1.5-0.4c0.4-0.1,0.8-0.2,1.2-0.3c0.3-0.1,0.5-0.2,0.8-0.2" + ' ' +
+									"c1.2-0.1,2.2-0.6,3.4-0.9c0.9-0.2,1.7-0.4,2.1-1.3c0.5-0.1,0.9-0.2,1.3-0.3c0.1,0,0.2-0.1,0.3,0c0.8,0.5,1.5-0.1,2.3-0.1" + ' ' +
+									"c0.5,0,1-0.3,1.5-0.1c0.1,0,0.3,0,0.4,0c0.8-0.2,1.7-0.3,2.5-0.5c1.7-0.5,3.5-0.8,5.3-1.2c1-0.2,1.9-0.5,2.8-0.8" + ' ' +
+									"c1.1-0.4,2.2-0.7,3.4-0.8c0.7-0.1,1.3-0.4,2.1-0.3c1,0.1,1,0.1,2,0.6c0.1,0,0.3,0,0.5-0.1c0.2,0,0.4-0.1,0.5-0.1" + ' ' +
+									"c0.3,0.1,0.5,0.3,0.7,0.4c0.3,0.1,0.5,0,0.8,0.1c0,0.8-0.4,1.3-1.1,1.7c-1.6,0.9-3.2,1.4-4.9,1.9c-1.4,0.4-2.8,0.8-4.2,1.2" + ' ' +
+									"c-2.4,0.7-4.8,1.3-7.2,2c-0.4,0.1-0.7,0.2-1.1,0.4c-0.1,0.3-0.1,0.6-0.2,0.9c0,1.7-0.1,3.4-0.1,5c0,1.2-0.1,2.4-0.1,3.6" + ' ' +
+									"c0,1.2-0.1,2.3-0.1,3.5c-0.1,2.5-0.3,5-0.4,7.6c0,0.2,0,0.5-0.1,0.7c-0.1,3.5-0.5,7-0.4,10.5c0,1.3,0,2.5,0.3,3.7" + ' ' +
+									"c0.2,1.2,0,2.4,0,3.6c-0.4,0.5-0.7,0.9-1.1,1.3c-0.1,0.1-0.2,0.1-0.3,0.1c-0.6-0.3-0.7-1-0.7-1.8c-0.4,0.4-0.6,0.8-0.9,1.1" + ' ' +
+									"c-0.5,0.1-0.9,0.1-1.4,0.2c-0.6-0.3-1.2-0.5-1.5-1c-0.7,0-1.3,0.1-1.8,0c-0.6-0.1-1.2-0.2-1.6-0.5c-0.4-0.7-0.4-1.5-0.2-2.1" + ' ' +
+									"c0.4-1.2,0.3-2.5,0.3-3.8c0-1.4-0.1-2.7-0.1-4.1c0-0.6,0-1.1,0-1.7c0.2-1.9,0.3-3.9,0.3-5.8c0-0.5,0.1-1,0.2-1.6" + ' ' +
+									"c-0.1-0.1-0.2-0.2-0.4-0.3c0-0.4,0-0.9,0.1-1.3c0.1-0.7,0.2-1.4,0.1-2.1c-0.1-0.7,0-1.4,0.2-2.1c0.2-0.6,0.2-1.3,0.1-1.9" + ' ' +
+									"c-0.1-1,0-2.1,0.3-3c0.2-0.8,0.3-1.6,0.3-2.3c0-0.9-0.1-1.9,0.1-2.8c0-0.2-0.1-0.4-0.1-0.6c-0.3,0-0.6-0.1-0.8,0" + ' ' +
+									"c-0.4,0.1-0.8,0.3-1.2,0.5c-0.7,0.3-1.3,0.4-1.9,0c-0.9,0.2-1.6,0.4-2.2,0.5c-0.9-0.2-1.4-0.6-1.8-1.3c-0.8,0.1-1.4,0.8-2.3,0.1" + ' ' +
+									"c-0.1,0.4-0.2,0.6-0.2,0.7c0.2,0.9-0.1,1.7-0.2,2.5c-0.1,0.7-0.3,1.3-0.9,1.7c-0.7-0.1-1.1-0.5-1.5-1c-0.4,0.3-0.8,0.6-1.2,0.9" + ' ' +
+									"c-0.6-0.1-1.1-0.1-1.6-0.2c-0.3-0.4-0.7-0.7-1.1-1.2c-0.5,0.2-1,0.5-1.6,0.1c-0.4-0.9-1-1.8-1.2-2.8c0-0.2-0.2-0.4-0.2-0.6" + ' ' +
+									"c-0.3-0.7-0.6-1.5-0.8-2.2c-0.4-1.6-1.3-2.9-2.4-4.1c-0.2-0.2-0.5-0.4-0.8-0.6c-0.3,0.2-0.6,0.3-0.8,0.5c-1.5,1.1-2.6,2.7-3.5,4.3" + ' ' +
+									"c-0.7,1.3-1.2,2.6-1.6,4c-0.3,1.1-0.5,2.3-0.5,3.5c0,0.8,0.3,1.3,1,1.7c1.3,0.8,2.7,1.3,4.1,1.8c1.4,0.5,2.7,1,3.9,1.8" + ' ' +
+									"c0.5,0.4,1.2,0.5,1.7,0.9c0.2,0.1,0.5,0.3,0.7,0.4c0.5,0.5,1.1,0.9,1.7,1.1c0.2,0.1,0.4,0.3,0.5,0.4c0.1,0.1,0.2,0.3,0.4,0.4" + ' ' +
+									"c0.8,0.7,1.6,1.3,2.4,2c0.3,0.9,0.9,1.7,1.4,2.5c0.3,0.5,0.5,1,0.8,1.4c0.2,0.4,0.5,0.8,0.8,1.1c0,0,0,0-0.1,0.1c0,0,0-0.1,0-0.1" + ' ' +
+									"c0.2,0.2,0.2,0.5,0.2,0.8c-0.1,1,0.2,1.8,0.7,2.6c0.1,0.1,0.2,0.1,0.4,0.3c-0.2,0.8,0,1.7,0.1,2.8c-0.6-0.8-0.6-1.6-0.9-2.4" + ' ' +
+									"c-0.3,0.6-0.5,1-0.4,1.6c0.1,1.2-0.1,2.3-0.5,3.4c-0.4,1-0.6,2.1-0.9,3.1c-0.1,0.4-0.3,0.8-0.5,1.2c-0.2,0.4-0.4,0.8-0.6,1.2" + ' ' +
+									"c-0.2,0.4-0.2,0.8-0.4,1.1c-0.1,0.1-0.2,0.2-0.3,0.3c0,0-0.1,0-0.1,0.1c0,0,0-0.1,0-0.1c0.1-0.1,0.2-0.2,0.3-0.3" + ' ' +
+									"c0.1,0,0.2,0,0.3,0c0.8-0.6,1.6-1.2,2.1-2.2c0.3-0.5,0.6-1.1,0.9-1.6c0.5-1.1,0.5-2.3,0.7-3.4c0.1-0.4,0.1-0.8,0.1-1.2" + ' ' +
+									"c0.3,1,0.2,1.9,0,2.8c-0.1,0.7-0.2,1.3,0.1,2c-0.3,1.2-0.9,2.3-1.6,3.3c-0.9,1.3-1.8,2.5-3,3.5c-1.5,1.2-3.1,1.8-5.1,1.4" + ' ' +
+									"c-0.8-0.2-1.6-0.3-2.5-0.3c-0.8,0-1.5-0.2-2.2-0.5c-0.7-0.2-1.3-0.5-2-0.6c-1.6-0.2-2.7-1.1-3.9-2.1c-1.1-0.9-1.6-2.2-2.2-3.4" + ' ' +
+									"c-0.8-1.8-1.2-3.7-1.3-5.7c0-0.7,0.1-1.4,0.2-2c0.4-0.3,0.6-0.5,1-0.8c0.1,0.2,0.3,0.3,0.3,0.5c0.1,1.1,0.5,2.2,0.9,3.2" + ' ' +
+									"C175.2,54.7,175.4,54.8,175.4,54.9c0,0.2,0,0.4,0,0.7C175.8,55.3,175.7,55.1,175.4,54.9z M209.1,31.4c0.3-0.3,0.2-0.6,0.2-0.9" + ' ' +
+									"c0-1.6,0-3.3,0-4.9c0-0.2,0-0.4,0-0.6c-0.2,0.4-0.2,0.7-0.2,1.1c-0.1,1.3,0.1,2.6-0.2,3.9C209.1,30.4,208.9,31,209.1,31.4" + ' ' +
+									"c0,0.1-0.2,0.2-0.2,0.3c0,0.5,0,0.9-0.1,1.4c-0.1,2.5-0.2,5-0.4,7.5c-0.1,2.5-0.4,5-0.5,7.5c-0.1,2.5,0,4.9,0,7.4" + ' ' +
+									"c0,0.2,0,0.3,0.1,0.7c0.1-0.3,0.2-0.4,0.2-0.5c0-0.7,0-1.5,0-2.2c0.1-2.1-0.1-4.3,0.3-6.4c0-0.2,0-0.5,0-0.7" + ' ' +
+									"c0.1-1.3,0.1-2.7,0.2-4c0.2-2.8,0.4-5.6,0.3-8.4c0-0.3,0-0.7,0.1-1C209.4,32.5,209.3,31.9,209.1,31.4z M211.7,54.5" + ' ' +
+									"c0.1,0,0.2,0,0.3,0c0-0.2,0.1-0.4,0.1-0.6c0.1-2.4,0.2-4.8,0.3-7.3c0.1-2.4,0.2-4.8,0.4-7.3c0.1-2.4,0.3-4.7,0.4-7.1" + ' ' +
+									"c0.1-2.9,0-5.9,0-8.8c0-0.1-0.1-0.3-0.1-0.4c-0.2,0.8-0.3,1.6-0.4,2.3c-0.1,2.7,0,5.5-0.3,8.2c-0.3,3.2-0.4,6.3-0.6,9.5" + ' ' +
+									"c-0.1,3-0.2,6-0.3,8.9C211.7,52.8,211.7,53.7,211.7,54.5z M190.8,64.4c-1.4,0.2-1.7,0.3-2.6,0.9c0.5,0,0.8,0,1.1-0.1" + ' ' +
+									"C189.8,65,190.4,64.9,190.8,64.4z M194.9,49.8c0,0,0,0.1,0,0.1C194.9,49.9,195,49.9,194.9,49.8C195,49.8,195,49.8,194.9,49.8z"}), 
+								React.createElement("path", {d: "M355.1,59c0.3,0.7,0.3,1.3,0.3,1.9c0,1.2,0.1,2.3,0.2,3.5c0.1,0.9,0.3,1.8,0.8,2.7c0-0.2,0-0.3,0-0.5" + ' ' +
+									"c-0.2-0.7-0.2-1.5-0.2-2.2c0-0.7,0.1-1.5,0.1-2.2c0.1-0.7,0.1-1.4,0.2-2.1c0-0.3,0.2-0.5,0.2-0.7c0.5-0.5,1.1-0.3,1.6-0.4" + ' ' +
+									"c0.2,0.9,0,1.7,0.1,2.5c0.1,0.8,0.2,1.6,0.2,2.3c0.7,0.3,0.3,0.9,0.3,1.4c0.2,0,0.3-0.1,0.4-0.1c0.1-1,0.2-2,0.4-2.9" + ' ' +
+									"c0.1-0.9,0.7-1.7,1-2.6c0,0.3,0.1,0.5,0.1,0.8c0,0.7,0,1.4-0.1,2.1c-0.1,1.6,0.1,3.2,0.4,4.8c0.4,1.7,1.1,3.2,2.3,4.5" + ' ' +
+									"c0.3,0.4,0.7,0.6,1.3,0.8c0.4-0.3,0.7-0.8,1.2-1c0.6-0.3,0.8-0.7,1.1-1.2c0.1-0.1,0.2-0.2,0.1-0.3c-0.2-0.5,0.3-0.8,0.4-1.2" + ' ' +
+									"c0.1,0,0.2,0,0.3,0.1c0.4-0.4,0.7-0.8,0.9-1.3c0-0.2,0.1-0.3,0.2-0.5c1-1.5,1.4-3.2,2.1-4.9c0.1-0.4,0.3-0.8,0.5-1.3" + ' ' +
+									"c0-0.2,0-0.5,0.1-0.8c0.6-1.5,0.6-3,0.5-4.5c0-0.6,0-1.2-0.1-1.7c0-0.4-0.1-0.9-0.2-1.2c-0.4-0.9-0.7-2-1.3-2.8" + ' ' +
+									"c-1.2-1.7-2.4-3.2-4.1-4.5c-0.9-0.6-1.6-1.4-2.5-2c-1-0.7-2.1-1.3-3.3-1.7c0,0-0.1,0-0.1,0c-1.1-0.5-2.2-0.8-3.4-1.2" + ' ' +
+									"c-0.8-0.2-1.5-0.8-2.2-1.3c-0.9-0.6-1.6-1.4-2.2-2.4c-0.5-0.8-1.2-1.6-1.5-2.6c-0.3-0.9-0.6-1.7-0.9-2.6c-0.1-0.4-0.1-0.9-0.2-1.3" + ' ' +
+									"c-0.1-0.4-0.2-0.8-0.3-1.2c-0.3-1.6,0-3.2,0.7-4.7c0.5-1.2,1-2.4,1.6-3.5c0.4-0.7,1.1-1.4,1.9-1.7c1.5-0.6,3.1-1,4.7-1" + ' ' +
+									"c0.7,0,1.4-0.1,2.1-0.1c0.4,0,0.8-0.1,1.2,0c1.7,0.2,3.4,0.6,5,1.4c1,0.5,1.8,1.1,2.6,1.9c0.3,0.3,0.6,0.7,1.1,0.9" + ' ' +
+									"c0.4-0.3,0.7-0.5,1.1-0.8c0.3,0.2,0.6,0.3,1,0.4c0.1-0.4,0.2-0.7,0.2-1c0.9-0.7,0.9-0.7,2.5-0.5c1,1,0.6,2.3,0.6,3.7" + ' ' +
+									"c0.3-0.5,0.2-0.9,0.2-1.2c0-0.6-0.1-1.2,0.3-1.8c0.6-0.3,1,0.1,1.3,0.5c0.2,0.3,0.3,0.8,0.4,1.2c0,0.5,0,1.1-0.1,1.6" + ' ' +
+									"c-0.6,2.7-1,5.4-1.4,8.2c-0.1,0.7-0.1,1.5-0.1,2.2c0,1.1-0.1,1.5-1.2,2.4c-0.2-0.1-0.4-0.1-0.5-0.2c-0.2-0.1-0.3-0.2-0.5-0.3" + ' ' +
+									"c-0.5,0.3-1,0.5-1.4,0.8c-0.8,0-1.3-0.4-1.8-0.6c-1.2,0.3-2.3,0.2-3.3-0.3c-0.5-0.3-0.9-0.8-0.9-1.4c0-0.5,0-0.9,0-1.4" + ' ' +
+									"c-0.1-1.2-0.4-2.3-0.7-3.4c-0.3-0.8-0.5-1.7-0.7-2.5c-0.4-1.4-1.1-2.6-2.2-3.7c-0.5-0.5-1-1.1-1.7-1.4c-0.2-0.1-0.5-0.1-0.7-0.2" + ' ' +
+									"c-0.7,0.4-1,1.1-1.3,1.7c-0.5,1.1-0.7,2.3-0.9,3.5c-0.1,1,0.1,1.9,0.2,2.8c0,0.4,0.2,0.8,0.2,1.2c0.4,2,1.4,3.8,2.7,5.4" + ' ' +
+									"c0.3,0.4,0.7,0.6,1.2,0.8c1.8,0.7,3.5,1.4,5.2,2.3c1.8,0.9,3.4,2,5,3.2c1,0.8,2,1.7,2.9,2.5c1.1,1.1,2.1,2.3,2.9,3.6" + ' ' +
+									"c1.6,2.5,2.2,5.2,1.8,8.2c-0.3,2.4-0.9,4.7-1.8,6.9c-0.9,2.2-2,4.4-3.2,6.4c-0.8,1.3-1.6,2.5-2.6,3.6c-1.6,1.7-3.6,2.4-5.9,2" + ' ' +
+									"c-0.4-0.1-0.8-0.1-1.2-0.1c-1.3-0.2-2.6-0.3-3.9-0.3c-0.5,0-1.1-0.2-1.6-0.2c-0.6-0.1-1.2-0.4-1.7-0.6c-2.3-1-4.1-2.6-5.5-4.7" + ' ' +
+									"c-0.4-0.6-0.6-1.3-0.8-2.1c-0.4-1.6-0.5-3.2-0.2-4.8c0.1-0.6,0.2-1.3,0.4-1.9c0.3-0.9,0.8-1.6,1.2-2.4" + ' ' +
+									"C354.5,59.5,354.8,59.3,355.1,59z M375.4,69C375.4,69.1,375.4,69.1,375.4,69C375.4,69.1,375.4,69.1,375.4,69" + ' ' +
+									"C375.3,69.1,375.4,69,375.4,69z M374.4,71c0,0-0.1,0-0.1,0c0,0,0,0,0,0.1C374.3,71.1,374.3,71.1,374.4,71c0.4-0.3,0.5-0.6,0.5-1.3" + ' ' +
+									"C374.5,70.2,374.4,70.6,374.4,71z M376.1,25.8c0.3-0.3,0.2-0.6,0.1-1C376.2,25.1,376.1,25.5,376.1,25.8c-0.4,0.5-0.2,1-0.1,1.4" + ' ' +
+									"C376,26.8,376.1,26.3,376.1,25.8z M375.9,67.8C375.8,67.8,375.8,67.9,375.9,67.8C375.8,67.8,375.8,67.8,375.9,67.8" + ' ' +
+									"c0.1,0,0.2,0.1,0.4,0.1c0-0.4,0-0.8,0-1.2c0.2,0.1,0.4,0.2,0.6,0.3c0.3-0.9,0.5-1.8,0.8-2.6c0.2,0.1,0.3,0.1,0.4,0.1" + ' ' +
+									"c0.5-1.1,0.9-2.1,1-3.3l0,0c0.4-0.4,0.2-0.7,0.1-1.1c0-0.1,0.1-0.1,0.1-0.2c0.1,0,0.2,0.1,0.3,0.1c0.4-0.4-0.3-0.6-0.1-1" + ' ' +
+									"c0.1,0,0.2-0.1,0.4-0.2c0-0.2,0.2-0.5,0.1-0.6c-0.3-0.4-0.2-0.9-0.2-1.4c0-0.6,0-1.2-0.1-1.7c0-0.2,0-0.3-0.2-0.4" + ' ' +
+									"c-0.2,0.4,0.1,0.8-0.1,1.2c-0.1,0.1-0.3,0.1-0.3,0.2c-0.1,0.9-0.3,1.7-0.4,2.5c-0.1,0.5-0.1,1-0.2,1.5c-0.2,0.9-0.5,1.8-0.8,2.7" + ' ' +
+									"c-0.1,0.2-0.2,0.5-0.2,0.7c0,0.7-0.3,1.3-0.5,1.9c-0.2,0.5-0.3,0.9-0.5,1.4C376.1,67.1,375.8,67.4,375.9,67.8z M353.9,26.8" + ' ' +
+									"C353.8,26.8,353.8,26.8,353.9,26.8c-0.1,0.3-0.1,0.5-0.1,0.8c0,0,0,0,0.1,0C353.9,27.3,353.9,27,353.9,26.8z M353.8,28.2" + ' ' +
+									"L353.8,28.2l0,0.1L353.8,28.2z"}), 
+								React.createElement("path", {d: "M417.6,58.9c-0.6,0.9-1.4,1.6-2.3,2.2c-1.3,1-2.6,2-4,3c-2.4,1.8-4.9,3.4-7.5,4.7" + ' ' +
+									"c-0.9,0.5-1.8,0.7-2.8,0.9c-0.7,0.1-1.5,0.1-2.2,0.5c-0.3,0.2-0.8,0.1-1.1-0.1c-0.4-0.3-0.8-0.3-1.2-0.3c-0.1,0-0.2,0-0.2,0" + ' ' +
+									"c-1,0-1.9-0.1-2.5-0.9c-1.5,0-1.5-0.1-2.9-0.6c-0.2-0.4-0.5-0.8-0.7-1.2c-0.1-0.2-0.2-0.5-0.2-0.7c-0.1-0.6-0.2-1.3-0.4-1.9" + ' ' +
+									"c-0.2-0.8-0.3-1.5-0.1-2.3c0.1-0.3,0-0.6,0-0.9c-0.2-0.6-0.1-1.1-0.1-1.7c0.1-1.4,0.1-2.7,0.1-4.1c0-1.3,0-2.6,0-4" + ' ' +
+									"c0.1-1.5,0.2-3,0.3-4.6c0.1-1.4,0.2-2.9,0.3-4.3c0.1-0.7,0.2-1.4,0.2-2.1c0.1-1.3,0.1-2.6,0.2-3.9c-0.3-0.5-0.5-1-0.8-1.5" + ' ' +
+									"c-0.4,0.1-0.7,0.1-1.1,0.2c-0.4-0.3-0.6-0.7-0.6-1.3c0.5-1.3,2-1.6,3.1-2.3c0.1-0.4,0.3-0.8,0.3-1.3c0.3-1.7,1.5-2.3,3-1.4" + ' ' +
+									"c0.1,0.1,0.2,0.1,0.4,0.2c0.7-0.2,1.5-0.1,2.2-0.7c0.1-0.1,0.2-0.1,0.3-0.1c0.5,0.1,0.9-0.2,1.3-0.4c1.1-0.5,2.1-1.1,3.1-1.8" + ' ' +
+									"c0.1-0.1,0.3-0.2,0.4-0.3c0.6-0.2,1.1-0.6,1.7-1c1.8-1.3,3.7-2.6,5.7-3.8c1.2-0.7,2.4-1.3,3.5-2c0.7-0.4,1.3-0.9,2.1-1.5" + ' ' +
+									"c0.8,0,1.8-0.1,2.8-0.1c0.2,0.3,0.4,0.6,0.7,0.9c0.5-0.1,1-0.2,1.4-0.3c0.7,0.9,0.7,0.9,1.3,1.1c-0.1,0.4-0.2,0.9-0.4,1.3l0,0" + ' ' +
+									"c-0.6,0.4-1.1,0.8-1.7,1.2c-0.1,0.1-0.2,0.2-0.3,0.3c-0.4,0-0.7,0.2-1,0.5c-0.3,0-0.6,0.1-0.7,0.5c-0.2-0.1-0.4-0.1-0.5,0.2" + ' ' +
+									"c-0.2,0.1-0.6,0-0.5,0.5c0.2-0.2,0.4-0.4,0.5-0.5c0.2,0.1,0.4,0,0.5-0.2c0.3-0.1,0.7-0.1,0.7-0.5c0.4,0,0.8,0,1-0.5" + ' ' +
+									"c0.4,0,0.7-0.1,1.2-0.1c-1,0.7-1.8,1.3-2.7,1.7c-0.4,0.2-0.8,0.4-1.2,0.7c-2.1,1.7-4.5,3.1-6.8,4.6c-1.9,1.3-4,2.4-6.1,3.4" + ' ' +
+									"c-1.1,0.5-2.2,1.1-3.3,1.7c-0.4,0.2-0.7,0.5-1,0.7c-0.8,4.4-1.1,8.8-1.3,13.2c0,0.1,0.1,0.3,0.1,0.5c0.5-0.1,0.8-0.3,1.2-0.5" + ' ' +
+									"c1.3-0.7,2.5-1.6,3.7-2.5c0.8-0.6,1.6-1,2.2-1.8c0.3-0.4,0.8-0.6,1.3-0.9c0.1-0.1,0.3-0.2,0.4-0.3c1.2-1.5,2.7-2.8,4.2-4" + ' ' +
+									"c1-0.9,2-1.7,3-2.6c1.1-0.9,2.4-1.3,3.7-1.5c0.3,0,0.6-0.1,0.9-0.1c0.5-0.1,1.1-0.1,1.6-0.2c0.4,0.3,0.7,0.6,1,0.8" + ' ' +
+									"c0.6,0,1.1-0.1,1.6-0.1c0.6,0.3,0.6,0.9,0.6,1.5c-0.5,0.6-1.2,1.2-1.9,1.7c-1.2,0.8-2.4,1.5-3.4,2.6c-0.9,1-2.1,1.7-3.1,2.6" + ' ' +
+									"c-0.4,0.3-0.9,0.6-1,1.2c-0.6,0.1-0.6,0.1-0.7,0.7c0,0-0.1,0-0.1,0.1c0,0,0-0.1,0-0.1c0.4-0.1,0.7-0.3,0.7-0.7" + ' ' +
+									"c0.2,0,0.3,0,0.5-0.1c0.5-0.3,1-0.7,1.5-1.1c0.4-0.3,0.7-0.6,1.1-0.8c1.1-0.9,2.1-1.7,3.2-2.6c0.1-0.1,0.2-0.1,0.3-0.1" + ' ' +
+									"c-0.3,0.8-1.7,2.2-2.9,3.1c-0.4,0.9-1.2,1.4-1.9,2c-0.4,0.4-0.8,0.7-1.1,1.1c-0.1,0.2-0.3,0.3-0.4,0.4c-1,0.8-2,1.6-3,2.4" + ' ' +
+									"c-0.3,0.3-0.6,0.5-0.9,0.8c-0.1,0.1-0.2,0.2-0.3,0.2c-1,0.5-1.7,1.3-2.7,1.8c-0.9,0.5-1.9,1-2.9,1.5c-1.1,0.5-2.3,0.8-3.4,1.1" + ' ' +
+									"c-0.8,0.2-1.7,0.2-2.6,0.2c-0.1,0-0.1,0.1-0.3,0.1c-0.1,3.1-0.1,6.2,0.1,9.2c0,0.5,0,1,0.4,1.5c0.7-0.1,1.3-0.4,1.9-0.8" + ' ' +
+									"c1.1-0.7,2.2-1.5,3.2-2.3c0.7-0.6,1.5-1.2,2.2-1.8c0.5-0.4,1-0.9,1.6-1.4c0.6-0.6,1.3-1,2-1.4c0.9-0.5,1.8-1.2,2.7-1.8" + ' ' +
+									"c0.5-0.3,0.9-0.5,1.5-0.7c0.8-0.2,1.6-0.3,2.3-0.8c0.2-0.1,0.5-0.1,0.7-0.2c0.2,0.2,0.5,0.5,0.7,0.7c0.6,0,1.1-0.5,1.7-0.3" + ' ' +
+									"c0.2,0.1,0.3,0.4,0.3,0.6c0,0.3-0.1,0.6-0.2,1c0.1,0.1,0.2,0.1,0.4,0.2c0,0.1,0,0.2,0,0.2c-0.2,0.3-0.5,0.7-0.8,1.1" + ' ' +
+									"c-0.5,0.4-1.2,0.7-1.7,1.4C417.1,58.8,417.3,58.8,417.6,58.9L417.6,58.9z M409.9,27.5C409.9,27.5,409.9,27.5,409.9,27.5" + ' ' +
+									"C409.9,27.5,409.9,27.5,409.9,27.5C409.9,27.6,409.9,27.6,409.9,27.5C409.8,27.6,409.9,27.5,409.9,27.5z M414.1,24.8" + ' ' +
+									"C414.1,24.8,414.2,24.7,414.1,24.8c0,0.1-0.1,0.2-0.2,0.3c-0.6,0-1.1,0.1-1.2,0.7c-0.2,0.1-0.4,0.1-0.6,0.2" + ' ' +
+									"c-0.4,0-0.6,0.2-0.7,0.5c-0.3,0-0.5,0.2-0.7,0.5c0,0,0,0-0.1,0.1c0,0,0-0.1,0-0.1c0.3,0,0.6-0.1,0.7-0.5c0.4,0,0.7-0.1,0.7-0.5" + ' ' +
+									"c0.2-0.1,0.4-0.1,0.6-0.2c0.5-0.1,0.8-0.5,1.2-0.7C413.9,25,414,24.9,414.1,24.8z M392.7,63.9c0,0,0.1,0,0.1,0" + ' ' +
+									"c0-0.3-0.1-0.6-0.1-0.9c0-0.4,0.1-0.7,0-1.1c-0.1-2.1-0.1-4.3,0-6.4c0-0.9,0-1.8,0-2.7c0-0.2,0.1-0.5-0.3-0.6" + ' ' +
+									"c-0.1,0.1-0.2,0.1-0.2,0.1c-0.2,3.8-0.2,7.5,0.2,11.2C392.6,63.6,392.7,63.7,392.7,63.9z M396.9,37.8c-0.4,0.3-0.4,0.6-0.4,0.9" + ' ' +
+									"c-0.1,1.5-0.3,3-0.4,4.4c-0.1,1.8-0.2,3.6-0.2,5.4c0,0.1,0.1,0.3,0.2,0.5c0.1-0.3,0.3-0.4,0.3-0.5c0-0.4,0.1-0.7,0.1-1.1" + ' ' +
+									"c0-2.9,0.2-5.8,0.5-8.6C397,38.5,396.9,38.2,396.9,37.8z M393.5,37.6c-0.3,0.5-0.4,0.8-0.4,1.2c0,0.5,0,1.1-0.1,1.6" + ' ' +
+									"c-0.4,2.9-0.4,5.8-0.5,8.6c0,0.1,0,0.3,0.3,0.3c0.1-0.3,0.1-0.5,0.2-0.8c0-0.7,0.1-1.5,0.1-2.2c0.1-1.5,0.2-3,0.2-4.6" + ' ' +
+									"C393.3,40.5,393.4,39.1,393.5,37.6z M396,53.9c-0.3,1-0.2,1.9-0.2,2.9c0,0.9,0,1.9,0.1,2.8c0.1,1,0.2,1.9,0.3,3.2" + ' ' +
+									"C396.3,59.6,396.3,54.9,396,53.9z M414.4,60.2c-1.3,0.7-2.5,1.5-3.7,2.6c0.3,0,0.5,0,0.7,0C412.3,61.8,413.6,61.3,414.4,60.2z" + ' ' +
+									 "M396.3,63.4L396.3,63.4L396.3,63.4L396.3,63.4z M392.9,64.7c0-0.1,0-0.1,0-0.2c0,0-0.1,0-0.1,0C392.8,64.6,392.8,64.6,392.9,64.7" + ' ' +
+									"z M415.5,23.9L415.5,23.9L415.5,23.9L415.5,23.9z M409.2,27.9L409.2,27.9L409.2,27.9L409.2,27.9z"}), 
+								React.createElement("path", {d: "M302.9,19.7c1-0.1,2-0.2,2.9-0.3c0.2,0,0.5-0.1,0.7,0c0.9,0.1,1.8-0.1,2.7,0.2c0.1,0,0.4-0.1,0.6-0.2" + ' ' +
+									"c0.3,0.4,0.8,0.6,1.2,0.7c0.7,0.1,1.2,0.4,1.6,0.9c1.4,1.6,2.6,3.2,3.3,5.2c0.2,0.6,0.4,1.2,0.5,1.8c0,0.5,0.1,1,0.3,1.5" + ' ' +
+									"c0.9,3.2,1.6,6.5,1.9,9.8c0.1,1.5,0.3,3,0.4,4.4c0,1.8-0.1,3.6-0.2,5.3c-0.2,2-0.5,3.9-1,5.9c-0.7,2.9-1.8,5.6-3.4,8.1" + ' ' +
+									"c-0.7,1-1.5,2-2.4,2.8c-1.1,0.9-2.3,1.2-3.6,1.5c-0.3,0.1-0.6,0-0.9-0.1c-0.6-0.3-1.3-0.3-1.9-0.3c-0.7,0-1.5-0.2-2.1-0.6" + ' ' +
+									"c-0.3-0.3-0.7-0.4-1.1-0.4c-1-0.1-1.8-0.6-2.4-1.3c-0.9-1.1-1.6-2.3-2-3.7c-0.2-0.6-0.4-1.2-0.6-1.8c-0.5-2.3-1-4.6-1.3-6.9" + ' ' +
+									"c-0.2-1.8-0.2-3.5-0.3-5.3c-0.1-1.8-0.2-3.6-0.3-5.4c0-0.7,0-1.5,0-2.2c0-1.4,0-2.8,0.1-4.2c0.1-1.1,0.2-2.2,0.3-3.3" + ' ' +
+									"c0-0.4,0-0.7,0.1-1.1c0.1-0.5,0.1-0.9,0.2-1.3c0.4-1.5,0.9-2.9,1.4-4.4c0.6-1.8,1.9-3.1,3.4-4.1c0.3-0.2,0.6-0.3,0.9-0.4" + ' ' +
+									"C302.2,20,302.6,19.8,302.9,19.7z M315.7,31.5L315.7,31.5L315.7,31.5L315.7,31.5L315.7,31.5z M314.7,30c0,0.4,0.1,0.7,0.1,1.1" + ' ' +
+									"c0,0.2,0,0.4,0.4,0.4C315,31,315.1,30.4,314.7,30c0-0.3,0-0.3-0.3-0.5C314.5,29.7,314.6,29.9,314.7,30z M299.5,58.8" + ' ' +
+									"c0.1-0.5,0-1-0.1-1.5c-0.2-1-0.4-1.9-0.6-2.9c-0.2-1-0.2-2-0.3-2.9c-0.1-0.5-0.1-1-0.2-1.5c-0.1-1.2,0-2.5-0.2-3.7" + ' ' +
+									"c-0.1-0.6-0.1-1.2-0.1-1.8c0-1.2,0-2.5,0.1-3.7c0-0.8,0.2-1.6,0.1-2.3c-0.1-1.3,0.1-2.6,0.3-4c0.3-2,0.6-3.9,0.9-5.9" + ' ' +
+									"c0-0.1,0-0.3,0-0.5c-0.1,0.1-0.3,0.1-0.3,0.2c-0.5,2-1,3.9-1.1,6c-0.1,1.8-0.3,3.6-0.4,5.4c0,0.5-0.1,1.1-0.1,1.6" + ' ' +
+									"c0,1,0.1,2.1,0.1,3.1c0,1-0.1,2-0.1,3c0,0.7,0.1,1.4,0.2,2.1c0.1,0.9,0.3,1.7,0.3,2.6c0,2.1,0.6,4.2,1.1,6.2" + ' ' +
+									"C299.2,58.4,299.3,58.7,299.5,58.8c0.1,0.4-0.1,0.8,0.5,1.2C299.8,59.5,299.7,59.2,299.5,58.8z M316.2,34.5c0.4-0.3,0.3-0.7,0-1" + ' ' +
+									"C316.2,33.8,316.2,34.2,316.2,34.5c-0.1-0.1-0.2-0.3-0.2-0.5c0-0.4,0.1-0.8,0.1-1.2c0-0.1,0-0.3,0-0.6c-0.3,0.2-0.5,0.3-0.8,0.4" + ' ' +
+									"c0.2,0.7,0.4,1.4,0.5,2.1c0.2,1.4,0.4,2.9,0.5,4.3c0.1,1.1,0.1,2.2,0.3,3.3c0.3,2.4,0.3,4.8,0,7.2c-0.1,1.2-0.4,2.5-0.7,3.7" + ' ' +
+									"c-0.5,2.5-1.1,4.9-2.4,7.1c-0.1,0.2-0.3,0.5-0.4,0.8c-0.1,0.2-0.4,0.4-0.2,0.8c1.1-1.1,1.4-2.5,2.1-3.7c0.1-0.6,0.2-1.3,0.5-1.8" + ' ' +
+									"c0.3-0.1,0.7-0.1,0.5-0.6c-0.1,0-0.2,0-0.3,0c0-0.4,0.2-0.7,0.4-1c0,0,0,0,0.1,0.1c0,0-0.1,0-0.1,0c0.1-0.1,0.1-0.3,0.2-0.3" + ' ' +
+									"c0.5-0.1,0.4-0.4,0.4-0.7l0,0c0.1-0.1,0.2-0.2,0.2-0.3c0.2-0.9,0.4-1.9,0.5-2.8c0.1-0.5,0.1-1-0.1-1.4c-0.1,0.3-0.1,0.7-0.1,1" + ' ' +
+									"c0,0-0.1,0-0.1,0c0-0.4,0-0.8,0.1-1.2c0.2-0.2,0.4-0.4,0.6-0.5c0.1-0.7,0.1-1.3,0.2-2c0-0.4-0.2-0.7-0.6-0.8c0-0.3,0-0.6,0-1.1" + ' ' +
+									"c0.2,0.4,0.3,0.6,0.4,0.9c0.1-0.2,0.2-0.3,0.2-0.4c-0.1-2.9-0.1-5.8-0.8-8.6c-0.2,0.1-0.3,0.1-0.4,0.1c-0.3-0.4-0.4-0.8-0.4-1.3" + ' ' +
+									"C316.2,35.2,316.2,34.8,316.2,34.5z M306.1,25.1c-0.1,0.1-0.3,0.2-0.3,0.3c-0.2,0.5-0.5,1-0.7,1.6c-1,2.9-1.5,5.9-1.9,9" + ' ' +
+									"c-0.1,0.7-0.2,1.4-0.2,2.1c-0.1,4.8-0.1,9.7,0.5,14.5c0.3,2.2,0.7,4.4,1.3,6.6c0.2,0.8,0.6,1.6,0.9,2.4c0.1,0.3,0.3,0.5,0.6,0.9" + ' ' +
+									"c0.9-0.7,1.5-1.5,2-2.4c0.6-1,1-2,1.2-3.1c0.8-2.8,1.3-5.7,1.2-8.7c0-0.7,0-1.4,0.1-2.1c0.1-0.9-0.2-1.7,0.1-2.6" + ' ' +
+									"c0-0.1,0-0.2,0-0.4c-0.2-0.8-0.1-1.6-0.3-2.3c-0.3-1.7-0.4-3.4-0.7-5.1c-0.3-1.2-0.4-2.4-0.7-3.6c-0.4-1.7-0.9-3.3-1.7-4.9" + ' ' +
+									"c-0.3-0.6-0.6-1.1-0.9-1.6C306.5,25.4,306.3,25.3,306.1,25.1z M301.4,43.3c0,1.3-0.2,2.6,0,3.9C301.5,45.8,301.4,44.5,301.4,43.3z" + ' ' +
+									 "M301.6,49c0,0.1,0,0.1,0.1,0.1c0-0.1,0.1-0.2,0.1-0.2c0-0.3,0-0.6,0-0.9c0-0.1-0.1-0.1-0.3-0.3C301.2,48.3,301.6,48.6,301.6,49z" + ' ' +
+									 "M316.4,35.3c0.2,0.4,0.3,0.5,0.4,0.7C316.9,35.7,316.9,35.5,316.4,35.3z"}), 
+								React.createElement("path", {d: "M131.1,44c-0.2,0.4-0.4,0.8-0.7,1.2c-1.2,1.3-2.4,2.5-3.5,3.8c-0.3,0.4-0.6,0.8-1,1.2" + ' ' +
+									"c-0.9,0.9-1.8,1.8-2.7,2.6c-1.6,1.5-3.3,3.1-4.9,4.6c-2.6,2.4-5.3,4.6-8.4,6.2c-1,0.5-2,0.9-3.1,1.3c-0.5,0.2-1.1,0.1-1.6,0.2" + ' ' +
+									"c-0.3-0.2-0.6-0.4-0.9-0.6c-1.4,0.3-2.6,0-3.4-1.2c-0.9,0-1.8,0.1-2.4-0.8c0.1-0.7,0.4-1.3,1.2-1.6c1.1-0.5,2.1-1,3.1-1.6" + ' ' +
+									"c0-0.2-0.1-0.4-0.2-0.6c-1,0.5-2,0.2-3,0.1c-1.1,0-2.2-1.4-1.7-2.7c0.2-0.5,0.3-1,0.4-1.5c0.1-1.5,0.1-3.1,0.2-4.6" + ' ' +
+									"c0-0.7,0.1-1.5,0.2-2.3c-0.3-0.7-0.3-1.6-0.2-2.5c0.1-0.8,0.1-1.5,0-2.2c-0.1-0.5-0.1-0.9-0.1-1.4c0-4.5,0-9,0.1-13.4" + ' ' +
+									"c0-0.9,0-1.8,0-2.7c0-0.9,0.3-1.6,0.7-2.4c0.2-0.4,0.5-0.8,0.7-1.1c-0.1-0.7-0.4-1.1-1-1.2c-0.6-0.1-1-0.5-1.3-0.9" + ' ' +
+									"c-0.1-0.5,0.1-0.8,0.5-1c0.6-0.3,1.3-0.5,2-0.7c0.3-0.1,0.6-0.1,0.9-0.3c0.6-0.3,1.3-0.4,1.8-0.6c1,0.2,1.7,0.6,2.6,0.6" + ' ' +
+									"c0.4,0,0.8,0.3,1.1,0.5c0.7,0.5,1.5,0.6,2.4,0.8c-0.4-1,0-1.8,0.3-2.7c0.9-0.4,1.4-1.4,2.4-1.7c0.6,0.8,0.6,1.6,0.4,2.6" + ' ' +
+									"c-0.2,0.3-0.5,0.7-0.8,1.1c-0.3,0.4-0.9,0.3-1,0.9c0.1,0.1,0.2,0.2,0.3,0.2c0.3,0.1,0.6,0.1,1,0.2c0.2,0.1,0.4,0.2,0.7,0.2" + ' ' +
+									"c1.6,0.1,3.1,0.8,4.8,0.9c0.4,0,0.9,0.3,1.3,0.4c1.9,0.6,3.7,1.5,5.3,2.7c0.9,0.7,1.8,1.5,2.6,2.3c0.5,0.4,1,0.9,1.5,1.3" + ' ' +
+									"c0.1,0.1,0.3,0.3,0.4,0.4c0.5,0.6,0.9,1.2,1.4,1.8c1,1,1.7,2.2,2.4,3.4c0.7,1.2,1.2,2.5,0.8,4c0,0.1,0,0.2,0,0.3" + ' ' +
+									"c0,1.8-0.8,3.2-1.8,4.6c-1.2,1.6-2.5,3.3-3.9,4.7c-0.7,0.7-1.5,1.4-2.2,2.2c-0.2,0.2-0.3,0.3-0.4,0.5c0.2,0.3,0.4,0.2,0.5,0.1" + ' ' +
+									"c1.9-1.7,3.7-3.4,5.6-5.1C130.5,44.3,130.7,44,131.1,44L131.1,44z M121,52.4C121,52.4,121,52.4,121,52.4" + ' ' +
+									"C121,52.4,121,52.4,121,52.4c0.1-0.1,0.2-0.2,0.3-0.3c0.4,0,0.7-0.2,0.8-0.5c0.1-0.1,0.2-0.2,0.3-0.3c0.1-0.1,0.2-0.2,0.3-0.3" + ' ' +
+									"c0.1-0.1,0.2-0.2,0.3-0.3c0.5-0.1,0.5-0.1,0.6-0.5c-0.3,0-0.4,0.3-0.6,0.5c-0.1,0.1-0.2,0.2-0.3,0.3c-0.1,0.1-0.2,0.2-0.3,0.3" + ' ' +
+									"c-0.2,0-0.3,0.1-0.3,0.3c-0.4,0-0.7,0.2-0.8,0.5C121.2,52.2,121.1,52.3,121,52.4z M106.4,33.3C106.4,33.3,106.4,33.3,106.4,33.3" + ' ' +
+									"C106.5,33.3,106.5,33.3,106.4,33.3c-0.3,0.5-0.2,1-0.2,1.5c0.3-0.1,0.4-0.3,0.4-0.5C106.6,33.9,106.5,33.6,106.4,33.3z" + ' ' +
+									 "M108.3,23.9c-0.1,1.1-0.2,2.1-0.2,3.1c0,2.9,0,5.8,0,8.7c0,3.5-0.1,7-0.1,10.5c0,1.3,0,2.6,0,3.9c0,0.9,0,1.8,0.5,2.5" + ' ' +
+									"c0.1,0.2,0.1,0.5,0.1,0.8c0,0.5,0,0.9,0,1.5c0.3-0.2,0.5-0.2,0.7-0.3c0.6-0.4,1.1-0.9,1.7-1.3c0.8-0.5,1.4-1.3,2.1-2" + ' ' +
+									"c0.3-0.2,0.6-0.5,0.7-1c0-0.3,0.4-0.5,0.7-0.5c0.9-0.2,1.4-0.8,1.8-1.6c0-0.1,0.1-0.3,0.2-0.4c0.6-0.6,1.2-1.1,1.8-1.7" + ' ' +
+									"c0.4-0.4,0.8-0.7,1.3-1.1c0.1,0,0.3,0,0.4,0c0.4-0.6,0.8-1.1,1.2-1.6c0.3-0.4,0.7-0.8,1-1.1c0.9-0.9,1.6-1.9,2.3-3" + ' ' +
+									"c0.3-0.5,0.5-1.1,0.7-1.7c0.1-0.4,0.1-0.9,0-1.4c-0.4-1.5-1.2-3-2.2-4.2c-1.1-1.3-2.3-2.5-3.6-3.7c-1.3-1.3-2.8-2.2-4.4-2.9" + ' ' +
+									"c-1-0.4-2-0.7-3.1-0.9c-0.9-0.2-1.8-0.3-2.8-0.5C108.9,23.9,108.7,23.9,108.3,23.9z M102.3,38.1c-0.1,0.4-0.1,0.5-0.1,0.7" + ' ' +
+									"c0,1.8-0.1,3.6-0.1,5.5c0,0.5-0.2,0.9-0.1,1.4c0.2,0.9,0.1,1.8,0,2.8c-0.1,0.9,0.1,1.8,0.3,2.7c0.1-4.2,0.2-8.5,0.2-12.7" + ' ' +
+									"C102.6,38.4,102.5,38.3,102.3,38.1z M106.3,35.4c-0.2,0.8-0.1,1.5-0.1,2.2c0,0.7,0,1.5,0,2.2c0,0.7-0.1,1.4,0,2.1" + ' ' +
+									"c0,0.7-0.1,1.4,0.1,2.1c0.1-0.6,0.1-1.1,0.1-1.7c0-1,0.2-2,0.1-2.9c-0.1-1.2-0.1-2.4,0.1-3.6C106.6,35.7,106.5,35.6,106.3,35.4z" + ' ' +
+									 "M106.6,29.1c0-1.6,0.2-3-0.1-4.4c-0.1,1.4-0.2,2.8-0.2,4.1c0,0,0,0.1,0.1,0.1C106.4,29,106.4,29,106.6,29.1z M106.2,45.9" + ' ' +
+									"c0.1,0,0.1,0,0.2,0c0-0.3,0-0.6,0-0.9c0-0.1,0-0.4-0.3-0.3C106.1,45.1,106.1,45.5,106.2,45.9z M102.3,32.8c0.1,0,0.1,0,0.2,0" + ' ' +
+									"c0-0.5,0-0.9-0.1-1.4c0,0-0.1,0-0.1,0C102.3,31.9,102.3,32.3,102.3,32.8z M106.1,49.2c0.3-0.3,0.4-0.5,0-0.7" + ' ' +
+									"C105.9,48.7,105.9,48.9,106.1,49.2z M106.2,47.7C106.2,47.7,106.3,47.7,106.2,47.7c0.1-0.2,0.1-0.4,0.1-0.6c0,0-0.1,0-0.1,0" + ' ' +
+									"C106.2,47.2,106.2,47.5,106.2,47.7z M102.4,36.6c-0.2,0.3-0.2,0.4,0.2,0.6C102.5,36.9,102.5,36.8,102.4,36.6z M106.5,32.3" + ' ' +
+									"c0-0.1,0-0.1,0-0.2c0,0-0.1,0-0.1,0C106.5,32.2,106.5,32.2,106.5,32.3z M106.5,30.8c0,0,0,0.1,0,0.1c0,0,0,0,0.1,0" + ' ' +
+									"C106.6,30.9,106.6,30.8,106.5,30.8C106.6,30.8,106.5,30.8,106.5,30.8z M106.3,49.8L106.3,49.8l0,0.1L106.3,49.8z"}), 
+								React.createElement("path", {d: "M338.5,61.1c0.2-0.1,0.4-0.2,0.4-0.4c0.6-1.2,1.1-2.5,1.4-3.8c0.2-1.1,0.6-2.2,0.8-3.4" + ' ' +
+									"c0.3-1.5,0.6-3.1,0.8-4.6c0.3-1.8,0.5-3.6,0.5-5.4c0-0.7,0.2-1.3,0-2c-0.1-0.3,0.1-0.6,0.1-0.9c0-0.4,0.1-0.8,0-1.1" + ' ' +
+									"c-0.2-0.7-0.1-1.3,0-2c0-0.6,0.1-1.2,0.1-1.9c0-0.5,0-0.9-0.3-1.3c-0.3-0.6-0.3-1.2,0-1.8c0.1-0.2,0.1-0.4,0.1-0.7" + ' ' +
+									"c-0.1-1.1-0.1-2.1-0.1-3.2c0-0.6,0-1.1,0.2-1.7c0.2-0.5,0.1-1.1,0.3-1.7c0.1,0.4,0.1,0.9,0.2,1.3c0.2,2.5,0.4,5,0.5,7.6" + ' ' +
+									"c0.1,1.9,0.1,3.8,0.1,5.7c0,2.6,0,5.2-0.3,7.8c-0.2,1.8-0.5,3.6-0.8,5.4c-0.3,1.6-0.6,3.2-1.1,4.7c-0.7,2.6-1.7,5-3.2,7.2" + ' ' +
+									"c-1,1.5-2.3,2.7-4,3.4c-0.3,0.1-0.7,0.3-1,0.5c-0.3-0.2-0.6-0.4-0.9-0.7c-0.1,0-0.2,0-0.4,0c-2,0.5-1.7,0.3-3.2-0.5" + ' ' +
+									"c-0.3,0-0.6,0.1-0.7,0.1c-1.4-0.1-2-0.9-2.5-1.9c-0.5-1.1-0.9-2.1-1.1-3.3c-0.1-0.6-0.2-1.2-0.3-1.8c-0.1-0.4-0.1-0.9-0.2-1.4" + ' ' +
+									"c-0.1-0.4-0.1-0.9-0.2-1.3c0-0.2-0.1-0.3-0.1-0.5c-0.1-0.9-0.2-1.7-0.1-2.6c0-1.7-0.2-3.5-0.3-5.2c0-0.8,0-1.6,0-2.4" + ' ' +
+									"c0-0.2,0-0.3,0-0.5c0.1-0.8-0.2-1.6-0.1-2.5c0.1-0.8,0-1.6,0-2.5c0-0.6,0.1-1.1,0.1-1.7c0-0.9,0-1.9,0-2.8c0-1.7,0.1-3.5,0.1-5.2" + ' ' +
+									"c0-0.7,0.1-1.5,0.3-2.2c0.3-1.5,0.4-2.9,0.5-4.4c0-0.1,0-0.2,0-0.2c0.2-1.3,0.6-2.5,0.6-3.8c0-0.4,0.3-0.8,0.4-1.2" + ' ' +
+									"c0-0.3,0-0.7,0-1.2c0.7,0.4,0.2,1.4,1,1.7c0.3-0.3-0.1-0.7,0-1c0.3-0.9,1.2-0.9,1.8-1.2c0.4,0.1,0.7,0.2,1.1,0.4" + ' ' +
+									"c0.1,0.1,0.3,0.3,0.5,0.6c0.4-0.1,0.7-0.2,1.1-0.2c0.6,0.8,1.1,1.6,1.1,2.7c0.1,2,0,4.1-0.1,6.1c-0.2,2-0.3,4-0.4,5.9" + ' ' +
+									"c-0.1,2.2-0.2,4.4-0.3,6.6c0,0.5,0,1,0,1.5c0,1.7-0.1,3.4-0.1,5.1c0.1,2.2,0.2,4.4,0.3,6.7c0,0.5,0.1,1.1,0.1,1.6" + ' ' +
+									"c0,1.9,0.3,3.8,0.6,5.6c0,0,0,0.1,0.1,0.1c0.5-0.5,0.8-1.1,1-1.7c0.5-1.7,0.9-3.4,1.2-5.2c0-0.2,0-0.4,0-0.6" + ' ' +
+									"c0.1-0.6,0.1-1.1,0.2-1.7c0.1-0.8,0.2-1.6,0.3-2.3c0.2-1.9,0.4-3.8,0.5-5.7c0.1-0.8,0-1.6,0-2.4c0-1.7,0-3.4,0-5.1" + ' ' +
+									"c0-1.7-0.1-3.5-0.2-5.2c0-0.8-0.1-1.6,0.4-2.3c0.1-0.2,0.1-0.5,0.2-0.7c0.2-0.9,0.3-1.9,0.5-2.8c0.1-0.5,0.4-0.9,0.6-1.4" + ' ' +
+									"c0.1-0.2,0.3-0.2,0.5-0.4c0.5,0.5,0.4,1.1,0.5,1.6c0.4,0.1,0.4-0.2,0.4-0.4c0-0.8,0.2-1.5,0.6-2.1c0.1-0.1,0.2-0.2,0.3-0.3" + ' ' +
+									"c0.4,0.1,0.5,0.4,0.6,0.7c0,0.4,0.2,0.7,0.4,1c0.4,0.4,0.5,0.9,0.6,1.5c0.2,1.5,0.4,3,0.5,4.6c0.1,0.9,0.1,1.8,0.1,2.7" + ' ' +
+									"c0.2,0.2,0.3,0.3,0.5,0.4c-0.2,0.6-0.1,1.2,0,1.8c0.1,0.9,0.2,1.9,0.2,2.8c0,1.2,0,2.4,0,3.6c0,0.3,0,0.7-0.2,0.9c0,0,0,0-0.1-0.1" + ' ' +
+									"c0,0,0.1,0,0.1,0c-0.1,0.1-0.1,0.3-0.2,0.5c0.1,0.1,0.2,0.1,0.3,0.2c0,0.1,0,0.1,0,0.2c-0.3,0.9-0.3,1.7-0.3,2.6" + ' ' +
+									"c0,0.7-0.1,1.4-0.2,2.1c0,0.4-0.1,0.7,0,1.1c0.1,0.4-0.3,0.6-0.1,1c0.1,0.2-0.1,0.7-0.1,1c-0.1,0-0.2,0-0.2,0" + ' ' +
+									"c0,0.1-0.1,0.1-0.1,0.2c0,0.5-0.1,1,0.1,1.5c0.1,0.3,0.1,0.6-0.2,0.8l0,0c0-0.2,0-0.3,0-0.5c-0.5,0.6-0.6,0.7-0.3,2" + ' ' +
+									"c-0.1,0.3-0.3,0.7-0.5,1.1c0,0.1-0.1,0.2-0.1,0.3c-0.3,1.5-0.7,2.8-1.4,4.1C338.4,60.7,338.5,60.9,338.5,61.1" + ' ' +
+									"c-0.4,0.4-0.4,0.4-0.5,1.1C338.2,61.8,338.6,61.6,338.5,61.1z M330.6,61.8C330.6,61.8,330.6,61.9,330.6,61.8" + ' ' +
+									"C330.6,61.9,330.6,61.9,330.6,61.8C330.6,61.9,330.5,61.7,330.6,61.8z M325.9,46.4c0,0.2-0.3,0.4,0,0.7" + ' ' +
+									"C326,46.8,326,46.8,325.9,46.4c0-0.1,0-0.2,0-0.3c0.1-0.1,0.2-0.2,0.2-0.3c0-0.6,0.1-1.2,0.1-1.9c0-0.9,0-1.7,0-2.8" + ' ' +
+									"c-0.1,0.3-0.2,0.5-0.2,0.6c0.1,0.7-0.1,1.4,0,2.1c0.1,0.8,0,1.6,0,2.3C325.7,46.2,325.7,46.3,325.9,46.4z M328.9,49.2" + ' ' +
+									"c0.4,0.3,0.4,0.7,0.4,1.1c0.1,1.3,0.1,2.6,0.2,4c0.2,1.4,0.2,2.9,0.4,4.3c0,0.4,0.2,0.8,0.4,1.2c0.1-0.2,0.1-0.4,0.1-0.6" + ' ' +
+									"c-0.1-1.9-0.2-3.7-0.3-5.6c0-0.2,0-0.4,0-0.6c-0.1-1.3-0.2-2.6-0.2-3.8c0-3.9-0.1-7.9,0.2-11.8c0.2-3.1,0.3-6.3,0.4-9.4" + ' ' +
+									"c0-0.9,0.1-1.7,0.1-2.6c0-0.4-0.1-0.7-0.1-1.1c-0.1-0.3,0.1-0.7-0.2-1c-0.3,0.8-0.3,1.6-0.3,2.4c0,2.6-0.3,5.2-0.5,7.8" + ' ' +
+									"c-0.1,1.4-0.2,2.9-0.3,4.3c-0.1,1-0.1,2-0.2,3c0,0.9,0.1,1.9,0.1,2.8c-0.1,1,0,2,0.1,3C329.2,47.4,329.1,48.2,328.9,49.2z" + ' ' +
+									 "M326.2,54.6c-0.2,0.7-0.1,1.5,0,2.2C326.4,56.1,326.4,55.3,326.2,54.6z M326,47.7c0,0-0.1,0-0.1-0.1c0,0.7,0,1.3,0,2" + ' ' +
+									"c0,0,0.1,0,0.1,0C326,49,326,48.4,326,47.7z M326,50.6c-0.1,0.4-0.1,0.8,0,1.2c0.1-0.1,0.1-0.1,0.1-0.1" + ' ' +
+									"C326.1,51.3,326.1,51,326,50.6z M342.7,33c-0.1,0-0.1,0-0.2,0c0,0.3,0.1,0.6,0.1,1c0.1,0,0.1,0,0.3,0" + ' ' +
+									"C342.8,33.6,342.8,33.3,342.7,33z M326.1,37.4c0,0-0.1,0-0.1,0c0,0.4,0,0.7,0,1.1c0,0,0.1,0,0.1,0" + ' ' +
+									"C326.1,38.1,326.1,37.8,326.1,37.4z M326.1,53.1c0.2-0.3,0.2-0.5-0.1-0.7C325.9,52.7,325.8,52.9,326.1,53.1z M341.6,38.2" + ' ' +
+									"c0.2-0.6,0.2-0.6,0-1C341.6,37.5,341.6,37.8,341.6,38.2z M325.9,40.8c0.2-0.3,0.1-0.6,0-0.8C325.9,40.2,325.9,40.4,325.9,40.8z" + ' ' +
+									 "M326.1,36.2c0.1,0,0.1,0,0.2,0c0-0.2,0-0.4-0.1-0.5c0,0-0.1,0-0.1,0C326.1,35.9,326.1,36.1,326.1,36.2z M330.5,60.9" + ' ' +
+									"C330.5,60.9,330.5,60.8,330.5,60.9C330.5,60.8,330.4,60.8,330.5,60.9C330.4,60.9,330.5,60.9,330.5,60.9z"}), 
+								React.createElement("path", {d: "M80.5,23.1c0.9-0.3,1.7-0.5,2.6-0.8c0-0.2,0.1-0.5,0-0.7c-0.1-0.7-0.2-1.4-0.3-2.1" + ' ' +
+									"c-0.1-0.7,0.1-1.2,0.7-1.6c0.4-0.3,0.9-0.5,1.4-0.8c0.5-0.8,1.2-1.5,2.3-1.7c0.7,0.1,1.3,0.5,1.7,1.2c0.4-0.1,0.7-0.1,1-0.2" + ' ' +
+									"c0.9,0.5,1.4,1.4,1.7,2.4c0.8,2.5,1.4,5.1,1.6,7.8c0.1,1,0.3,2,0.4,3.1c0,0.2,0.1,0.4,0.1,0.6c0.2,4.2,0.5,8.4,0.3,12.6" + ' ' +
+									"C93.8,47,93.4,51,92.2,55c-0.3,0.8-0.5,1.7-0.8,2.5c-0.5,1.5-1.2,2.8-2.1,4.1c-1.3,1.7-3,2.6-5.1,2.9c-1.5,0.2-3.1,0.1-4.6-0.1" + ' ' +
+									"c-0.5,0-0.9-0.1-1.4-0.2c-1.2-0.4-2.5-0.7-3.8-0.9c-1.3-0.3-2.2-1.1-2.9-2.1c-1-1.5-1.6-3.3-1.7-5.1c0-0.4-0.1-0.8,0-1.1" + ' ' +
+									"c0.2-1.3,0.5-2.6,0.7-3.8c0.1-0.4,0.1-0.8,0.2-1.2c0.1-1.1,0.5-2,0.9-3c0.4-1,0.7-2,1.2-3c0.3-0.6,0.6-1.3,0.7-2" + ' ' +
+									"c0.1-0.6,0.3-1.2,0.6-1.7c0.6-1.3,1.2-2.5,1.9-3.7c0.8-1.4,1.5-2.9,2.1-4.4c0.4-0.9,0.7-1.8,1-2.7c0.4-1,0.8-2,0.8-3.1" + ' ' +
+									"c0-0.5,0.5-0.8,0.4-1.4C80.3,24.3,80.4,23.8,80.5,23.1z M82.6,31.6C82.6,31.6,82.7,31.5,82.6,31.6C82.7,31.5,82.6,31.6,82.6,31.6" + ' ' +
+									"c0,0.1-0.1,0.2,0,0.1C82.5,31.9,82.5,31.8,82.6,31.6z M74.5,48.8C74.4,48.8,74.4,48.8,74.5,48.8C74.4,48.8,74.4,48.8,74.5,48.8" + ' ' +
+									"c0.1-0.1,0.3-0.2,0.1-0.4C74.5,48.5,74.5,48.6,74.5,48.8z M78.9,47.9c0.1-0.1,0.3-0.2,0.1-0.4C79,47.7,79,47.8,78.9,47.9" + ' ' +
+									"c-0.2,0.2-0.3,0.3-0.1,0.7C78.9,48.3,78.9,48.1,78.9,47.9z M82,40.6c0.3-0.1,0.3-0.4,0.3-0.6c0.5-0.2,0.6-0.6,0.6-1.1" + ' ' +
+									"c0.3-0.1,0.3-0.4,0.3-0.6c0.7-0.3,0.9-0.9,0.9-1.6l0.1-0.1l0,0.1c-0.5,0.5-0.7,1-0.9,1.6C83,38.6,83,38.8,82.9,39" + ' ' +
+									"c-0.4,0.2-0.6,0.6-0.6,1.1C82.1,40.2,82,40.4,82,40.6c-0.5,0.2-0.6,0.6-0.5,1.1c-0.5,0.2-0.6,0.7-0.7,1.2c0.4-0.3,0.6-0.7,0.7-1.2" + ' ' +
+									"C81.9,41.5,82,41.1,82,40.6z M91.3,50.4c-0.1,0.1-0.2,0.1-0.2,0.2c-0.3,1.1-0.6,2.1-0.9,3.2c0,0.2,0,0.4,0,0.6c0.5-1,0.8-2,1-3" + ' ' +
+									"C91.3,51.1,91.3,50.7,91.3,50.4c0-0.1,0.1-0.1,0.2-0.2c0.4-1.3,0.4-2.7,0.5-4C91.6,47.2,91.3,49.2,91.3,50.4z M83.9,41" + ' ' +
+									"c-0.1,0.2-0.3,0.4-0.4,0.7c-0.7,1.5-1.4,3-2.1,4.6c-0.9,2.4-1.6,4.8-2,7.3c-0.3,1.6-0.3,3.2,0.2,4.8c0.1,0.2,0.2,0.4,0.5,0.4" + ' ' +
+									"c0.1-0.1,0.2-0.1,0.3-0.2c0.7-0.9,1.2-2,1.5-3.1c0.4-1.2,0.7-2.5,1-3.8c0.4-1.4,0.6-2.7,0.7-4.1c0.1-0.8,0.1-1.6,0.2-2.4" + ' ' +
+									"C84.1,43.8,84,42.4,83.9,41z M91.9,45.5c0.7-2.6,0.3-4.9,0.7-7.2c-0.4-1.5,0-3.1-0.3-4.7c-0.3,0.5-0.2,0.9-0.2,1.4" + ' ' +
+									"c0.1,2.5,0.2,4.9-0.1,7.4C91.9,43.3,91.8,44.2,91.9,45.5z M80.5,43.6c0,0,0,0.1,0,0.1C80.5,43.7,80.5,43.7,80.5,43.6" + ' ' +
+									"C80.5,43.7,80.5,43.7,80.5,43.6z M80.2,44.6c0,0,0-0.1,0-0.1C80.2,44.5,80.2,44.5,80.2,44.6C80.2,44.6,80.2,44.6,80.2,44.6z" + ' ' +
+									 "M75.2,46.9c0,0,0-0.1,0-0.1C75.2,46.8,75.1,46.8,75.2,46.9C75.1,46.8,75.1,46.9,75.2,46.9C75.2,46.9,75.2,46.9,75.2,46.9z" + ' ' +
+									 "M78.2,40c0,0,0,0.1,0,0.1c0,0,0,0,0.1,0C78.3,40.1,78.3,40.1,78.2,40C78.3,40.1,78.2,40,78.2,40z M91.7,28.5L91.7,28.5l0,0.1" + ' ' +
+									"L91.7,28.5z"}), 
+								React.createElement("path", {d: "M147.9,29.5c-0.7,2.4-0.9,4.6-1.3,6.9c0,0.2,0,0.3,0.1,0.6c0.8-0.3,1.7-0.6,2.4-1c1.1-0.6,2.1-1.3,3.2-2" + ' ' +
+									"c0.8-0.5,1.6-1,2.5-1.3c0.5-0.1,1-0.4,1.4-0.6c0.6-0.3,1.2-0.5,1.9-0.3c0.2,0.3,0.3,0.5,0.5,0.8c0.8-0.1,1.7-0.4,2.6,0" + ' ' +
+									"c0.1,0.3,0.2,0.6,0.2,0.8c-0.4,0.7-0.8,1.3-1.3,2.1c0.5-0.1,0.8-0.2,1.2-0.2c0.1,0.1,0.2,0.3,0.3,0.4c-0.2,0.5-0.5,0.8-0.9,1.1" + ' ' +
+									"c-1.6,0.9-3.1,1.9-4.7,2.8c-3,1.5-6,2.7-9.2,3.7c-0.3,0.1-0.5,0.2-0.7,0.3c-0.4,0.5-0.3,1-0.3,1.4c0,2.2,0.3,4.5,0.9,6.6" + ' ' +
+									"c0,0,0,0.1,0,0.1c0.5,1.6,1.3,2.2,3,1.9c0.5-0.1,0.9-0.2,1.4-0.3c1.4-0.6,2.9-1.1,4.2-1.9c0.6-0.4,1.3-0.6,2-0.6" + ' ' +
+									"c0,0.2,0,0.4,0,0.6c1.3,0,2.3-1.3,3.7-0.9c-0.7,1.9-1.6,3.5-3.3,4.5c0.1,0.2,0.1,0.3,0.2,0.4c-0.9,0.5-1.8,1.1-2.4,1.8" + ' ' +
+									"c-1.4,0.5-2.8,0.5-4.1,0.5c-0.7,0-1.3,0.1-2,0.1c-1.6,0.1-3-0.4-4.5-0.9c-0.9-0.3-1.8-0.7-2.8-1c-2-0.7-3.4-2.1-4.1-4.1" + ' ' +
+									"c-0.9-2.2-1.1-4.6-1.2-7c0-0.6,0-1.2,0-1.8c0-0.4-0.1-0.8-0.1-1.2c0-0.3-0.1-0.7,0-1c0.3-1.3,0.5-2.6,0.5-3.9" + ' ' +
+									"c0-0.6,0.2-1.3,0.3-1.9c0.4-1.5,0.2-3-0.2-4.5c0-0.1-0.1-0.2-0.2-0.3c-0.1,0-0.1-0.1-0.1-0.1c-0.2,0-0.4,0-0.6,0" + ' ' +
+									"c-0.2-0.2-0.4-0.4-0.6-0.6c-0.1-0.9,0.3-1.5,1-1.9c0.4-0.3,0.9-0.5,1.3-0.8c0.4-0.3,0.8-0.7,1-1.2c0.2-0.7,0.7-1,1.3-1.4" + ' ' +
+									"c0.5-0.3,1-0.6,1.6-0.6c0.6,0.3,1.3,0.6,2,0c0.2-0.2,0.5-0.2,0.8-0.2c1.4,0.1,2.5-0.6,3.7-1.2c0.9-0.5,1.8-1,2.7-1.4" + ' ' +
+									"c1-0.5,1.9-1.1,2.7-1.8c1.2-1,2.7-1.5,4-2.2c0.2-0.1,0.5-0.1,0.8-0.2c0.3,0,0.7,0,1-0.1c1-0.3,1.7-0.2,2.3,0.6" + ' ' +
+									"c1.1,0.1,2.2-0.3,2.9,0.7c0.1,0.5,0.2,0.9,0.3,1.3c-0.4,1.1-1.6,1.1-2.1,1.9c-0.9-0.2-1.6,0.2-2.3,0.5c-0.1,0.2-0.1,0.3-0.2,0.5" + ' ' +
+									"c0.3,0,0.6,0,0.9,0.1c-0.8,0.7-3.4,2.2-6.7,3.9C152.4,27.3,150.2,28.4,147.9,29.5z M144.4,37.4c0.4-0.9,0.4-0.9,0.3-2" + ' ' +
+									"c-0.1,0.5-0.3,0.8-0.3,1.2C144.4,36.8,144.4,37.1,144.4,37.4z M139.9,44.9c-0.1,0.7-0.1,1.5,0.1,2.2" + ' ' +
+									"C140.1,46.3,140.1,45.6,139.9,44.9z M140.4,35.8c0.2,0.8-0.2,1.4,0.2,2.2c0.1-0.8,0.1-1.3,0.2-1.9" + ' ' +
+									"C140.7,36.1,140.7,36.1,140.4,35.8z M143.9,45.4c0.2-0.3,0.3-0.7,0-1C143.6,44.7,143.7,45.1,143.9,45.4z M144.9,34.5" + ' ' +
+									"c0,0,0.1,0,0.1,0c0-0.1,0-0.3,0-0.4c0,0-0.1,0-0.1,0C144.9,34.2,144.9,34.4,144.9,34.5z M145.1,33.5c0.1-0.1,0.1-0.1,0.1-0.2" + ' ' +
+									"c0,0-0.1-0.1-0.1-0.1c-0.1,0-0.1,0.1-0.2,0.1C145,33.3,145.1,33.4,145.1,33.5z M143.9,46.3c0,0,0-0.1,0-0.1c0,0-0.1,0-0.1,0" + ' ' +
+									"C143.9,46.2,143.9,46.3,143.9,46.3C143.9,46.3,143.9,46.3,143.9,46.3z M140.3,38.6C140.3,38.6,140.2,38.6,140.3,38.6" + ' ' +
+									"c-0.1,0.1-0.1,0.1-0.1,0.1c0,0,0.1,0,0.1,0C140.3,38.6,140.3,38.6,140.3,38.6z M140.3,47.8C140.2,47.8,140.2,47.8,140.3,47.8" + ' ' +
+									"c-0.1,0.1-0.1,0.1-0.1,0.1c0,0,0.1,0,0.1,0C140.3,47.9,140.3,47.9,140.3,47.8z"}), 
+								React.createElement("path", {d: "M370.3,50.9c-1,0.8-1.8,0.6-2.6,0.1c-0.3-0.5,0-0.7,0.3-1c0.8-0.6,1.6-0.8,2.5,0" + ' ' +
+									"C370.3,50.3,370.3,50.6,370.3,50.9z"}), 
+								React.createElement("path", {d: "M224.1,48.5c0,0.3,0,0.6,0,0.9C223.7,49,223.9,48.8,224.1,48.5L224.1,48.5z"}), 
+								React.createElement("path", {d: "M110.8,44.6c0,0.2-0.1,0.3-0.1,0.5C110.5,44.8,110.6,44.7,110.8,44.6L110.8,44.6z"}), 
+								React.createElement("polygon", {points: "52.2,48.3 52.1,48.3 52.2,48.1   "}), 
+								React.createElement("polygon", {points: "342.1,27.3 342.1,27.2 342.2,27.3   "}), 
+								React.createElement("path", {d: "M131.1,44c0-0.2,0.1-0.3,0.3-0.3l0,0C131.3,43.8,131.2,43.9,131.1,44L131.1,44z"}), 
+								React.createElement("path", {d: "M131.7,43.5C131.7,43.4,131.7,43.4,131.7,43.5C131.7,43.4,131.7,43.4,131.7,43.5L131.7,43.5z"}), 
+								React.createElement("path", {d: "M131.7,43.4c-0.1,0.1-0.2,0.2-0.3,0.3l0,0C131.5,43.6,131.6,43.6,131.7,43.4L131.7,43.4z"}), 
+								React.createElement("polygon", {points: "335.4,56.2 335.4,56 335.4,56.1   "}), 
+								React.createElement("path", {d: "M279.6,59.7c-0.2-0.2-0.2-0.2-0.1-0.5C279.5,59.4,279.6,59.6,279.6,59.7L279.6,59.7z"}), 
+								React.createElement("polygon", {points: "278.4,62.5 278.3,62.7 278.3,62.5   "}), 
+								React.createElement("polygon", {points: "278,63.5 278,63.5 278,63.4   "}), 
+								React.createElement("path", {d: "M317,42.4c0.4,0.7,0.3,1.2,0.3,1.7C317,43.7,317,43.7,317,42.4z"}), 
+								React.createElement("path", {d: "M189.3,48.9c-0.2,0-0.3,0.1-0.5,0.1c-0.3-0.4,0.1-0.6,0.4-1C189.2,48.4,189.2,48.7,189.3,48.9L189.3,48.9z"
+									}), 
+								React.createElement("path", {d: "M317,40.6c-0.3-0.2-0.4-0.3-0.2-0.5c0,0,0.1,0,0.1,0C317.2,40.2,317.2,40.3,317,40.6z"}), 
+								React.createElement("path", {d: "M317.4,47.5c-0.3-0.3-0.1-0.5-0.1-0.8C317.3,47,317.4,47.2,317.4,47.5z"}), 
+								React.createElement("path", {d: "M316.7,38.6c0.2,0.2,0.2,0.4,0.1,0.7C316.6,39,316.7,38.9,316.7,38.6z"}), 
+								React.createElement("path", {d: "M189.4,45.3c0-0.1,0.1-0.3,0.1-0.4c0,0,0.1,0.1,0.1,0.1c0,0.1,0,0.2-0.1,0.4" + ' ' +
+									"C189.5,45.4,189.4,45.4,189.4,45.3z"}), 
+								React.createElement("path", {d: "M317.3,48.4C317.3,48.4,317.3,48.4,317.3,48.4c0.1,0.1,0,0.1,0,0.1C317.3,48.5,317.2,48.4,317.3,48.4" + ' ' +
+									"C317.2,48.4,317.3,48.4,317.3,48.4z"}), 
+								React.createElement("polygon", {points: "317,41.5 317,41.4 317.1,41.5   "}), 
+								React.createElement("path", {d: "M189.5,46.5C189.4,46.5,189.4,46.5,189.5,46.5c-0.1-0.1,0-0.1,0-0.1C189.5,46.4,189.5,46.4,189.5,46.5z"})
+							), 
+							React.createElement("rect", {x: "8.5", y: "3", width: "414.3", height: "72", width: "436"})
+						), 
+						React.createElement("g", {id: "purity_ring", className: "band_lineup_link pink", onClick: self.openBand.bind(this, "Purity Ring")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M111.8,103.6c-0.3,6.4,0,11.7,0.8,16.6c0.2,1.2,0.6,2.4,1,3.6c0.1,0.3,0.2,0.7,0.3,1c0.6,2,2,3.1,4,3.2" + ' ' +
+									"l0.3,0l0.2-0.1c0.1,0,0.2-0.1,0.2-0.1c0.3-0.1,0.7-0.2,1-0.5c2.3-1.7,4-3.9,5.1-6.4c1.2-2.7,2-5.6,2.7-9.6c0.3-1.7,0.5-3.4,0.6-5" + ' ' +
+									"c0.1-1.3,0.3-2.6,0.5-3.9c0.1-0.6,0.2-1.2,0.3-1.7l0.1-0.3c0.2-0.1,0.5-0.3,0.7-0.5c-0.1,0.8-0.1,1.5-0.2,2.3" + ' ' +
+									"c-0.2,2.6-0.4,5.3-0.5,7.9c0,0.6-0.2,1.1-0.4,1.4c-1.3,1.9-0.8,3.7-0.3,4.9c0.2,0.5,0.4,1.2,0.4,1.8c0.1,2.2,0.2,4.7,0.2,7.5" + ' ' +
+									"c0,2,0.9,3.3,2.7,4c0.5,0.2,1,0.3,1.4,0.3c1.4,0,2.5-1,2.7-2.6c0.4-2.6,0.6-4.7,0.6-6.7c0-0.4-0.1-0.8-0.2-1c0-0.1,0-0.1-0.1-0.2" + ' ' +
+									"l-0.1-0.2c2.3,0.1,4.3,0,6.3-0.3c1.7-0.3,3-0.8,4-1.6l0.2-0.2l0.1-0.2c0.7-1.5-0.1-2.6-0.4-3l-0.2-0.3l-0.3-0.1" + ' ' +
+									"c-1-0.4-1.4-0.6-2.1-0.6c-0.3,0-0.6,0-1,0.1c-1.6,0.2-3.3,0.3-5.5,0.3c-0.3,0-0.6,0-1,0c0.3-0.4,0.7-0.8,1.1-1.1" + ' ' +
+									"c0.2-0.2,0.5-0.5,0.7-0.7c0.7-0.7,1.4-1.4,2.1-2.1c1.6-1.6,3.2-3.3,4.9-5c1.7-1.6,3.2-3.6,4.6-5.6l0.1-0.1l0-0.2" + ' ' +
+									"c1-3.3-0.7-5.1-2.4-6.6l-0.2-0.2l-0.3-0.1c-0.3-0.1-0.6-0.2-0.9-0.3c-0.9-0.3-1.9-0.5-2.9-0.6c-2-0.2-3.8-0.1-5.3,0.1" + ' ' +
+									"c-1.3,0.2-2.4,0.3-3.1,0.3c-0.4,0-0.7,0-1,0l-0.2,0l-0.2,0.1c-0.7,0.2-1.3,0.4-1.9,0.6c-1.5,0.4-2.8,0.8-4.1,1.1" + ' ' +
+									"c-0.7,0.2-1.8,0.4-2.5,1.4l-0.1,0.1l-0.1,0.1c-0.4,1.1-0.6,2.2-0.6,3.4c0,1,0,1.8-0.2,2.5c-0.4,1.7-0.7,3.3-0.9,5" + ' ' +
+									"c-0.1,0.9-0.3,1.8-0.4,2.7c-0.5,2.9-1.4,6-2.7,9.7c-0.3,0.7-0.8,1.4-1.3,2.1c0,0-0.1,0.1-0.1,0.1c-0.2-0.5-0.4-1-0.4-1.5l-0.1-0.9" + ' ' +
+									"c-0.3-2.3-0.6-4.4-0.5-6.6c0-0.9,0.1-1.9,0.1-2.8c0-1.3,0-2.5,0.1-3.8c0.1-1.6,0.3-3.1,0.7-4.7c0.1-0.3,0.2-0.5,0.3-0.7" + ' ' +
+									"c1.4-1.8,1.5-3.8,1.4-5.1l0-0.4l-0.3-0.3c-0.1-0.1-0.2-0.3-0.3-0.4c-0.3-0.3-0.5-0.6-0.9-0.9c-1.1-1-2.7-1-3.8-0.1" + ' ' +
+									"c-1,0.8-1.6,1.8-1.8,3C112.1,98,111.9,101,111.8,103.6z M135,106.2c0.2-2.4,0.4-4.6,0.6-6.9l0-0.1c0-0.3,0.1-0.6,0.1-0.9" + ' ' +
+									"c0.3-0.9,0.6-1.3,1.5-1.4c1.5-0.2,2.8-0.3,4.1-0.3c0.4,0,0.8,0,1.3,0c0.2,0,0.5,0.1,0.7,0.2c-0.4,0.8-0.9,1.7-1.5,2.3" + ' ' +
+									"c-1.3,1.4-2.7,2.8-4.1,4.2l-1.4,1.4C135.9,105.2,135.5,105.7,135,106.2z"}), 
+								React.createElement("path", {d: "M223.4,99.6l0.2,0l0.2-0.1c0.9-0.3,1.4-0.9,1.9-1.4c0.1-0.1,0.2-0.2,0.3-0.3c0.4-0.4,0.9-0.9,1.3-1.1" + ' ' +
+									"c1.3-0.6,2.8-1.2,4.4-1.4c0,1.9-0.6,13.8-0.9,16.2c-0.5,0.3-1.1,0.6-1.7,0.8c-0.8,0.3-1.7,0.7-2.5,1.3l-0.3,0.2l-0.1,0.3" + ' ' +
+									"c0,0.1-0.1,0.2-0.1,0.3c-0.1,0.3-0.2,0.5-0.2,0.9c-0.1,0.9,0.1,1.8,0.6,2.4c0.7,0.7,1.7,1,2.8,0.8c0.4-0.1,0.7-0.2,1.1-0.4" + ' ' +
+									"c0.1,0,0.1,0,0.2-0.1c0.1,2,0.1,4.2,0,6.8l0,0.2c0,1.5-0.1,2.9-0.5,4.3c-0.3,0.7-0.4,1.9,0.5,3.3c0.3,0.4,0.6,0.8,0.9,1.1" + ' ' +
+									"c0.1,0.1,0.2,0.2,0.3,0.3l0.2,0.3l0.4,0.1c0.3,0.1,0.6,0.1,0.8,0.1c0.9,0,1.7-0.4,2.2-1.1c0.6-0.8,0.9-1.7,0.9-2.6l-0.1-1.4" + ' ' +
+									"c-0.1-1.5-0.2-3.1-0.1-4.6c0-2.6,0.1-5.2,0.2-7.7l0.1-2.1l0.7-0.3c0.1,0,0.2,0.1,0.2,0.1c0.4,0.2,0.8,0.4,1.1,0.7" + ' ' +
+									"c2.2,1.8,4.6,3.4,6.7,4.8c1.1,0.7,2.1,1.5,2.9,2.1c0.7,0.5,1.3,1,2,1.5c1.1,0.9,2.3,1.8,3.5,2.7c0.8,0.6,1.8,1.1,2.9,1.5" + ' ' +
+									"c0.3,0.1,0.7,0.2,1,0.2c1.4,0,2.7-1,3-2.5l0.1-0.3l-0.5-1.9l-0.4-0.2c-0.3-0.2-0.6-0.4-0.9-0.5c-0.6-0.4-1.3-0.8-2-1.1" + ' ' +
+									"c-0.5-0.3-1-0.6-1.5-1c-0.4-0.3-0.8-0.6-1.3-0.9c-2.5-1.6-5-3.4-7.4-5.2c-1-0.7-2-1.5-3-2.2c-0.6-0.5-1.1-0.9-1.5-1.4" + ' ' +
+									"c0.8-0.5,1.6-1.1,2.5-1.6c1.1-0.8,2.3-1.5,3.4-2.3c2.3-1.6,5-3.4,7.4-5.7c1.1-1.1,2.4-2.3,2.8-4.8l0.1-0.3L258,96" + ' ' +
+									"c0-0.1,0-0.1-0.1-0.2c-0.1-0.4-0.3-1.1-0.7-1.6c-0.7-0.9-1.5-1.6-2.4-2.2c-2.7-1.6-5-2.6-7.5-3c-1.5-0.3-3.1-0.4-4.9-0.4" + ' ' +
+									"c-1.5,0-3,0.1-4.2,0.2c-0.5,0-1,0-1.5,0.1c-1.7,0.1-3.5,0.1-5.3,0.8c-2.6,0.1-4.9,1.1-7.1,2l-0.1,0c-1.2,0.5-2.7,1.2-3.8,2.7" + ' ' +
+									"l-0.1,0.2l-0.6,2l0.1,0.3C220.7,99.1,222.2,99.6,223.4,99.6z M236.5,106.5c0-1.1,0-2.3,0.1-3.4c0.1-1.7,0.2-3.9,0.3-6" + ' ' +
+									"c0.1-1.3,0.3-1.9,1-2.8c4.2-0.5,7.6-0.3,10.8,0.8l0.2,0.1c1.2,0.4,2.3,0.8,3,1.7c-0.1,0.1-0.2,0.3-0.2,0.3" + ' ' +
+									"c-1.7,1.7-3.7,3.4-5.9,4.8c-1.7,1-3.3,2.1-4.9,3.1c-0.8,0.5-1.6,1-2.4,1.5c0,0-0.1,0.1-0.1,0.1l-1.8-0.1" + ' ' +
+									"C236.5,106.6,236.5,106.6,236.5,106.5z"}), 
+								React.createElement("path", {d: "M301.7,111.8c-0.2-2-0.4-4-0.6-6c-0.1-0.8-0.1-1.7-0.2-2.5c-0.2-1.9-0.4-3.9-0.3-5.8" + ' ' +
+									"c0-0.9-0.1-1.8-0.4-2.9c-0.3-1.1-1.3-1.8-2.4-1.8c-0.7,0-1.4,0.3-1.9,0.9c-0.3,0.3-0.6,0.8-0.8,1.3c-0.6,1.3-0.6,2.7-0.6,3.7" + ' ' +
+									"c0.1,2.1,0.2,4.2,0.4,6.2l0,0.3c0.1,1,0.2,2,0.3,3c0.1,1.2,0.2,2.4,0.3,3.6c0.2,2.3,0.3,4.7,0.4,6.9l0.1,1.1c0.1,2-0.1,4-0.5,6.1" + ' ' +
+									"c-1.3-2.1-2.5-4.4-3.6-6.5c-0.7-1.5-1.5-2.9-2.2-4.4c-0.7-1.4-1.3-2.7-2-4.1c-0.6-1.1-1.2-2.2-1.8-3.3c-0.7-1.3-1.4-2.7-2.1-4" + ' ' +
+									"c-0.5-1-1-2.1-1.1-3.3c-0.1-0.8-0.5-1.5-0.8-2.1c-1-1.8-2.8-2.6-5.1-2.5l-0.4,0l-0.3,0.3c-2.4,2.6-2.5,4-0.8,6.5" + ' ' +
+									"c0.4,1.3,0.5,2.6,0.2,4.1c-0.1,0.4-0.1,0.7-0.1,1c0,0.1,0,0.2,0,0.4c0,0.6,0,1.2,0,1.9c0,1.4,0,2.6-0.2,3.9" + ' ' +
+									"c-0.2,1.1-0.3,2.3-0.4,3.4c-0.4,3.2-0.8,6.5-1.6,9.7c-0.6,2.4,0.5,4.5,2.8,5.6l1.3,0.6l0.4-0.2c2.7-1,3.7-2.7,3.2-5.3" + ' ' +
+									"c-0.2-1.1-0.3-2.3-0.1-3.5l0.2-2c0.4-3,0.7-6.2,0.9-9.3c0.4,0.7,0.8,1.5,1.1,2.2c0.4,0.8,0.9,1.7,1.3,2.5c0.3,0.6,0.6,1.2,1,1.8" + ' ' +
+									"c0.6,1.1,1.3,2.3,1.8,3.5c1.4,3.1,3.2,6.1,4.9,8.9l0.7,1.1c0.9,1.4,2.1,2.4,4,3.2l0.5,0.2l2.5-1.6l0.1-0.3" + ' ' +
+									"c0.1-0.3,0.2-0.6,0.4-0.8c0.3-0.6,0.5-1.2,0.7-1.8c0.1-0.4,0.3-0.8,0.4-1.1c0.4-1.2,0.9-2.5,1-3.8c0.2-2.6,0.3-5.2,0.1-7.9" + ' ' +
+									"C302.2,116.5,302,114.1,301.7,111.8z"}), 
+								React.createElement("path", {d: "M332.4,111.8l-0.1,0c-0.1,0-0.3,0-0.4,0c0,0-0.1,0-0.1,0l-0.8,0c-0.8,0-1.6,0.1-2.4,0.1" + ' ' +
+									"c-0.9,0-1.9,0-2.8,0c-2.7,0-5.6,0-8.4,0.2c-1,0.1-2.3,0.3-3.2,1.5l-0.2,0.3l0,0.3c-0.1,1.5,0,2.5,1.7,3.3c0.6,0.3,1.3,0.5,2.1,0.5" + ' ' +
+									"c1.7,0.2,3.5,0.2,5.2,0.2c0.7,0,1.5,0,2.2,0c0.4,0,0.7,0,1.1,0.1c0.3,0,0.6,0.1,0.9,0.1l0.4,0c0.2,0,0.4,0,0.6,0" + ' ' +
+									"c0,0.1-0.1,0.2-0.1,0.3l-0.4,0.7c-0.5,0.9-1,1.8-1.5,2.6c-0.6,1-1.3,2.1-2.2,3.3c-0.2,0.3-0.4,0.5-0.7,0.8l-0.3,0.3" + ' ' +
+									"c-0.8,0.9-1.8,1.2-3,1c-0.8-0.2-1.7-0.4-2.5-0.6c-0.2-0.1-0.5-0.1-0.7-0.2c-1.2-1.1-1.8-2.2-2.1-3.5c-0.1-0.3-0.1-0.5-0.3-0.8" + ' ' +
+									"c-0.6-0.9-0.8-2-1-3.2c-0.1-0.4-0.2-0.9-0.2-1.3c-0.3-1.4-0.3-2.8-0.2-4.3c0-0.4,0-0.9,0-1.3c0-1.2,0.2-2.5,0.4-4" + ' ' +
+									"c0.2-1.3,0.6-2.7,1-3.8c0.8-2.6,1.9-4.3,3.4-5.4c0.3-0.1,0.7-0.1,0.9-0.1c0.7,0,1.6,0.2,2.5,1.8c0.5,0.8,0.8,1.4,0.9,2.2" + ' ' +
+									"c0.1,1,0.5,2,1,2.7l0.2,0.2c0.9,0.8,1.9,1.1,3.2,0.9l0.3,0l2-1.5l0.1-0.4c0.3-1.3,0.1-2.4-0.2-3.4c-0.5-2.1-1.6-4.1-3.4-5.9" + ' ' +
+									"c-2.2-2.2-4.7-3.3-7.3-3.2c-0.7,0-1.4,0.2-2.1,0.3c-1.7,0.3-3.1,1.2-4.2,2.7c-2.3,3.2-3.9,7.2-4.9,12c-0.2,0.9-0.3,1.8-0.4,2.8" + ' ' +
+									"c0,1.4,0,2.9,0,4.3c0,0.6,0,1.1,0,1.7c0,2.4,0.5,4.6,1.2,7.3c0.4,1.4,1,2.7,1.5,3.9c0.2,0.4,0.4,0.8,0.5,1.3" + ' ' +
+									"c0.7,1.8,2.1,3.2,3.9,4c2.3,1.1,4.3,1.7,6.4,2.1c0.5,0.1,0.9,0.1,1.4,0.1c2.2,0,4-1,5.4-2c1.7-1.1,2.6-2.7,3.6-4.5" + ' ' +
+									"c0.4-0.7,0.7-1.3,1.1-2c0.5-0.9,1-1.9,1.5-2.8c1-1.7,2.2-3.3,3.7-5.2l0.2-0.2l0.5-2.2l-0.1-0.3C336.1,113,335,112,332.4,111.8z"}), 
+								React.createElement("path", {d: "M90.7,139.5l-0.1-1.3c0-0.6-0.1-1.2-0.1-1.8c-0.1-1.6-0.2-3.3-0.2-4.9c-0.1-2.2-0.2-4.4-0.3-6.7" + ' ' +
+									"c-0.1-2.9-0.1-5.8-0.1-8.7l0-2.2c0-1.2,0-2.5,0-3.7c0-0.3,0.1-0.7,0.1-1.1c0,0,0,0,0-0.1c0,0,0,0,0.1,0c0.3-0.2,0.5-0.3,0.7-0.4" + ' ' +
+									"c2.1-1,3.9-2.4,5.6-3.7l1.2-0.9c2.5-1.9,5.1-3.8,7.6-5.8l0.1-0.1c2.3-1.9,4.8-3.9,6.5-6.6c1.2-1.8,1.5-4,0.9-6.2" + ' ' +
+									"c-0.6-2.1-2.1-3.8-3.9-4.6c-3-1.3-5.6-1.6-8.2-1.1c-0.9,0.2-1.8,0.4-2.7,0.6c-1.2,0.3-2.4,0.5-3.6,0.8c-0.2,0-0.4,0.1-0.7,0.2" + ' ' +
+									"c-0.2,0.1-0.5,0.1-0.6,0.2L91.2,80l-0.5,0c-2.9,0.2-3.4,0.7-4.3,3.7c-0.3,0.1-0.6,0.3-0.9,0.4c-0.7,0.3-1.4,0.5-2.1,0.7" + ' ' +
+									"c-1.2,0.3-2.3,0.7-3.5,1.3c0,0,0,0-0.1,0c-1.3,0-2.3,0.6-3.2,1.1L76,87.7L75.9,88c-0.7,1.6-0.8,1.8-0.6,3.4l0,0.3l0.3,0.4" + ' ' +
+									"c0.1,0.1,0.2,0.3,0.4,0.5c0.5,0.6,1.4,1.4,2.6,1.4c0.7,0,1.4-0.3,2.2-0.8c0.2-0.1,0.4-0.3,0.7-0.5c0.4-0.3,0.8-0.6,1.3-0.8" + ' ' +
+									"c1-0.5,1.9-1,2.9-1.4c-0.1,2-0.3,4.1-0.5,6.1c-0.3,2.8-0.5,5.8-0.5,8.7c-0.5,0.1-0.9,0.2-1.4,0.4c-1.4,0.4-2.1,1.6-2,3" + ' ' +
+									"c0.2,1.4,1.2,2.3,2.7,2.4c0.2,0,0.3,0,0.5,0c0,1.4,0,2.8,0,4.2c0,2.4,0,4.8,0,7.2c0,1.1,0,2.3,0.1,3.4c0,0.6,0,1.3,0,1.9l0,0.7" + ' ' +
+									"c0,0.8,0,1.6,0,2.3c0,1.8-0.1,3.6-0.2,5.5l-0.1,2.8l1.9,2.3l3,0.1L90.7,139.5z M90.2,102.8c0-3.8,0.9-11.9,1.7-14.8" + ' ' +
+									"c0.3-0.3,0.8-0.4,1.4-0.6c2.4-0.7,5.1-1.5,7.9-2c1.3-0.2,2.6-0.1,4.1,0.3c0.1,0,0.4,0.1,0.6,0.3c1.4,1,1.6,1.7,0.8,3.1" + ' ' +
+									"c-0.7,1.2-1.6,2.3-2.6,3.2c-3.6,3.2-6.7,5.7-9.7,7.8C93.1,100.9,91.7,101.9,90.2,102.8z"}), 
+								React.createElement("path", {d: "M158.5,100.2l0,0.3c0.1,1.3,0.8,2,1.4,2.6l0.7,0.8l0.7-0.3c0.1-0.1,0.3-0.1,0.4-0.2" + ' ' +
+									"c0.4-0.1,0.7-0.3,1.1-0.5c0.4-0.3,0.7-0.5,1.1-0.8c0.2-0.2,0.4-0.3,0.6-0.5c0.6-0.5,1.4-0.8,2.1-1.1c0,0.2-0.1,0.4-0.1,0.6l0,0.2" + ' ' +
+									"c-0.5,2.5-0.7,5.1-0.9,7.6c-0.1,0.6-0.1,1.2-0.2,1.8c-0.1,1.1-0.2,2.2-0.3,3.3c0,0.5-0.1,1.1-0.1,1.6l-0.2,2.8" + ' ' +
+									"c-0.1,0.9-0.1,1.7-0.1,2.5c0,1.2,0,2.3-0.2,3.4c-0.2,1.1,0.2,2.3,1.1,3.3c0.6,0.7,1.7,1.1,2.8,1.1c0.5,0,1.1-0.1,1.5-0.3" + ' ' +
+									"c0.8-0.4,1.7-1.2,1.7-3.1l0-0.3c0-1.2-0.1-2.5-0.4-3.7c-0.2-0.8-0.3-1.6-0.2-2.5c0.1-0.9,0.1-1.8,0.2-2.8c0.1-2.5,0.3-5.1,0.6-7.7" + ' ' +
+									"c0.4-3.1,0.9-6.2,1.3-8.5l0-0.3c0.1-0.5,0.1-0.8,0.3-1l0,0c0.2-0.1,0.4-0.1,0.6-0.2l0.9-0.3c2.5-0.8,5-1.6,7.6-2.5" + ' ' +
+									"c-0.5,1.2-0.1,2.3,0.1,3.2l0.1,0.4l0.1,0.2c0.2,0.3,0.4,0.5,0.6,0.8c0.4,0.5,0.7,0.9,1,1.4c0.4,0.7,0.7,1.4,1.1,2.2" + ' ' +
+									"c1.2,3,2.7,5.8,4.1,8.1c0.1,0.1,0.1,0.2,0.2,0.4c0.1,0.2,0.1,0.3,0.2,0.5c0.1,0.2,0.3,0.5,0.4,0.7c0.7,1.3,1.4,2.8,3,3.7" + ' ' +
+									"c0,0.3,0,0.5-0.1,0.8l-0.2,1.4c-0.3,1.8-0.6,3.6-1,5.4c-0.2,0.7-0.3,1.5-0.4,2.3c-0.4,2.2-0.7,4.2-1.6,6.2" + ' ' +
+									"c-0.5,1.2-0.4,2.4,0.3,3.6l0.1,0.2l0.2,0.1c0.2,0.1,0.3,0.2,0.5,0.3c0.6,0.4,1.5,1,2.5,1c0.2,0,0.5,0,0.7-0.1l0.2-0.1l0.2-0.1" + ' ' +
+									"c1.2-1,1.4-2.2,1.6-3.1c0.2-0.9,0.4-1.8,0.5-2.8c0.3-1.6,0.7-3.3,0.9-5.1c0.1-0.5,0.2-1.1,0.4-1.7c0.1-0.3,0.1-0.5,0.2-0.8" + ' ' +
+									"c0-0.2,0.1-0.4,0.2-0.6c0.1-0.4,0.2-0.8,0.3-1.2c0.2-1.2,0.5-2.3,0.7-3.5c0.3-1.5,0.6-3,0.9-4.4c0.3-1.5,0.6-2.9,0.9-4.4l0.3-1.4" + ' ' +
+									"c0.2-1.1,0.5-2.1,0.7-3.2c0.5-2.2,1-4.5,1.4-6.7c0.3-1.4,0.5-2.7,0.7-4.1c0.8-4.3,1.5-8.7,3-12.8c0.1-0.4,0.2-0.8,0.2-1.2" + ' ' +
+									"c0-0.1,0-0.2,0-0.3l0.1-0.4l-0.2-0.4c-0.7-1.1-1.9-2.7-4-2.7c-0.4,0-0.8,0.1-1.2,0.2l-0.2,0l-0.2,0.1c-1.6,1-1.9,2.5-2,3.5" + ' ' +
+									"c0,0.2,0,0.5,0,0.7c0,0.4,0,0.7-0.1,1c-0.3,1.8-0.7,3.6-1,5.4c-0.2,1.3-0.5,2.6-0.7,3.9c-0.1,0.4-0.1,0.9-0.2,1.3" + ' ' +
+									"c-0.1,0.4-0.1,0.8-0.2,1.3c-0.3,1.8-0.7,3.6-1,5.3c-0.5,2.6-1.1,5.4-1.8,8.3c-0.2-0.3-0.3-0.5-0.5-0.8c-0.8-1.3-1.6-2.7-2.3-4.1" + ' ' +
+									"l-0.1-0.3c-0.9-1.8-1.7-3.5-1.9-5.4c-0.1-1.4-0.8-2.7-2-3.8l-0.1-0.1l-0.2-0.1c-0.1-0.1-0.2-0.1-0.4-0.1c1.4-0.5,2.2-1.6,2.4-3" + ' ' +
+									"l0-0.3l-0.2-0.3c-0.7-1.3-1.8-2.8-3.7-2.8c-0.5,0-1.1,0.1-1.7,0.4c-1,0.4-2,0.8-3,1.2c-0.5,0.2-1,0.4-1.5,0.6L179,90" + ' ' +
+									"c-1.4,0.6-2.8,1.2-4.2,1.7c-0.2,0.1-0.5,0.1-0.7,0.2c0,0,0,0,0,0c-0.3-0.3-0.7-0.7-1.2-1c-0.6-0.4-1.3-0.6-1.9-0.6" + ' ' +
+									"c-1.2,0-2.3,0.7-3,2c-0.2,0.3-0.4,0.7-0.5,1l-0.1,0.2c-0.8,0.5-1.8,0.8-2.8,1.2l-0.6,0.2c-0.1,0-0.2,0.1-0.3,0.1" + ' ' +
+									"c-0.4,0.1-0.8,0.2-1.2,0.6l-0.1,0.1c-1.4,1.2-2.8,2.5-3.7,4.3L158.5,100.2z"}), 
+								React.createElement("path", {d: "M150.4,122.7c0.1,0.8,0.3,1.6,0.7,2.6c0.4,1,1.3,2.2,3.5,2.4c0.1,0,0.2,0,0.2,0c1.2,0,2.1-0.7,2.4-1.8" + ' ' +
+									"c0.3-0.9,0.2-1.8-0.2-2.7c-0.6-1.3-0.9-2.7-0.9-4.3c0-2.1,0-4.2,0.1-6.2c0.1-1.9,0.3-3.9,0.4-5.8l0.1-1.3c0-0.5,0.1-1,0.2-1.3" + ' ' +
+									"c0.5-1,0.7-2,1-3c0.1-0.3,0.1-0.6,0.2-0.9c0.5-1.8,0.9-3.7,1.4-5.5c0.1-0.5,0.2-1,0.3-1.6c0.2-2.3-1.1-3.1-2.5-3.9" + ' ' +
+									"c-1.2-0.7-2.8-0.3-4,1c-0.6,0.7-1,1.5-1.1,2.4c-0.1,0.8-0.2,1.5-0.4,2.4c-0.1,0.4-0.2,0.8-0.2,1.3l-0.3,2.6" + ' ' +
+									"c-0.2,2.1-0.4,4.4-0.7,6.6c-0.1,1-0.2,1.9-0.2,2.9c-0.1,1-0.1,2-0.2,2.9C149.8,114.9,149.9,118.4,150.4,122.7z"}), 
+								React.createElement("path", {d: "M264.1,129c0,0.9,0,1.8,0.5,2.9l0.1,0.3l0.2,0.2c0.1,0.1,0.2,0.1,0.2,0.2c0.3,0.2,0.6,0.5,1,0.7" + ' ' +
+									"c0.6,0.3,1.2,0.5,1.8,0.5c0.7,0,1.3-0.2,1.9-0.7c1.2-1,1-2.4,1-3c0-0.1,0-0.3-0.1-0.4c-0.6-1.8-0.9-3.9-0.9-6.4c0-1.3,0-2.6-0.1-4" + ' ' +
+									"c0-1.8-0.1-3.6-0.1-5.3c0-3.5,0.2-7,0.4-10.3c0-0.7,0.1-1.4,0.1-2c0.1-1.8,0.1-3.4,0.5-5.1c0.3-1.2-0.1-2.3-0.5-3.1" + ' ' +
+									"c-0.5-1-1.4-1.6-2.6-1.6c-1.5,0-2.6,0.8-3.4,2.4l-0.2,0.3l0.1,0.4c0.3,1.7,0.3,3.5,0.2,5.4c0,0.5,0,0.9-0.1,1.4" + ' ' +
+									"c-0.1,4.3-0.3,8.4-0.2,12.6c0,1.1,0,2.2,0,3.3c-0.1,2.2-0.1,4.5,0.1,6.8C264.1,125.7,264.1,127.3,264.1,129z"})
+							), 
+							React.createElement("rect", {x: "8.1", y: "76.8", width: "415.1", height: "58.2"})
+						), 
+						React.createElement("g", {id: "alvvays", className: "band_lineup_link tan", onClick: self.openBand.bind(this, "Alvvays")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M98.6,179.1c0.9-0.1,1.8-0.2,2.8-0.2c0.8,0,1.7-0.1,2.5-0.2l1.7-0.2c1.5-0.2,2.9-0.4,4.4-0.5" + ' ' +
+									"c1.1-0.1,2.1-0.4,3.1-0.6c0.7-0.2,1.3-0.3,2-0.5c0,0.1,0.1,0.2,0.1,0.3l1.2,4c1.3,4.3,2.6,8.7,3.9,13.1c0.4,1.4,0.7,2.8,1,4.3" + ' ' +
+									"c0.1,0.7,0.3,1.3,0.4,2l0,0.2l0.1,0.2c0.8,1.4,2.1,2.2,3.6,2.5l0.2,0l0.2,0c1-0.1,1.6-0.7,2.1-1.1c0.1-0.1,0.2-0.2,0.3-0.2" + ' ' +
+									"l0.4-0.3l0.1-0.4c0.2-1.4,0.2-1.7-0.2-2.6l-0.3-0.6c-0.4-0.8-0.7-1.6-0.9-2.4c-0.4-1.4-0.9-2.9-1.4-4.3c-0.7-2.1-1.5-4.4-2.1-6.6" + ' ' +
+									"c-0.3-1.1-0.7-2.2-1-3.3c-0.3-1.1-0.7-2.2-1-3.3c-0.1-0.3-0.2-0.6-0.3-0.9c-0.2-0.7-0.4-1.4-0.5-2.1c0.9-0.3,2-0.8,2.6-2.2" + ' ' +
+									"l0.1-0.1l0-0.1c0.2-2.1-0.8-3.6-2.9-4.3l-0.2-0.1h-0.2c-0.3,0-0.6,0.1-0.9,0.1c-0.1,0-0.1,0-0.2,0.1c-0.6-2-1-4.1-1.5-6.1" + ' ' +
+									"c-0.2-1.2-0.5-2.4-0.8-3.6c-0.4-1.5-0.6-3.1-0.9-4.6c-0.1-0.8-0.3-1.5-0.4-2.3c-0.1-0.3-0.1-0.6-0.2-0.9c-0.2-0.9-0.3-1.8-0.6-2.8" + ' ' +
+									"c-0.8-2.9-0.9-5.4-0.4-7.8c0.3-1.4-0.3-2.5-0.8-3.3c-0.8-1.2-2-1.7-3.3-1.4c-0.2,0-0.3,0.1-0.5,0.1c-0.6,0.1-1.4,0.2-2.1,0.8" + ' ' +
+									"l-0.1,0.1l-0.1,0.1c-1.2,1.6-0.8,3.2-0.4,4.5c0,0.1,0.1,0.3,0.1,0.4l-0.3,0.6c-0.4,0.7-0.7,1.4-1.1,2c-1.2,2.4-2.5,4.8-3.7,7.2" + ' ' +
+									"l-0.1,0.2c-0.2,0.3-0.3,0.7-0.5,1.1c-0.3,0.7-0.6,1.5-0.8,2.2c-0.3,0.9-0.7,1.8-1,2.7c-0.2,0.6-0.4,1.1-0.7,1.7" + ' ' +
+									"c-0.4,1-0.8,1.9-1.1,2.9c-0.8,2.4-1.6,4.8-2.4,7.1c-0.4,1.3-0.9,2.7-1.3,4c0,0.1-0.1,0.2-0.1,0.3c-0.3,0.1-0.5,0.1-0.8,0.2" + ' ' +
+									"c-1.3,0.3-2.8,0.6-4,1.9l-0.3,0.3l-0.2,2l0.3,0.4c0.8,0.9,1.3,1.3,2.4,1.3c0.1,0,0.2,0,0.3,0c-0.7,1.6-1.5,3.4-2.3,5.3" + ' ' +
+									"c-0.4,0.8-0.9,1.5-1.6,2.1c-0.4,0.3-0.8,0.7-1.1,1.2c-0.6,0.7-0.7,1.7-0.3,2.6c0.5,1.4,1.9,2.3,3.3,2.3c0.4,0,0.8-0.1,1.2-0.2" + ' ' +
+									"c0.2-0.1,0.4-0.2,0.6-0.3l0.5-0.2l0.2-0.3c0.2-0.4,0.5-0.8,0.7-1.1c0.5-0.8,1-1.7,1.5-2.5c1.4-2.6,2.7-5.5,3.8-8.9" + ' ' +
+									"C98.4,179.6,98.5,179.3,98.6,179.1z M113.7,170.7c-0.9,0.4-1.6,0.6-2.3,0.8c-2.8,0.6-6.6,1.4-10.5,1.5c-0.1,0-0.2,0-0.2,0" + ' ' +
+									"c0.3-1,0.6-1.9,0.9-2.9l0.2-0.5c0.9-2.7,1.9-5.5,2.9-8.3c0.4-1.2,0.9-2.5,1.6-4c1-2.3,1.9-4.2,2.9-6.1l0.2,1.1" + ' ' +
+									"c0.6,2.7,1.2,5.3,1.7,8c0.3,1.6,0.8,3.3,1.2,4.8C112.8,167,113.3,168.9,113.7,170.7z"}), 
+								React.createElement("path", {d: "M290.3,146.1l-2.2-2.1l-0.6,0.1c-2.3,0.5-2.6,0.7-3.7,2.6l-0.1,0.1c-0.3,0.5-0.6,1-0.9,1.5" + ' ' +
+									"c-0.6,0.9-1.1,1.8-1.6,2.7c-1.2-3-2.7-5.5-4.6-7.8c-1.3-1.5-2.9-2.6-4.8-3.4c-1.5-0.6-3-0.7-4.4,0c-1,0.4-1.8,1-2.5,1.7" + ' ' +
+									"c-0.6,0.6-1.2,1.3-1.6,1.9c-0.1-0.4-0.2-0.8-0.5-1.2c-0.9-1.1-2-1.7-3.3-1.7c-1.1,0-2,0.5-2.4,1.5c-0.3,0.6-0.4,1.3-0.5,1.9" + ' ' +
+									"c-0.1,0.3-0.1,0.7-0.1,1c0,0.4-0.1,0.7-0.1,1c-0.4,1.5-0.7,3.1-1.1,4.6l-0.5,2.1c-0.1,0.4-0.2,0.8-0.3,1.2" + ' ' +
+									"c-0.1,0.6-0.3,1.2-0.4,1.8c-0.5,2-1,4-1.5,6l-1.6,6.4c-0.5-0.3-0.9-0.6-1.2-1c-0.6-0.9-1.4-1.9-2.2-2.8c-1.8-2-3.3-4.4-4.8-6.6" + ' ' +
+									"l-0.2-0.4c-0.4-0.6-0.6-1-0.7-1.6c-0.1-1.5-0.9-2.6-2.2-3.2c0,0-0.1-0.1-0.1-0.1c-0.1-0.1-0.1-0.1-0.2-0.2l-0.2-0.2l-0.7-0.1" + ' ' +
+									"c-0.4-0.1-0.8-0.2-1.3-0.2c-0.9-0.1-1.7,0.3-2.2,1.1c-1,1.4-0.9,3.5,0.3,4.8c0.4,0.4,0.8,0.8,1.2,1.1c0.1,0.1,0.3,0.3,0.4,0.4" + ' ' +
+									"c0.1,0.1,0.3,0.2,0.4,0.3c0.1,0.1,0.3,0.2,0.3,0.3l0.6,0.9c1.4,2.1,2.9,4.3,4.5,6.3c1.3,1.6,2.5,3.2,3.8,4.8l0.3,0.3" + ' ' +
+									"c0.5,0.6,0.9,1.2,1.1,1.8c0.1,0.4,0.4,0.8,0.6,1l0.1,0.1c0.2,0.3,0.5,0.6,0.7,0.8c-0.2,1.3-0.5,2.6-0.8,3.9" + ' ' +
+									"c-0.5,2-0.9,4.1-1.2,6.2c-0.3,0.9-0.5,1.9-0.8,2.8c-0.4,1.7-0.8,3.3-1.6,4.7c-0.1,0.2-0.2,0.4-0.3,0.6c-0.4,1.5-0.1,2.8,0.7,3.9" + ' ' +
+									"c0.7,0.9,1.6,1.4,2.7,1.4c0.3,0,0.6,0,1-0.1l0.6-0.1l0.2-0.5c0.1-0.2,0.1-0.3,0.2-0.5c0.2-0.4,0.4-0.8,0.5-1.3" + ' ' +
+									"c0.5-1.9,0.9-3.5,1.2-5c0.4-1.8,0.8-3.7,1.2-5.5l0.3-1.4c0.1-0.6,0.3-1.3,0.4-1.9c0.2-1.2,0.5-2.4,0.7-3.5" + ' ' +
+									"c0.3-1.2,0.6-2.5,0.9-3.6c0.2-0.9,0.5-1.7,0.7-2.6c0.2-1,0.5-2,0.7-3c0.2-1.1,0.5-2.1,0.8-3.2c0.3-1.3,0.7-2.6,1-4" + ' ' +
+									"c0.5-1.9,1-3.8,1.5-5.7l0.3-1.1c0.2-0.8,0.4-1.7,0.6-2.5c0,1,0.2,2.1,0.5,3.1c0.7,2.5,2.2,4.7,4.8,6.9c1.3,1.1,2.7,2.1,4,3" + ' ' +
+									"c0.6,0.4,1.2,0.9,1.8,1.3c0.5,0.3,0.9,0.7,1.3,1c1.1,0.9,2.1,2,2.9,3c0.9,1.1,1.5,2.4,1.9,4c0.1,0.5,0,0.8-0.3,1.1l-0.2,0.2" + ' ' +
+									"c-0.8,0.9-1.6,1.7-2.5,2.3l-0.6,0.4c-1.4,0.8-2.9,1.7-4.4,2.4c-1.8,0.9-3.5,1.4-5.1,1.5c-0.2-0.1-0.4-0.2-0.6-0.3" + ' ' +
+									"c-0.6-0.2-1.2-0.5-1.3-1.8c-0.1-0.6-0.1-1.3-0.2-1.9c-0.1-1.2-0.8-1.8-1.4-2.1l-0.5-0.2l-0.5,0.3c-0.1,0-0.1,0.1-0.2,0.1" + ' ' +
+									"c-0.2,0.1-0.5,0.3-0.7,0.5c-0.3,0.2-0.5,0.4-0.6,0.6c-0.1,0.1-0.1,0.1-0.2,0.2l-0.2,0.2l-0.1,0.5c0,0.1,0,0.2-0.1,0.3" + ' ' +
+									"c-0.7,2.3-0.2,4.4,1.5,6.5c1,1.3,2.4,2,3.7,2.6l0.4,0.2c0.4,0.2,0.8,0.2,1.1,0.2l0.2,0c0.2,0,0.4,0,0.6,0c2.2,0,4.2-0.4,5.9-1.3" + ' ' +
+									"c0.5-0.3,1-0.5,1.5-0.8c1.3-0.6,2.6-1.3,3.8-2c1.3-0.8,2.9-1.7,4.2-2.8c2.1-1.7,3-4,2.7-6.4c-0.3-1.9-0.9-3.5-1.8-5.2" + ' ' +
+									"c-1.5-2.7-3.5-4.9-6-6.9c-1.1-0.9-2.3-1.8-3.9-3c-1.8-1.4-3.6-2.7-4.6-4.7c-0.5-1-0.8-2-0.7-2.9c0.2-2.5,0.8-4.5,1.8-6.3" + ' ' +
+									"c0.3-0.6,0.8-1.2,1.4-1.8c0.5-0.5,0.8-0.5,0.9-0.5c0.3,0,0.6,0.1,0.9,0.3c0.8,0.5,1.5,1.3,2.2,2.3c1.3,2,2.2,4.2,2.9,6.9" + ' ' +
+									"c0.2,0.9,0.3,1.6,0.1,2.1c-0.7,2-0.2,3.8,1.5,5.4c0.1,0.1,0.2,0.2,0.4,0.3l0.5,0.3l0.4,0c0.1,0,0.3,0,0.4,0c0.4,0,0.8,0,1.2,0" + ' ' +
+									"c1.6-0.1,2.5-0.9,2.8-2.5c0-0.2,0.1-0.4,0.1-0.6c0.1-1,0.4-2,1-3c1.2-2,2.1-3.6,3.1-5.1c0.2-0.4,0.6-0.8,1.1-1.1" + ' ' +
+									"c1.7-1.4,2-2.2,1.4-4.5L290.3,146.1z"}), 
+								React.createElement("path", {d: "M194.5,187.8c0.2-0.4,0.3-0.8,0.5-1.2l0.1-0.2c0.1-0.2,0.2-0.5,0.2-0.7c0.1-0.4,0.2-0.7,0.4-1" + ' ' +
+									"c0.9-1.9,1.8-3.8,2.7-5.7c0.2-0.5,0.5-0.9,0.7-1.4c0.3-0.5,0.5-0.9,0.8-1.4c0.6-1.2,1.1-2.4,1.7-3.5c1-2.1,2-4.2,3.1-6.2l0.1-0.2" + ' ' +
+									"c1.2-2.2,2.3-4.3,3.9-6.1l0.1-0.2c0.9-1.1,1.9-2.3,3-3.2c0.8-0.7,1.7-1.6,2-3.1l0-0.2l-0.1-0.2c-0.3-1.3-1-2.2-2-2.8" + ' ' +
+									"c-0.5-0.3-1.2-0.5-1.8-0.5c-1.2,0-2.3,0.6-2.8,1.6c-0.6,1.1-1.4,2.1-2.3,3.2c-0.5,0.6-1,1.2-1.5,1.9l-0.4,0.5" + ' ' +
+									"c-0.7,0.9-1.4,1.9-2,2.9c-1.3,2.4-2.5,4.7-3.5,7c-1.8,3.9-3.8,7.6-5.3,10.4c-0.2,0.4-0.4,0.7-0.6,1.1c-1.6-4.9-3.2-9.9-4.3-14.9" + ' ' +
+									"c-0.1-0.3-0.2-0.6-0.2-0.9c-0.3-1.2-0.6-2.4-0.4-3.6c0.1-0.5,0-0.9,0-1.2c0-0.1,0-0.2,0-0.2c-0.1-0.6-0.2-1.3-0.3-1.9" + ' ' +
+									"c-0.2-1.5-1-2.7-2.3-3.4c-1.6-0.9-3-0.8-4.4,0.3l-0.2,0.2c-0.6-0.7-1.5-0.9-3-1.2l-0.2-0.1l-0.2,0.1c-0.9,0.2-1.7,0.7-2.3,1.6" + ' ' +
+									"c-1.3,1.7-2.2,3.3-2.9,4.9c-0.9,2.3-1.5,4.7-2.2,7l-0.3,1.3c-0.8,3.1-1.8,6.3-2.7,9.4c-0.2,0.8-0.5,1.6-0.7,2.4" + ' ' +
+									"c-0.5-1.5-1.1-3-1.5-4.5c-0.1-0.6-0.4-1.1-0.5-1.7c-0.1-0.2-0.2-0.5-0.3-0.7l-0.3-0.8c-0.2-0.7-0.5-1.3-0.7-2" + ' ' +
+									"c-0.3-1-0.6-1.9-0.9-2.9c-0.6-1.9-1.1-3.9-1.8-5.8c-0.5-1.5-1-3.1-0.9-4.6l0-0.3l-1.3-2.2l-2.6-1l-2.6,1l-1.1,2.8l1.2,2.1" + ' ' +
+									"c0.1,0.2,0.3,0.4,0.4,0.7c0.3,0.4,0.5,0.8,0.6,1.2c1,2.6,1.8,4.7,2.4,6.7c0.7,2,1.3,4.2,2,6.2l0.7,2.2c0.3,1,0.6,2,0.9,3" + ' ' +
+									"c0.5,1.6,1,3.2,1.5,4.8l0.1,0.3c0.4,1.2,0.8,2.4,0.8,3.7c0,0.5,0.1,1,0.2,1.5l0,0.1c0.4,1.7,2.1,3,4,3c0.6,0,1.1-0.1,1.6-0.4" + ' ' +
+									"c1.1-0.5,1.7-1.4,1.9-2.6c0-0.2,0.1-0.5,0.1-0.7c0.1-0.4,0.1-0.8,0.2-1.2c0.5-1.7,1-3.5,1.6-5.2c0.2-0.8,0.5-1.6,0.7-2.4" + ' ' +
+									"c0.2-0.6,0.3-1.1,0.5-1.7c0.4-1.4,0.9-2.8,1.2-4.2c1.1-4.4,2.2-8,3.5-11.6c0.5-1.4,1.2-2.5,2.2-3.2l0.1-0.1c0,0,0,0,0,0" + ' ' +
+									"c0.2,0.5,0.4,1,0.7,1.5c0.1,0.1,0.1,0.3,0.2,0.5l0.5,1.6c0.7,2.4,1.5,4.8,2.2,7.2c0.4,1.4,0.8,2.7,1.2,4.1" + ' ' +
+									"c0.5,1.6,0.9,3.2,1.4,4.8c0.3,0.9,0.5,1.8,0.8,2.6c0.3,1.1,0.7,2.1,1,3.2c0.1,0.5,0.2,1,0.3,1.6l0.1,0.5c0.1,0.6,0.1,1.2,0.2,1.8" + ' ' +
+									"l0.2,1.4l1.1,0.5c0.4,0.2,0.9,0.4,1.3,0.6c0.3,0.1,0.6,0.2,1,0.3c0.3,0.1,0.6,0.1,0.9,0.1C193.4,189.5,194.1,188.5,194.5,187.8z"}
+									), 
+								React.createElement("path", {d: "M212.9,166.5c-0.2,0.9,0,1.8,0.7,2.6c0.2,0.2,0.3,0.4,0.5,0.5c0,0.1,0,0.2-0.1,0.3" + ' ' +
+									"c-0.2,0.7-0.5,1.4-0.7,2.1c-0.3,0.9-0.7,1.9-1,2.8c-0.7,1.9-1.3,3.7-2.2,5.2c-0.7,1.2-1,2.4-1,3.8l0,0.3l0.2,0.3" + ' ' +
+									"c0.6,0.9,1.3,1.6,2,2.2l0.3,0.3l0.4,0c1.8,0,3-1.1,3.4-3c0.2-1.3,0.6-2.5,1.1-3.8l0.1-0.2c0.7-2,1.3-4,1.9-5.9" + ' ' +
+									"c0.3-1,0.7-2.1,1-3.1c0-0.1,0.1-0.3,0.1-0.4c0-0.2,0.1-0.3,0.1-0.5c0.9-0.1,2.2-0.2,3.4-0.2c0.7,0,1.3,0,1.8,0.1" + ' ' +
+									"c0,0.1,0,0.2,0.1,0.2c0.1,0.8,0.2,1.6,0.3,2.4c0.2,1.6,0.4,3.3,0.8,4.9c0.1,0.5,0.2,1,0.1,1.5c-0.2,0.5-0.1,1-0.1,1.3" + ' ' +
+									"c0,0.1,0,0.3,0,0.4c0,1.4,0.4,3.2,2.9,4.3l0.2,0.1l2.6,0l0.3-0.5c0.7-1.1,1.5-2.6,0.6-4.4c-0.4-0.9-0.8-1.9-1-3.1" + ' ' +
+									"c-0.3-1.6-0.6-3.2-0.8-4.8c-0.1-0.9-0.3-1.7-0.4-2.6c-0.1-0.6-0.1-1,0.1-1.4c0.5-1.1,0.4-2.3-0.3-3.4c-0.4-0.6-0.5-1.3-0.6-2.4" + ' ' +
+									"l-0.2-2.5c-0.1-1.8-0.3-3.6-0.4-5.4c-0.1-1.6-0.4-3.2-1-4.9c-0.3-0.8-0.8-1.5-1.6-1.9c-0.7-0.4-1.5-0.8-2.5-0.8" + ' ' +
+									"c-0.2,0-0.5,0-0.8,0.1l-0.4,0.1l-0.3,0.3c-0.1,0.1-0.2,0.2-0.3,0.3c-0.3,0.3-0.7,0.7-1,1.3c-0.7,1.4-1.4,3-2,4.6" + ' ' +
+									"c-0.9,2.6-1.7,5.2-2.6,7.7c-0.3,0.9-0.6,1.8-0.9,2.6l-0.1,0c-0.4,0.1-0.9,0.3-1.3,0.5C213.7,164.9,213.1,165.6,212.9,166.5z" + ' ' +
+									 "M222.1,163.8c0.4-1.4,1.1-3.7,1.7-5.5c0.2,1.7,0.4,3.7,0.5,5.3C223.6,163.7,222.9,163.8,222.1,163.8z"}), 
+								React.createElement("path", {d: "M139.3,186.9C139.3,186.9,139.4,186.9,139.3,186.9c2.5-0.2,5.4-0.5,8.3-1c0.7-0.1,1.3-0.3,2-0.7" + ' ' +
+									"c0.9-0.5,1.5-1.1,1.7-1.9c0.3-1.1-0.2-2.2-0.7-2.9l-0.3-0.6l-0.7,0c-0.2,0-0.3,0-0.5,0c-0.4,0-0.9,0-1.4,0.1" + ' ' +
+									"c-0.8,0.1-1.6,0.3-2.4,0.4c-0.6,0.1-1.1,0.2-1.7,0.3l-0.6,0.1c-1,0.2-2,0.3-3,0.4c-0.2,0-0.4,0-0.6,0c-0.6,0-1-0.1-1.4-0.3l0,0" + ' ' +
+									"c-0.1-0.3-0.1-0.5-0.2-0.8c-0.1-0.8-0.2-1.6-0.3-2.4c-0.1-1.1-0.3-2.2-0.4-3.3c-0.9-6.3-1.3-12.8-1.7-18.2" + ' ' +
+									"c-0.1-1.4-0.1-2.9,0.7-4.2l0.2-0.3l-0.1-0.8c-0.1-0.9-0.1-1.9-0.8-2.8l-0.2-0.3l-3.2-1l-0.4,0.3c-1.1,0.7-1.6,1.5-1.8,2.7" + ' ' +
+									"c-0.2,1.1-0.1,2.2,0,3.3l0.1,0.3c0.1,0.4,0.1,0.7,0.1,1c-0.1,1.3,0,2.5,0.2,3.5c0.2,1.3,0.3,2.6,0.4,3.8c0.1,1.1,0.2,2.2,0.2,3.4" + ' ' +
+									"c0.1,1.3,0.2,2.7,0.3,4l0,0.5c0.3,3.3,0.6,6.8,0.9,10.2c0.1,1,0.1,1.8-0.3,2.6c-0.6,1.3-0.9,3.2,1.3,5.2c1,0.9,2.3,1.4,3.7,1.4" + ' ' +
+									"l0.2,0l0.2,0C138.1,188.3,138.8,187.5,139.3,186.9z"})
+							), 
+							React.createElement("rect", {x: "9.1", y: "142.3", width: "413.7", height: "56"})
+						), 
+						React.createElement("g", {id: "good_life", className: "band_lineup_link pink", onClick: self.openBand.bind(this, "The Good Life")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M146.1,237.2L146,237c-0.3-0.4-0.7-1.1-1.5-1.4c0,0,0,0,0-0.1c-0.2-0.2-0.6-0.6-1.2-0.6" + ' ' +
+									"c-0.2,0-0.3,0-0.5,0.1c-0.5-0.2-1.1-0.2-1.7,0.1c0,0,0,0-0.1,0c-0.1,0-0.3,0-0.4,0.1l-0.1,0c-0.2,0.1-0.7,0.1-1,0.5" + ' ' +
+									"c-0.1,0.1-0.3,0.1-0.5,0.2c-0.1,0.1-0.3,0.1-0.4,0.2c-0.9,0.4-1.8,0.6-2.8,0.8c-0.8,0.2-1.7,0.3-2.5,0.6c-0.3,0.1-0.6,0.2-0.9,0.2" + ' ' +
+									"c-0.4,0.1-0.7,0.1-1.1,0.3c-1.7,0.5-3.4,0.8-5,1c-0.5,0.1-0.9,0.1-1.4,0.2c-1,0.1-2.1,0.3-3.1,0.4c-0.8,0.1-1.6,0.3-2.4,0.5" + ' ' +
+									"c-0.3,0.1-0.6,0.1-0.9,0.2l-0.1,0c-0.3,0.1-0.6,0.1-0.8,0.2c-0.7,0.2-1.4,0.5-2,0.7l-1.1,0.4L114,242c0,0.1-0.1,0.1-0.1,0.2" + ' ' +
+									"c-0.1,0.2-0.3,0.5-0.4,0.9c-0.1,0.4-0.2,1.1,0,1.7c0.5,1.3,1.9,2,3.1,2c0.2,0,0.4,0,0.7-0.1c0.5-0.1,1.1-0.2,1.6-0.7" + ' ' +
+									"c0.1,0,0.1,0,0.2-0.1l0.2-0.1c0.7-0.3,1.5-0.4,2.3-0.5c0.5-0.1,1-0.2,1.4-0.3c0,0,0.1,0,0.1,0l0.1,0c0.2,0,0.4,0,0.5,0" + ' ' +
+									"c0.5-0.1,1.1-0.2,1.6-0.3c0.6-0.1,1.2-0.2,1.9-0.4c0.7-0.1,1.5-0.3,2.2-0.4c0.7-0.1,1.4-0.2,2.1-0.4c0.3,0,0.5-0.1,0.8-0.2" + ' ' +
+									"c0.2-0.1,0.4-0.1,0.6-0.1c1-0.2,2-0.4,2.9-0.6c0.8-0.2,1.6-0.4,2.4-0.5c0.1,0,0.1,0,0.2,0c-0.1,0.4-0.2,0.8-0.3,1.3l-0.1,0.2" + ' ' +
+									"c-0.1,0.6-0.3,1.2-0.5,1.8c-0.3,0.9-0.5,1.9-0.8,2.8l-0.2,0.6c-0.2,0.6-0.3,1.1-0.5,1.6c-0.3,0.7-0.6,1.5-0.9,2.3" + ' ' +
+									"c-0.1,0.3-0.3,0.6-0.4,0.9c-0.5,1.2-0.9,2.3-1.7,3.3c-0.3,0.4-0.6,0.7-0.9,1.1c-0.3,0.4-0.5,0.7-0.8,1c-0.7,0.8-1.3,1.4-2.1,1.8" + ' ' +
+									"c-0.7,0.4-1.5,0.9-2.3,1.3c-0.7,0.3-1.3,0.6-1.9,0.7c-0.4,0.1-0.9,0.1-1.4,0.1c-0.6,0-1.2-0.1-2-0.2c-1.1-0.2-2-0.5-2.7-1" + ' ' +
+									"l-0.2-0.2c-1.2-0.8-2.4-1.5-3.4-2.5c-1-1-2.2-2.3-3.1-3.7l-0.1-0.2c-0.7-1.2-1.4-2.3-1.9-3.5c-0.2-0.5-0.4-1-0.6-1.4" + ' ' +
+									"c-0.3-0.7-0.7-1.4-0.8-2.1c-0.1-0.5-0.3-1-0.5-1.5c-0.1-0.4-0.3-0.8-0.4-1.1c-0.2-0.9-0.4-1.8-0.6-2.8l-0.3-1.3" + ' ' +
+									"c-0.2-1-0.5-2.1-0.6-3.1c-0.3-2-0.6-4.2-0.9-6.3c-0.2-1.8-0.4-3.5-0.5-5.1c-0.1-1.2,0-2.4,0-3.6c0-0.5,0-1,0-1.5" + ' ' +
+									"c0-2,0.3-4.1,0.9-6.5c0.3-1.1,0.7-2.2,1.1-3.1c0.5-1.1,1.3-1.7,2.3-2.5l0.2-0.2l0.1,0c0.9-0.1,1.7-0.2,2.3,0l0.9,0.3" + ' ' +
+									"c0.7,0.2,1.4,0.5,2.1,0.8c0.2,0.1,0.4,0.2,0.7,0.4c0.2,0.1,0.3,0.2,0.5,0.3l0.3,0.1l0.3,0c0,0,0.1,0,0.2,0.2l0.3,0.2" + ' ' +
+									"c0.3,0.2,0.6,0.4,0.9,0.7l0.6,0.5c0.6,0.5,1.2,0.9,1.8,1.4c0.4,0.3,0.7,0.7,1.1,1c0.4,0.4,0.7,0.7,1.1,1c1.1,1,1.9,2.1,2.8,3.4" + ' ' +
+									"c0.4,0.6,0.6,1.3,0.6,1.9c0,0.8,0,1.6,0.4,2.2c0.7,1.1,1.7,1.7,2.8,1.7c0,0,0,0,0,0c0,0,0.1,0,0.1,0c0.3,0.1,0.8,0.1,1.1-0.1" + ' ' +
+									"l0.2-0.1c0.5-0.2,1.3-0.5,1.7-1.5l0.1-0.2v-0.2c0-0.1,0-0.2,0-0.3c0,0,0,0,0,0c0.3-0.7,0.2-1.4-0.3-2.2c-0.2-0.4-0.5-0.9-0.7-1.3" + ' ' +
+									"c-0.7-1.4-1.4-3-2.6-4.4l-0.2-0.2c-0.6-0.7-1.3-1.4-2-2.1c-1.3-1.2-2.6-2.4-4-3.5c-0.9-0.7-2-1.5-3.5-2.3c-1-0.6-2.1-1-3-1.4" + ' ' +
+									"c-1.4-0.6-3.1-1.2-4.9-1.5c-1.1-0.2-2.1-0.1-3.1,0.3c-0.4,0.1-0.7,0.2-1.1,0.3c-1.2,0.3-2.2,1-3.3,2.1c-0.6,0.6-1.1,1.3-1.6,2.1" + ' ' +
+									"c-0.6,1-0.9,2.1-1.2,3.1c-0.1,0.2-0.1,0.5-0.2,0.7c-0.2,0.6-0.3,1.2-0.4,1.7c0,0.2-0.1,0.4-0.1,0.7c0,0.2-0.1,0.4-0.1,0.6" + ' ' +
+									"c0,0.2,0,0.5,0,0.7c0,0.4,0,0.8-0.1,1.1c-0.2,0.8-0.2,1.6-0.2,2.3l0,0.3c0,1.5,0,3,0,4.4c0,0.5,0,1,0,1.6c0,0.2,0,0.5,0,0.7" + ' ' +
+									"l0.1,0.8c0,0.5,0,0.9,0.1,1.4c0,0.3,0.1,0.6,0.1,0.8c0,0.1,0,0.3,0.1,0.4c0,0.2,0,0.4,0.1,0.6c0,0.4,0.1,0.8,0.1,1.2" + ' ' +
+									"c0.1,0.4,0.1,0.9,0.2,1.3c0.1,0.5,0.2,0.9,0.2,1.4c0,0.3,0.1,0.5,0.1,0.8c0,0.4,0.1,0.8,0.1,1.2c0.3,1.7,0.6,3.1,0.8,4.5" + ' ' +
+									"c0.2,0.8,0.4,1.5,0.5,2.2l0.2,0.6c0.1,0.4,0.2,0.8,0.3,1.2c0.2,0.8,0.4,1.6,0.6,2.3c0.2,1.1,0.6,2.2,1.1,3.3l0.5,1" + ' ' +
+									"c0.5,1.1,1.1,2.3,1.7,3.4c0.1,0.2,0.2,0.5,0.4,0.7c0.4,0.7,0.8,1.5,1.4,2.2c0.1,0.1,0.3,0.4,0.4,0.6c0.2,0.3,0.4,0.6,0.6,0.9" + ' ' +
+									"c0.8,0.9,1.6,1.7,2.4,2.4c0.3,0.3,0.6,0.5,0.9,0.8c0.2,0.1,0.3,0.3,0.5,0.4c0.1,0.1,0.2,0.3,0.4,0.5l0.5,0.4" + ' ' +
+									"c0.7,0.5,1.4,1,2.1,1.4c0.7,0.4,1.4,0.7,2,1c0.8,0.3,1.4,0.5,2.1,0.7c1,0.2,1.8,0.4,2.7,0.5c0.1,0,0.3,0,0.4,0" + ' ' +
+									"c0.3,0,0.6,0,0.9-0.1c0.2,0,0.3,0,0.5,0c0.9-0.1,1.8-0.2,2.8-0.5c0.3-0.1,0.5-0.2,0.8-0.3c0.7-0.2,1.3-0.4,2-0.8" + ' ' +
+									"c0.3-0.2,0.6-0.3,0.9-0.5c0.4-0.2,0.8-0.4,1.3-0.7c0.7-0.4,1.4-1,2-1.5c0.6-0.5,1.2-1.2,1.8-1.9c0.6-0.8,1.3-1.6,1.9-2.5" + ' ' +
+									"c1-1.6,1.9-3.5,2.6-5.6c0.2-0.5,0.4-1.1,0.6-1.6c0.3-1,0.7-2,1-3c0.4-1.4,0.8-2.8,1.1-4.1c0.2-0.7,0.3-1.3,0.5-2" + ' ' +
+									"c0.1-0.5,0.2-0.5,0.3-0.6c0.4-0.1,0.6-0.4,0.7-0.6l0.7-0.9l0.3-1.8l-0.4-2L146.1,237.2z M123.3,244L123.3,244L123.3,244L123.3,244" + ' ' +
+									"z"}), 
+								React.createElement("path", {d: "M36.6,235.9c0,0.3,0.1,0.5,0.1,0.8c0.1,0.5,0.1,1.1,0.1,1.6c0.1,1.5,0.3,3,0.5,4.5c0.1,0.5,0.2,1,0.2,1.6" + ' ' +
+									"l0,0.4c0.1,1,0.3,1.9,0.2,2.8c-0.1,0.7-0.1,1.7,0.4,2.6l0.1,0.2l0.4,0.3c0.2,0.1,0.3,0.2,0.5,0.3c0.5,0.3,1.1,0.7,1.8,0.7" + ' ' +
+									"c0.9,0,1.5-0.6,2-1.1c0.4-0.4,0.6-0.9,0.6-1.4c0-0.5,0-1-0.1-1.5l0-0.3c0-0.2-0.1-0.3-0.1-0.5l0,0c0.1-0.7,0-1.4-0.2-2l-0.1-0.3" + ' ' +
+									"c0-0.1,0-0.2,0-0.3c-0.1-0.4-0.1-1-0.5-1.4c-0.1-0.1-0.1-0.2-0.2-0.5c-0.1-0.9-0.2-1.8-0.3-2.7c0-0.5-0.1-1.1-0.1-1.6" + ' ' +
+									"c0-0.4-0.1-0.9-0.1-1.3c-0.1-0.8-0.1-1.7-0.2-2.5l0-0.5c0.1,0,0.1-0.1,0.2-0.1c1-0.4,2-0.8,3-1.2l0.5-0.2c0.4-0.2,0.8-0.3,1.2-0.5" + ' ' +
+									"c0.9-0.3,1.8-0.7,2.8-1.1c0.4-0.2,0.8-0.2,1.3-0.2c0,0,0,0,0,0c0.1,1.5,0.2,2.9,0.4,4.4l0,0l0,0.1c0,0.1,0,0.3,0,0.4" + ' ' +
+									"c0,0.2,0,0.4,0,0.6c0,0.6-0.1,1.2,0,1.9c0,0.3,0.1,0.5,0.2,0.8c0.1,0.4,0.2,0.8,0.2,1.2c0,0.3,0,0.7,0.1,1c0.2,1,0.1,2.1,0,3.2" + ' ' +
+									"c-0.1,0.7-0.1,1.6,0.1,2.4l0,0.2l0.1,0.1c0.7,1.2,1.6,1.7,2.5,2.1l0.3,0.1l1.7-0.2l1.9-2.5l-0.5-0.2c0-0.1,0.1-0.2,0.1-0.3" + ' ' +
+									"c0.4-0.9,0.3-1.8,0.2-2.6c0-0.2,0-0.4,0-0.7l0-0.9l-1.1-0.2c0,0,0,0,0,0c0-0.3,0-0.6,0-0.9c0-0.4,0-0.8,0-1.2" + ' ' +
+									"c0.2,0,0.4-0.1,0.6-0.2c0.2-0.1,0.4-0.2,0.7-0.3c0.2-0.1,0.4-0.2,0.6-0.3c0.6-0.2,1.3-0.4,1.9-0.6c0.2,0.6,0.3,1.2,0.5,1.8" + ' ' +
+									"c0.3,0.9,0.5,1.8,0.7,2.7c0,0.1-0.1,0.3-0.1,0.5c0,0.1,0,0.2,0,0.3c0,0.4,0,1,0.3,1.5c0.5,1.1,1.5,1.8,2.7,2.1" + ' ' +
+									"c0.9,0.2,1.9-0.1,2.6-0.7c0.5-0.5,0.7-1.2,0.7-1.9c0-0.1,0-0.1,0-0.2c0,0,0-0.1,0-0.1c0.6,0.4,1.5,0.5,2.3,0.3" + ' ' +
+									"c0.6-0.2,1.2-0.2,1.8-0.3c0.3,0,0.6-0.1,1-0.1c0.1,0,0.3-0.1,0.4-0.1c0.1,0,0.1,0,0.2,0c0.3-0.1,0.5-0.1,0.8-0.2" + ' ' +
+									"c0.6-0.1,1.1-0.2,1.6-0.3c1.2,0,2.1-0.5,3-0.8l0.4-0.2c0.2-0.1,0.4-0.2,0.5-0.3c0.1,0,0.1-0.1,0.2-0.1c0.8-0.2,1.2-0.7,1.5-1" + ' ' +
+									"c0.3-0.4,0.6-0.7,0.8-1.1c0.2-0.3,0.3-0.8,0.4-1.2c0.1-0.7-0.1-1.5-0.4-2.2l-0.2-0.4l-0.4-0.1c0,0-0.1,0-0.2,0" + ' ' +
+									"c-1.3-0.7-2.6-0.5-3.7,0.6c-0.2,0.2-0.4,0.3-0.8,0.5c-0.2,0.1-0.4,0.2-0.6,0.3l-0.3,0.1c-0.1,0-0.2,0.1-0.2,0.1" + ' ' +
+									"c-0.1,0-0.2,0.1-0.4,0.1c-0.7,0.3-1.6,0.5-2.4,0.6l-0.4,0.1c-0.8,0.1-1.5,0.3-2.1,0.2c-0.2-0.5-0.3-1.2-0.3-1.7c0-0.2,0-0.4,0-0.6" + ' ' +
+									"c0,0,0-0.1,0-0.1l0,0c0.6-0.1,1.2-0.2,1.7-0.3c0.5-0.1,1.1-0.1,1.6-0.2c0.6-0.1,1.3-0.2,1.9-0.3c0.5-0.1,1-0.1,1.5-0.3" + ' ' +
+									"c0.3-0.1,0.5-0.2,0.8-0.3c0.2-0.1,0.3-0.1,0.5-0.2c0.1,0,0.3-0.1,0.5-0.1c0.2,0,0.5-0.1,0.8-0.2l0.1,0c0.6-0.2,1.2-0.4,1.8-0.8" + ' ' +
+									"c0.5-0.3,1-0.9,1.3-1.5c0.2-0.5,0.1-1.1,0-1.5l0-0.2c0-0.3-0.1-0.5-0.2-0.7c0-0.1-0.1-0.2-0.1-0.3l-0.2-0.5l-0.4-0.2" + ' ' +
+									"c-0.1,0-0.2-0.1-0.3-0.1c-0.2-0.1-0.4-0.2-0.6-0.3c-0.7-0.4-1.5-0.4-2.2,0.1c-0.1,0.1-0.2,0.2-0.3,0.2c-0.1,0.1-0.2,0.2-0.2,0.2" + ' ' +
+									"l-0.5,0.2c-0.7,0.2-1.3,0.5-1.9,0.6c-0.9,0.2-1.7,0.4-2.5,0.6c-0.4,0.1-0.9,0.2-1.3,0.4c-0.4,0.1-0.7,0.2-1.1,0.2" + ' ' +
+									"c0.1-0.3,0.2-0.6,0.4-0.8c0.4-0.5,1-0.9,1.8-1.1c0.4-0.1,0.8-0.3,1.2-0.4c0.5-0.2,0.9-0.4,1.3-0.4c0.7-0.1,1.3-0.4,1.8-0.7" + ' ' +
+									"c0.2-0.1,0.4-0.2,0.6-0.3c0.5-0.2,1.7-0.7,2.2-2.2l0.1-0.2l-0.2-1.9l-1.6-1.8l-1.5-0.3l-0.3,0.1c-0.1,0-0.2,0.1-0.3,0.1" + ' ' +
+									"c-0.3,0.1-0.7,0.2-1,0.5c-0.6,0.5-1.4,0.9-2.2,1.3c-0.4,0.1-0.7,0.3-1.1,0.5c-0.6,0.3-1.2,0.5-1.8,0.7c-0.7,0.2-1.3,0.5-1.7,0.9" + ' ' +
+									"c-0.6,0-1,0.2-1.3,0.4c-0.2,0.1-0.3,0.1-0.4,0.2c-0.5,0.1-0.7,0.4-0.8,0.6c-1,1.1-0.9,2.4-0.8,3.3c0,0.5,0.1,1-0.1,1.5" + ' ' +
+									"c0,0,0,0.1,0,0.2c-0.2,0-0.4-0.1-0.6-0.1c0,0,0,0,0,0c-0.1-0.3-0.1-0.6-0.2-0.8c-0.4-1.8-0.8-3.5-0.5-5.2l0.1-0.3l-0.1-0.3" + ' ' +
+									"c-0.6-1.3-1-1.6-2.2-2.2l-0.9-0.5l-0.6,0.3c0,0-0.1,0-0.1,0.1c-1.3,0.4-1.8,1.5-2.1,2.2c-0.1,0.4-0.2,0.8-0.1,1.1" + ' ' +
+									"c0.1,0.4,0.2,0.7,0.3,1.1c0.1,0.2,0.1,0.4,0.2,0.7c0.1,0.2,0.1,0.4,0.2,0.6c0.1,0.4,0.2,0.8,0.3,1.2l0.5,2.3" + ' ' +
+									"c0.1,0.4,0.2,0.8,0.3,1.3l0,0.2c-0.1,0.1-0.3,0.1-0.4,0.2c-0.5,0.3-1,0.5-1.5,0.7c-0.4,0.1-0.8,0.2-1.2,0.3c0,0,0-0.1,0-0.1" + ' ' +
+									"c0-0.6-0.1-1.3-0.1-1.9c-0.1-1.1-0.1-2.3-0.2-3.4c0-0.3,0-0.5,0-0.8c0-0.5,0-1-0.1-1.4c-0.1-1.6-0.8-2.5-2.3-2.9" + ' ' +
+									"c-0.3-0.1-0.5-0.1-0.8-0.1c-0.6,0-1.2,0.3-1.6,1c-0.2,0.3-0.3,0.5-0.4,0.8l-0.5-0.2l-1,0.6c-0.4,0.3-0.9,0.5-1.3,0.8" + ' ' +
+									"c-0.2,0.1-0.3,0.1-0.5,0.2c-0.1,0-0.2,0.1-0.3,0.1l-0.2,0.1c-0.2,0.1-0.3,0.1-0.5,0.2c-0.2,0.1-0.4,0.2-0.7,0.3" + ' ' +
+									"c-0.4,0.2-0.7,0.3-1.1,0.5c-0.5,0.2-0.9,0.4-1.4,0.5c-0.4,0.2-0.9,0.3-1.3,0.5c0,0,0,0-0.1,0c-0.4-0.7-1.7-1.8-2.5-1.8l-0.1,0" + ' ' +
+									"c-0.2,0-0.4,0-0.6,0.1c-1.9,0.6-2.9,2.2-2.5,4.1c0,0,0,0.1,0,0.1c-0.1,0-0.2,0.1-0.2,0.1c-1,0.4-2,0.8-2.9,1.2" + ' ' +
+									"c-0.3,0.1-0.6,0.3-0.8,0.4c-0.4,0.2-0.7,0.3-1,0.4c-0.7,0.1-1.4,0.4-1.9,0.7c-0.4,0.2-0.7,0.3-1,0.4c-0.6,0.2-1.1,0.5-1.5,0.7" + ' ' +
+									"c-0.2,0.1-0.3,0.2-0.5,0.3c-1.2,0.6-1.7,1.9-1.4,3.1c0.4,1.6,1.6,1.9,2.6,2l0.3,0l0.3-0.1c2.5-1.3,5.1-2.2,7.8-3.1" + ' ' +
+									"C36,236.1,36.3,236,36.6,235.9z"}), 
+								React.createElement("path", {d: "M226.1,228.8c-0.1-0.2-0.2-0.3-0.3-0.5c-0.9-1.5-2.2-2.9-4-4.1c-0.3-0.5-0.7-1-1.3-1.3" + ' ' +
+									"c-0.3-0.2-0.6-0.4-0.9-0.7c-0.1-0.1-0.3-0.2-0.4-0.3c-0.1-0.1-0.2-0.2-0.3-0.3c-0.2-0.2-0.4-0.3-0.7-0.5c-0.8-0.6-1.6-1.1-2.4-1.7" + ' ' +
+									"l-1.6-1.1c-0.1-0.1-0.2-0.1-0.3-0.2c-0.2-0.2-0.5-0.4-0.8-0.5c-0.6-0.3-1.3-0.6-1.9-0.9c-0.3-0.1-0.6-0.3-0.9-0.4" + ' ' +
+									"c-0.1,0-0.2-0.1-0.2-0.1c-0.2-0.1-0.3-0.2-0.5-0.2l-0.4-0.2c-0.7-0.3-1.5-0.6-2.2-0.9c-0.4-0.1-0.7-0.2-1.1-0.3" + ' ' +
+									"c-0.1,0-0.3-0.1-0.4-0.1c-0.3-0.1-0.5-0.2-0.8-0.2c-0.5-0.2-1-0.3-1.6-0.4c-0.4-0.1-0.7-0.1-1.1-0.2l-0.5-0.1" + ' ' +
+									"c-0.1,0-0.2-0.1-0.3-0.1c-0.3-0.1-0.7-0.2-1.1-0.2l-0.2,0c-0.1,0-0.2,0-0.5-0.5l-0.8-1.2l-1.2,0c-0.1,0-0.2,0-0.3,0l-0.1,0" + ' ' +
+									"c-0.7,0-1.3,0.3-1.8,0.7c0,0,0,0-0.1,0c-0.3,0.1-0.7,0.1-1.1,0.1c-0.1,0-0.3,0-0.4,0l-0.2,0c-0.1,0-0.4,0-0.5,0" + ' ' +
+									"c-0.7-0.3-1.4-0.5-2.3-0.5l-0.1,0c-1.4,0-2.2,0.6-2.7,1.7c-0.8,2-0.1,3.9,1.9,4.8c0.3,0.1,0.5,0.2,0.8,0.3l0.8,0.3l0.4-0.1" + ' ' +
+									"c0,0,0.1,0,0.1,0c0.3-0.1,0.7-0.2,1.1-0.5c0.4-0.3,0.9-0.4,1.7-0.4l0,0c0,0.1,0,0.3,0,0.4c0,0.3,0,0.5,0.1,0.8l0.1,0.4" + ' ' +
+									"c0.2,1,0.3,2,0.4,3c0.1,1.2,0.2,2.3,0.5,3.2c0.1,0.4,0.2,0.8,0.2,1.3c0,0.4,0.1,0.9,0.2,1.3c0.1,0.7,0.2,1.4,0.2,2.1" + ' ' +
+									"c0,0.3,0,0.6,0.1,0.8l0,0.4c0.1,0.8,0.2,1.7,0.2,2.6l0,0.2c0,0.9,0.1,1.8,0,2.7c0,0.6,0,1.1,0.1,1.6c0.1,0.5,0.1,1.1,0,1.5" + ' ' +
+									"c-0.1,0.9-0.1,1.7-0.1,2.6c0,0.3,0,0.5,0,0.8c0,1-0.3,1.9-0.6,2.9c-0.3,0.9-0.7,1.9-0.5,3.1c0,0.2,0.1,0.5,0.3,0.8l-0.7,0.1" + ' ' +
+									"l-0.3,0.6c0,0.1-0.1,0.2-0.1,0.2c0,0.1-0.1,0.1-0.1,0.2c-0.6,1.3-0.3,2.7,0.8,3.6c0.5,0.4,1,0.7,1.5,0.8c0.4,0.1,0.9,0.2,1.3,0.2" + ' ' +
+									"c0.7,0,1.5-0.2,2.3-0.5c0.7-0.3,1.3-0.7,1.9-1c0.6-0.3,1.1-0.7,1.7-0.9c0.1,0,0.2-0.1,0.2-0.1l0.7-0.4c0.5-0.3,1-0.6,1.5-0.9" + ' ' +
+									"c0.3-0.2,0.5-0.4,0.8-0.5c0.3-0.2,0.6-0.4,0.9-0.6c0.3-0.2,0.6-0.3,0.8-0.5c0.5-0.3,0.9-0.6,1.4-0.9c0.4-0.3,0.7-0.5,1.1-0.8" + ' ' +
+									"c0.5-0.4,1-0.7,1.5-1c1.2-0.7,2.4-1.6,3.8-2.8c0.4-0.3,0.8-0.6,1.2-0.9c0.2-0.2,0.5-0.3,0.7-0.5l0.2-0.2c0.4-0.3,0.8-0.6,1.2-0.9" + ' ' +
+									"c0.3-0.3,0.7-0.6,1-0.9c0.4-0.4,0.8-0.7,1.3-1.1c1.8-1.4,3.3-3.2,4.5-5.5c0.9-1.7,0.6-3.4,0.2-4.6" + ' ' +
+									"C226.9,229.9,226.5,229.3,226.1,228.8z M202.8,239.3c0-0.5,0-1,0-1.5c0-1.1-0.1-2.1-0.1-3.2c0-0.4,0-0.9-0.1-1.3" + ' ' +
+									"c-0.1-1.3-0.3-2.6-0.4-3.8c-0.3-2.4-0.6-4.9-0.9-7.3c0-0.3-0.1-0.6-0.2-0.9c0-0.2-0.1-0.4-0.1-0.7c-0.1-0.6-0.2-1.3-0.3-1.9" + ' ' +
+									"c0.2,0,0.4,0.1,0.6,0.1c0.1,0,0.2,0,0.4,0.1c0.4,0.1,0.9,0.2,1.4,0.3c0.4,0.1,0.9,0.2,1.3,0.3c0.9,0.2,1.7,0.5,2.6,0.9" + ' ' +
+									"c0.2,0.1,0.5,0.2,0.7,0.3c0.3,0.1,0.6,0.3,1,0.5c0.2,0.1,0.4,0.2,0.6,0.4c0.1,0.1,0.3,0.1,0.4,0.2c0.1,0.1,0.2,0.1,0.3,0.2" + ' ' +
+									"l0.2,0.1c0.4,0.2,0.7,0.4,1,0.6c1.2,0.9,2.4,1.6,3.5,2.5c1.3,1,2.4,1.8,3.5,2.7c0.7,0.6,1.4,1.3,2,2c0.2,0.3,0.4,0.6,0.6,1" + ' ' +
+									"c0,0.1,0.1,0.1,0.1,0.2l-0.1,0.1l0,0l0,0.1l-0.1,0.1c-0.1,0.1-0.2,0.2-0.3,0.3l-0.9,0.8l0.8,0.7l-0.1,0.2l0.2,0.1l-0.1,1.1" + ' ' +
+									"c-0.5,0.7-1.1,1.2-1.8,1.8c-0.2,0.2-0.5,0.4-0.7,0.7c-0.6,0.6-1.3,1.2-2,1.7c-0.2,0.2-0.5,0.4-0.7,0.6c-0.1,0.1-0.2,0.1-0.2,0.2" + ' ' +
+									"c-0.1,0.1-0.3,0.2-0.4,0.3c-0.5,0.4-1,0.8-1.5,1.1c-0.7,0.5-1.4,1-2.1,1.5l-0.3,0.2c-1,0.7-2.1,1.5-3.1,2.2c-1,0.7-2,1.3-3,1.9" + ' ' +
+									"l-0.3,0.2c-0.5,0.3-1.1,0.7-1.6,1c0-0.2,0-0.3,0-0.5c0.3-1.7,0.4-3.1,0.4-4.4C202.9,241.7,202.8,240.4,202.8,239.3z M220.4,232.6" + ' ' +
+									"L220.4,232.6L220.4,232.6L220.4,232.6z"}), 
+								React.createElement("path", {d: "M194.2,236.7c0-0.1,0-0.2,0-0.3c0-0.3,0-0.5-0.1-0.8c0-0.5-0.1-1.1-0.2-1.7c-0.1-0.4-0.1-0.8-0.2-1.2" + ' ' +
+									"c-0.1-0.4-0.2-0.8-0.2-1.2c-0.1-1-0.4-1.8-0.7-2.7c-0.1-0.3-0.2-0.6-0.3-0.9c-0.2-0.7-0.5-1.4-0.8-2c-0.5-1-1-2.1-1.5-3" + ' ' +
+									"c-0.5-1-0.9-1.8-1.4-2.6c-0.2-0.4-0.4-0.7-0.6-1.1c-0.1-0.2-0.3-0.5-0.4-0.7c-0.8-1.4-1.6-2.4-2.5-3.3c-0.1-0.1-0.2-0.2-0.3-0.3" + ' ' +
+									"c-0.2-0.3-0.5-0.6-0.9-0.8c-1-0.6-2.2-1.2-3.6-0.9c-0.1,0-0.3,0-0.4,0l-0.4,0c-0.2,0-0.3,0-0.5,0c-0.3,0-0.5,0.1-0.8,0.1" + ' ' +
+									"c-0.1,0-0.2,0-0.3,0.1l-0.3,0.1l-0.2,0.2c-0.2,0.2-0.4,0.3-0.6,0.5c-0.5,0.4-1.1,0.8-1.5,1.5c0,0-0.1,0.1-0.1,0.1" + ' ' +
+									"c-0.1,0.1-0.2,0.2-0.3,0.3c-0.5,0.5-1,1-1.4,1.7c-0.1,0.1-0.1,0.2-0.2,0.4c-0.1,0.2-0.2,0.4-0.3,0.5c-0.7,0.8-1.2,1.8-1.6,3.1" + ' ' +
+									"c-0.1,0.2-0.1,0.4-0.2,0.5c-0.1,0.2-0.1,0.4-0.2,0.5c-0.2,0.4-0.4,0.9-0.5,1.4c-0.2,0.9-0.4,1.8-0.5,2.6c0,0.3-0.1,0.6-0.1,0.8" + ' ' +
+									"c-0.1,0.7-0.2,1.3-0.4,1.8c-0.3,0.6-0.3,1.2-0.4,1.8c0,0,0,0.1,0,0.1c-0.1-0.3-0.2-0.7-0.3-1c-0.3-0.9-0.7-1.7-1-2.5" + ' ' +
+									"c-0.1-0.2-0.2-0.5-0.3-0.7c-0.4-0.8-0.9-2-1.8-2.8c0,0-0.1-0.1-0.2-0.2c-0.7-1.2-1.7-2.2-2.7-3.1c-0.2-0.2-0.5-0.4-0.7-0.6" + ' ' +
+									"c-0.5-0.5-1.1-1.1-2-1.5c-0.2-0.1-0.4-0.3-0.7-0.4c-0.2-0.2-0.5-0.3-0.7-0.4c-0.2-0.1-0.4-0.2-0.7-0.3c-0.1-0.1-0.3-0.1-0.4-0.2" + ' ' +
+									"c0,0,0,0,0,0c0,0,0-0.1,0-0.1l0-0.4l-0.2-0.3c-0.8-1.2-1.7-1.8-3.1-2.1l-0.3-0.1L154,215c-0.1,0-0.1,0.1-0.2,0.1" + ' ' +
+									"c-0.3,0.1-0.8,0.3-1.2,0.6l-0.3,0.2c-0.6,0.5-1.3,1-1.7,2c-0.1,0.1-0.1,0.1-0.1,0.2l-0.2,0.4c-0.2,0.4-0.5,0.8-0.7,1.2" + ' ' +
+									"c-0.1,0.2-0.2,0.4-0.3,0.6c0,0.1-0.1,0.3-0.1,0.3c-0.6,0.8-0.7,1.6-0.9,2.3l-0.1,0.5c-0.2,0.7-0.3,1.5-0.5,2.3" + ' ' +
+									"c-0.2,1.3-0.4,2.2-0.5,3.1c-0.1,1-0.2,2-0.1,3.1c0,0.8,0,1.6,0,2.4c0,0.5,0,1,0,1.5c0,0.7,0,1.3,0.1,2c0.1,1,0.1,2,0,2.9" + ' ' +
+									"c0,0.2,0,0.4,0,0.5c0,0.4,0.1,0.7,0.1,1.1c0.1,0.9,0.2,1.7,0.2,2.5c0,1,0.2,2,0.3,2.9c0.1,0.9,0.2,1.7,0.2,2.5" + ' ' +
+									"c0,0.5,0.1,1.1,0.2,1.7c0.2,0.9,0.5,1.8,0.7,2.8c0.3,1.1,0.8,2.5,2.1,3.7c0.4,0.3,0.7,0.6,1.1,0.8c0.1,0.1,0.3,0.2,0.4,0.3" + ' ' +
+									"c0.5,0.3,1.1,0.5,1.7,0.5l0.1,0c0.7,0,1.4-0.1,2.1-0.2c1.2-0.2,2.2-0.8,3-1.3c0.3-0.2,0.7-0.5,0.9-0.7c0.1-0.1,0.3-0.2,0.4-0.3" + ' ' +
+									"c1.1-0.8,2.2-1.8,3-2.9c0.4-0.4,0.7-0.9,1-1.3c0.1-0.2,0.3-0.4,0.4-0.6c0.9-1.2,1.6-2.5,2.2-3.8c0.1-0.3,0.2-0.6,0.4-0.9" + ' ' +
+									"c0.1-0.4,0.3-0.7,0.4-1.1c0.4-1.1,0.8-2.2,1-3.4c0,0.1,0,0.2,0.1,0.3l-0.3,1.6l0.1,0.3c0.2,0.5,0.3,0.9,0.3,1.3" + ' ' +
+									"c0,0.8,0.1,1.5,0.3,2.1c0.1,0.4,0.2,0.7,0.3,1.1c0.1,0.4,0.2,0.7,0.3,1c0.3,1.4,0.9,2.7,1.6,3.9l0.1,0.3c0.5,0.9,1,1.9,1.9,2.7" + ' ' +
+									"c0.7,0.7,1.4,1.3,2.2,1.7c0.1,0.1,0.2,0.1,0.3,0.2c0.2,0.1,0.4,0.2,0.5,0.3c0.8,0.5,1.7,0.8,2.6,0.8c1.1,0,2.1-0.3,3-0.7" + ' ' +
+									"c0.5-0.2,0.9-0.5,1.2-0.7c0.2-0.1,0.3-0.3,0.5-0.4c1.3-0.7,2.3-1.7,3.2-2.7c1.3-1.4,2.2-2.9,3.1-4.4c0.8-1.4,1.5-2.9,2.1-4.5" + ' ' +
+									"c0.3-0.8,0.6-1.7,0.8-2.7c0.3-1.3,0.5-2.3,0.7-3.3c0.2-1.1,0.2-2.3,0.3-3.4l0-0.4C194.3,237.2,194.2,236.9,194.2,236.7z" + ' ' +
+									 "M163.9,236.2c0,0.3,0,0.5,0,0.8l0,0.8l-0.3,0.1c0.2,0.8,0.1,1.7-0.2,2.5c0,0.4-0.1,0.8-0.2,1.2l0.2,0c0,0.2-0.1,0.5-0.1,0.7" + ' ' +
+									"c-0.2,0.7-0.5,1.5-0.7,2.2c-0.2,0.5-0.3,1-0.5,1.5c-0.3,1-0.9,1.8-1.4,2.8l-0.2,0.3c-0.7,1-1.5,1.9-2.4,2.9" + ' ' +
+									"c-0.3,0.3-0.6,0.6-0.9,0.9c-0.4,0.4-1,0.8-1.8,1.1c-0.1,0-0.3,0.1-0.4,0.2c-0.1,0.1-0.3,0.1-0.3,0.1l-0.1,0" + ' ' +
+									"c-0.2,0-0.5-0.2-0.6-0.4c-0.2-0.8-0.4-1.6-0.6-2.5c-0.1-0.5-0.2-0.9-0.3-1.4c-0.1-0.6-0.2-1.3-0.3-1.9c-0.1-0.6-0.1-1.3-0.3-2" + ' ' +
+									"c-0.1-0.3-0.1-0.7-0.1-1.1c0-0.2,0-0.3,0-0.5l-0.1-1.3c-0.1-1.1-0.1-2.3-0.1-3.4c0-1.2,0-2.4,0-3.5c0-0.6,0-1.1,0-1.7l0-1" + ' ' +
+									"c0-0.6,0-1.2,0-1.8c0-0.1,0-0.2,0-0.3c0-0.1,0-0.2,0-0.3c0-0.3,0-0.6,0.1-0.9c0-0.6,0.1-1.2,0.2-1.7c0-0.3,0.1-0.7,0.2-1" + ' ' +
+									"c0.1-0.4,0.2-0.7,0.2-1.1c0.1-0.7,0.3-1.4,0.6-2.1c0.2,0,0.4,0,0.6,0l0.2,0c0.1,0,0.2,0,0.3,0c0.6,0,1.4-0.2,2-1.1" + ' ' +
+									"c0.4,0.2,0.8,0.5,1.3,0.8c1.6,1.2,2.9,2.6,3.8,4.1c0.6,1,1.1,2.1,1.5,3.3c0.2,0.7,0.3,1.4,0.4,2.2c0.1,0.4,0.1,0.8,0.2,1.2" + ' ' +
+									"C163.9,235.2,163.9,235.7,163.9,236.2z M188.2,238.7c-0.1,0.7-0.2,1.3-0.3,2c-0.1,0.7-0.3,1.5-0.5,2.2c-0.2,0.6-0.4,1.3-0.5,1.9" + ' ' +
+									"l-0.2,0.6c0,0.1-0.1,0.2-0.1,0.4l-0.3,0.6c-0.2,0.4-0.3,0.7-0.5,1.1c-0.4,0.9-0.9,1.7-1.4,2.6c-0.1,0.2-0.3,0.5-0.4,0.7" + ' ' +
+									"c-0.3,0.4-0.6,0.8-1,1.3c-0.3,0.3-0.6,0.7-0.8,1c-0.3,0.5-0.9,0.9-1.5,1.3c-0.3,0.2-0.7,0.4-1.1,0.5l-0.3,0.1" + ' ' +
+									"c-0.5,0.2-0.9,0.2-1.4-0.1c-0.6-0.3-0.9-0.9-1.3-1.6c-0.5-0.8-0.8-1.7-1.1-2.6c-0.1-0.3-0.2-0.7-0.2-1.1c0-0.2-0.1-0.4-0.1-0.6" + ' ' +
+									"l-0.1-0.6c-0.1-0.5-0.2-1-0.3-1.5c-0.1-0.6-0.1-1.1-0.2-1.8c-0.1-0.8-0.1-1.6-0.1-2.5c0-0.3,0-0.7,0-1c0-0.4,0-0.7,0-1.1" + ' ' +
+									"c0-0.9,0-1.8,0.1-2.7c0.2-1.7,0.4-3.4,0.6-5.1c0.2-1.2,0.4-2.5,0.7-3.8c0.1-0.4,0.2-0.8,0.3-1.2c0.1-0.2,0.2-0.5,0.2-0.7" + ' ' +
+									"c0-0.1,0.1-0.2,0.1-0.3c0.1-0.4,0.3-0.8,0.3-1.3c0-0.1,0.1-0.3,0.2-0.5c0.1-0.2,0.2-0.5,0.3-0.8c0.2-0.9,0.7-1.7,1.3-2.6" + ' ' +
+									"c0.1-0.2,0.2-0.2,0.3-0.2c0,0,0.1,0,0.1,0l1,0.2l1.7-1.3c0.1,0.1,0.2,0.2,0.3,0.3c0.4,0.4,0.7,0.9,1,1.3c0.7,1.1,1.4,2.1,1.9,3.3" + ' ' +
+									"c0.1,0.3,0.3,0.5,0.4,0.8c0.3,0.5,0.6,1,0.6,1.4c0,0.3,0.1,0.5,0.3,0.7c0.4,0.5,0.5,1.1,0.7,1.8c0.1,0.3,0.2,0.7,0.3,1" + ' ' +
+									"c0.3,1,0.6,2.1,0.8,3.1c0.1,0.4,0.1,0.6,0,0.8c-0.3,0.4-0.3,0.7-0.3,1c0,0.1,0,0.1,0,0.2l-0.1,0.4l0.3,0.5" + ' ' +
+									"c0.1,0.1,0.1,0.2,0.2,0.3C188.4,237.3,188.3,237.9,188.2,238.7z"}), 
+								React.createElement("path", {d: "M338.3,206.6c-0.1-0.9-0.6-1.7-1.5-2.3c-0.8-0.5-1.5-0.7-2.4-0.5c-0.2,0.1-0.5,0.1-0.7,0.1l-0.5,0.1" + ' ' +
+									"l-0.2,0.1c-0.3,0.1-0.5,0.3-0.7,0.4c-0.5,0.3-1,0.5-1.4,0.7c-0.2,0.1-0.3,0.1-0.5,0.2c-0.8,0.3-1.6,0.7-2.4,1.4" + ' ' +
+									"c-0.5,0.4-1.1,0.8-1.7,1L326,208c-0.5,0.2-1.1,0.5-1.7,0.9c-0.3,0.2-0.5,0.3-0.7,0.4l-0.5,0.3c-0.9,0.5-1.8,0.9-2.7,1.3" + ' ' +
+									"c-0.6,0.3-0.8,0.3-0.9,0.3c-0.2,0-0.4-0.1-0.8-0.1c-1.9-0.4-2.8,0.6-3.3,1.3c0,0-0.1,0.1-0.2,0.2c-0.1,0.1-0.1,0.1-0.2,0.2" + ' ' +
+									"l-0.3,0.3l0,0.3c0,0-0.1,0-0.1,0c-1.1,0.4-2.1,1-2,2.8c0,0.6,0.3,1.1,0.4,1.6c0,0.1,0.1,0.2,0.1,0.3c0.1,0.4,0.4,0.6,0.6,0.7" + ' ' +
+									"l0.2,0.2l-0.5,7.1c-0.1,0.1-0.3,0.2-0.5,0.2c-0.6,0.2-1.2,0.3-1.8,0.5l-0.4,0.1c-1.5,0.4-2.1,1.1-2.3,2.7l0,0.4l1.2,2.1l1.6,1.1" + ' ' +
+									"h0.4c0.7,0,1.3-0.3,1.7-0.5c0,0,0,0,0,0l-0.1,1.1c0,0.1,0,0.2,0,0.3c0,0.2-0.1,0.4-0.1,0.6c0,0.4,0,0.8,0,1.2c0,0.6,0,1.1-0.1,1.7" + ' ' +
+									"c0,0.8-0.1,1.6-0.2,2.5c0,0.2-0.1,0.5-0.2,0.8c-0.1,0.2-0.1,0.4-0.1,0.6c0,0.1,0,0.2-0.1,0.2c-0.1,0.3-0.2,0.8-0.1,1.2" + ' ' +
+									"c0.3,1.8,1.4,3.1,3.4,3.9c0.3,0.1,0.6,0.2,0.8,0.2c0.5,0,0.9-0.2,1.3-0.5c0.1-0.1,0.3-0.2,0.5-0.3c0.1-0.1,0.3-0.1,0.4-0.2" + ' ' +
+									"l0.2-0.1l0.1-0.2c0.1-0.1,0.1-0.2,0.4-0.2c0.9-0.1,1.7-0.4,2.4-0.6l0.3-0.1c0.7-0.2,1.4-0.5,2.1-0.7l0.8-0.3" + ' ' +
+									"c0.3-0.1,0.6-0.2,0.9-0.3l0.1,0c0.2-0.1,0.4-0.2,0.6-0.2c0.3-0.1,0.7-0.3,1-0.3c0.4-0.1,0.8-0.2,1.2-0.2c0.8-0.2,1.5-0.3,2.2-0.4" + ' ' +
+									"c1.5-0.2,2.8-0.1,4.2,0.2c0.2,0,0.3,0.1,0.5,0.1l0.6,0.1l0.5-0.4c0,0,0.1,0,0.1-0.1c1.5-0.9,1.9-2.3,1.2-3.9c-0.3-0.6-0.6-1-1-1.4" + ' ' +
+									"c-0.5-0.4-1.3-1.1-2.5-0.9c-0.3,0-0.6,0-0.9,0c-0.6-0.1-1.4,0-1.7,0.1l-0.4,0.1c-0.4,0.1-0.9,0.2-1.2,0.2c-1.3,0-2.4,0.3-3.3,0.6" + ' ' +
+									"c-0.6,0.2-1.2,0.4-1.8,0.6c-0.4,0.1-0.8,0.3-1.2,0.4l-0.2,0.1c-1.2,0.4-2.5,0.8-3.8,1.2c-0.4,0.1-0.8,0.2-1.2,0.3l0-0.5" + ' ' +
+									"c0-1,0-2.1,0-3.1c0-1.1,0.1-2.3,0.1-3.4l0.1-1.6c0-0.1,0-0.1,0-0.1c0,0,0.1,0,0.1-0.1l0.7-0.3c1-0.4,2-0.8,3-1.2" + ' ' +
+									"c1.2-0.5,2.4-1.1,3.5-1.7l0.5-0.3c0.2-0.1,0.5-0.3,0.7-0.4c0.2-0.1,0.3-0.2,0.5-0.3l0.3-0.2c1-0.5,2.1-1.1,3.1-1.8" + ' ' +
+									"c0.1-0.1,0.3-0.2,0.4-0.3c0.4-0.3,0.8-0.6,1.1-0.8c1-0.5,1.7-1.2,2.2-1.9l0.2-0.2c0.5-0.5,0.5-1.3,0.2-2c-0.5-0.9-1.5-1.6-2.6-1.6" + ' ' +
+									"c-0.4,0-0.8,0.1-1.1,0.2c-0.6,0.3-1.2,0.6-1.7,0.9c-0.4,0.3-0.9,0.5-1.3,0.7c-0.2,0.1-0.4,0.2-0.6,0.3c-0.3,0.2-0.4,0.2-0.5,0.2" + ' ' +
+									"c-0.5,0-0.9,0.3-1.1,0.5c-0.2,0.2-0.4,0.3-0.7,0.4l-0.2,0.1c-0.3,0.2-0.6,0.3-0.9,0.5c-0.6,0.3-1.2,0.7-1.8,0.9" + ' ' +
+									"c-0.5,0.2-1,0.5-1.5,0.7c-0.3,0.2-0.6,0.3-0.9,0.5c-0.1,0-0.2,0.1-0.4,0.1c-0.2,0-0.4,0.1-0.6,0.2c-0.1,0.1-0.3,0.1-0.4,0.2" + ' ' +
+									"c0.2-1.7,0.4-3.5,0.9-5.6c0-0.2,0.2-0.4,0.4-0.7c0.2-0.1,0.4-0.2,0.6-0.5c0.2-0.3,0.6-0.5,1-0.8c0.4-0.2,0.9-0.4,1.3-0.7" + ' ' +
+									"c0.4-0.2,0.8-0.4,1.3-0.6c0.9-0.5,1.7-0.9,2.6-1.4l0.6-0.3c0.8-0.4,1.6-0.9,2.4-1.3c0.2-0.1,0.5-0.3,0.7-0.4" + ' ' +
+									"c0.4-0.2,0.8-0.5,1.2-0.6c0.3-0.1,0.5-0.2,0.7-0.4c0.2-0.1,0.4-0.2,0.5-0.2l0.5,0.2l0.5-0.2c0.1-0.1,0.3-0.2,0.4-0.2" + ' ' +
+									"c0.2-0.1,0.4-0.2,0.5-0.2c1.1-0.3,2-0.8,2.8-1.3l0.5-0.3l0-0.5c0-0.1,0-0.3,0-0.4C338.3,207.4,338.3,207,338.3,206.6z"}), 
+								React.createElement("path", {d: "M298.4,239.9l0-1c0-0.6,0-1.2,0-1.9c0-0.7-0.1-1.4-0.1-2.1c0-0.5-0.1-1-0.1-1.5c0-0.6-0.1-1.1-0.1-1.7" + ' ' +
+									"l0.6-0.3c4-1.7,8.1-3.5,12.2-4.6l0.4-0.1l1.5-2.4l-0.1-0.5c-0.3-0.9-1-1.3-1.4-1.5c-0.1,0-0.2-0.1-0.2-0.1l-0.4-0.4l-0.5,0.1" + ' ' +
+									"c-0.2,0-0.4,0-0.6,0.1c-0.6,0-1.1,0.1-1.7,0.2c-0.5,0.1-0.9,0.2-1.4,0.4c-0.2,0.1-0.3,0.1-0.5,0.2l-1,0.3" + ' ' +
+									"c-0.8,0.2-1.6,0.5-2.3,0.7c-0.2,0.1-0.4,0.2-0.6,0.3c-0.1,0-0.2,0.1-0.2,0.1c-0.7,0.1-1.4,0.4-2,0.7c-0.5,0.2-0.9,0.4-1.4,0.5" + ' ' +
+									"c-0.3,0.1-0.6,0.1-0.9,0.2c0-0.1,0-0.2,0-0.3c-0.1-1.2-0.3-2.4-0.5-3.5l0-0.1c-0.2-1.3-0.4-2.6-0.6-3.9l0.2-0.1" + ' ' +
+									"c0.7-0.3,1.5-0.6,2.2-0.9c0.3-0.1,0.5-0.2,0.8-0.3c0.2-0.1,0.4-0.1,0.5-0.2c0.7-0.3,1.4-0.6,1.9-0.9c1.5-0.8,3.1-1.4,4.4-2" + ' ' +
+									"c0,0,0,0,0.1,0c0.1,0.2,0.3,0.4,0.5,0.5l0.5,0.4l0.8-0.4c0.2-0.1,0.4-0.2,0.6-0.3l0.5-0.2c0.2-0.1,0.5-0.2,0.7-0.4" + ' ' +
+									"c0.1,0,0.1,0,0.2-0.1c0.3-0.1,0.7-0.2,1-0.6c0.1-0.2,0.3-0.3,0.7-0.4c0.3-0.1,0.6-0.3,0.9-0.5l0.9-0.4l0.1-0.9" + ' ' +
+									"c0-0.2,0.1-0.4,0.1-0.6c0.2-1.2-0.5-2.1-1-2.7l-0.2-0.2c-0.4-0.4-0.9-0.5-1.1-0.5c-0.6-0.1-1.2-0.1-1.8-0.1" + ' ' +
+									"c-0.7,0-1.4,0.1-2.1,0.6c-0.1,0.1-0.3,0.1-0.5,0.2l-0.1,0.1c-0.2,0.1-0.3,0.1-0.5,0.2c-0.3,0.1-0.6,0.2-1,0.4" + ' ' +
+									"c-0.3,0.1-0.6,0.3-0.9,0.4c-0.2,0.1-0.5,0.2-0.7,0.4c-0.3,0.1-0.6,0.3-0.9,0.5c-0.4,0.2-0.8,0.4-1.2,0.6c-0.7,0.2-1.3,0.6-1.9,0.9" + ' ' +
+									"c-0.2,0.1-0.5,0.2-0.7,0.4c-0.1,0-0.1,0.1-0.2,0.1c-0.4,0-0.8,0.2-1,0.3c0,0-0.1,0-0.1,0.1c-0.6,0.3-1.3,0.6-1.9,0.8" + ' ' +
+									"c-0.1-0.2-0.2-0.3-0.2-0.5c-0.5-1.3-1.6-1.6-2.3-1.9c-0.1,0-0.2-0.1-0.3-0.1c-0.4-0.1-0.9-0.1-1.3,0.1c-0.4,0.2-0.7,0.4-1,0.6" + ' ' +
+									"c-0.9,0.6-1.3,1.9-1.1,3c0.1,0.4,0.2,0.7,0.2,1.1c0,0,0,0,0,0c-0.1,0-0.2,0.1-0.4,0.1c-0.3,0.1-0.6,0.2-0.9,0.3" + ' ' +
+									"c-0.2,0.1-0.8,0-1.4,0.1l-0.1,0c-1.3,0.3-1.6,0.5-2.4,1.5c-0.1-0.1-0.2-0.3-0.3-0.4c-0.7-1-1.8-1.2-2.5-1.4" + ' ' +
+									"c-1.1-0.3-2.4,0.3-3,1.3c-0.3,0.5-1.1,1.9-0.2,3.5c0.2,0.4,0.4,0.8,0.4,1.2c0.1,0.8,0.3,1.7,0.4,2.5c0.1,0.4,0.1,0.9,0.2,1.3" + ' ' +
+									"c0,0.2,0.1,0.4,0.1,0.7c0,0.3,0.1,0.5,0.1,0.8c0.1,0.7,0.1,1.4,0.2,2.1l0,0.6c0,0.1,0,0.3,0,0.4c0,0.3,0,0.6,0.1,0.9" + ' ' +
+									"c0.1,0.5,0.2,1,0.3,1.4c0.1,0.5,0.2,0.9,0.2,1.4c0.1,0.9,0.3,1.7,0.4,2.6l0.2,1.5c0.1,0.4,0.1,0.7,0.2,1.1" + ' ' +
+									"c0.1,0.4,0.2,0.7,0.3,1.1c0.1,0.4,0.2,0.7,0.3,1.1c0.2,0.7,0.3,1.4,0.4,2.1l0.1,0.7c0,0.2,0.1,0.5,0.2,0.7" + ' ' +
+									"c0.1,0.5,0.2,0.9,0.2,1.3c0,1.2,0.5,1.9,1,2.6l0.2,0.2c0.5,0.8,1.3,1.2,2.3,1.3c0.1,0,0.2,0,0.3,0c0.3,0,0.6,0,0.9-0.1" + ' ' +
+									"c0.1,0,0.3,0,0.4,0l0.6,0l0.3-0.5c0.1-0.1,0.1-0.2,0.2-0.3c0.1-0.2,0.1-0.3,0.2-0.4c0.5-0.6,0.6-1.4,0.3-2.3l-0.2-0.5" + ' ' +
+									"c-0.2-0.7-0.4-1.3-0.5-2c-0.1-0.6-0.3-1.2-0.6-1.8c-0.2-0.4-0.4-0.8-0.5-1.4c-0.1-0.7-0.2-1.4-0.4-2c-0.1-0.3-0.1-0.7-0.2-1" + ' ' +
+									"c-0.1-0.7-0.3-1.3-0.4-2c-0.2-1.6-0.5-3.2-0.8-5.2c-0.2-1.1-0.3-2.2-0.4-3.3l0-0.2c0-0.1,0-0.3,0-0.4c0-0.4,0-0.8-0.2-1.3" + ' ' +
+									"c0,0,0-0.1,0-0.1l0-0.9c0-0.9-0.1-1.8-0.2-2.7c0-0.2,0-0.3,0-0.3c0.3,0.3,0.7,0.6,1,0.7c0.5,0.3,1.1,0.5,1.7,0.5" + ' ' +
+									"c0.6,0,1.4-0.2,2.1-1.1c0.2-0.2,0.4-0.3,0.8-0.5l0.5,3c0,0.3,0.1,0.6,0.1,0.9c0.1,0.6,0.2,1.1,0.2,1.7l0,0.3" + ' ' +
+									"c0,0.5,0.1,1.1,0.2,1.7c0.1,0.5,0,0.7-0.3,0.8c-0.4,0.2-0.8,0.6-0.9,1.1c-0.1,0.5-0.4,1.8,0.6,2.9c0.1,0.1,0.2,0.2,0.3,0.4" + ' ' +
+									"c0.2,0.3,0.5,0.7,0.8,1c0,0,0,0.1,0,0.2c0,0.8,0,1.5,0.1,2.3c0,0.5,0,1,0,1.5l0,0.2c0,0.5,0,0.9,0,1.4c0,0.5-0.1,1-0.2,1.4" + ' ' +
+									"c-0.1,0.3-0.3,0.8-0.2,1.3c-0.3,0.6-0.4,1.5,0.2,2.6c0,0,0,0.1,0,0.1c0.2,1,1,1.6,1.6,2c0.1,0.1,0.2,0.1,0.3,0.2" + ' ' +
+									"c0.5,0.4,1,0.4,1.5,0.4c0.1,0,0.1,0,0.2,0c0.7,0,1.3-0.2,1.8-0.4l0.4-0.1l0.3-0.5c0.3-0.5,1.2-1.8,0.4-3.4" + ' ' +
+									"C298.4,241.6,298.4,240.8,298.4,239.9z"}), 
+								React.createElement("path", {d: "M278.4,243.9c-0.6-0.8-1.5-1.2-2.6-1.2c-0.1,0-0.2,0-0.3,0l-0.5,0l-0.3,0.1c-0.8,0.3-1.5,0.6-2.1,0.6" + ' ' +
+									"c-0.4,0-0.8,0.1-1.2,0.1c-0.6,0-1.3,0.1-1.9,0.2c-0.3,0.1-0.6,0.1-0.9,0.1c-0.8,0.1-1.7,0.2-2.6,0.6c-0.1,0-0.2,0.1-0.3,0.1" + ' ' +
+									"c-0.2,0.1-0.5,0.1-0.8,0.3c-0.6,0.3-1.3,0.4-2,0.6c-0.2,0-0.4,0.1-0.6,0.1c-1.1,0.2-2.1,0.5-3.2,0.7c-0.4,0.1-0.9,0.2-1.3,0.3" + ' ' +
+									"c-0.1-0.8-0.2-1.5-0.3-2.3c-0.1-1.4-0.3-2.8-0.5-4.2c-0.1-0.7-0.2-1.3-0.2-2.1c0-0.5-0.1-0.9-0.1-1.4c-0.1-0.8-0.1-1.5-0.2-2.3" + ' ' +
+									"c0-0.5,0-1-0.1-1.5c0-0.4-0.1-0.7-0.1-1.1c0-0.3-0.1-0.6-0.1-0.9c0-0.3,0-0.6,0-0.8c0-0.4,0-0.7-0.1-1.1c0-0.4-0.1-0.9-0.2-1.3" + ' ' +
+									"c-0.1-0.7-0.2-1.3-0.2-2c0-0.6-0.1-1.2-0.2-1.7c-0.1-0.6-0.2-1.1-0.2-1.6c0-1.3-0.2-2.5-0.3-3.7c0-0.4-0.1-0.9-0.1-1.3l0-0.4" + ' ' +
+									"c-0.1-0.7-0.1-1.4-0.3-2.1c-0.2-0.9-0.2-1.8-0.2-2.6c0-0.5,0-0.9,0.1-1.4l0-0.9l-0.2-0.3c-0.1-0.1-0.1-0.2-0.2-0.3" + ' ' +
+									"c0,0,0-0.1-0.1-0.1c-0.2-1-0.8-1.7-1.8-2.1c-0.8-0.3-1.7-0.4-2.5-0.1c-0.7,0.2-1.4,0.8-1.8,1.6c-0.5,0.9-0.5,2-0.2,2.8l0.2,0.4" + ' ' +
+									"c0.3,0.7,0.5,1.2,0.6,1.8c0,0.2,0.1,0.3,0.1,0.4c0.1,0.4,0.2,0.8,0.2,1.2c0.2,0.9,0.4,1.8,0.5,2.7c0.1,0.9,0.2,1.8,0.3,2.7" + ' ' +
+									"c0,0.4,0.1,0.8,0.1,1.3l0.1,0.9c0.1,1.1,0.2,2.1,0.4,3.2c0,0.3,0.1,0.6,0.1,0.9c0.1,0.4,0.1,0.7,0.1,1.1c0.1,1.2,0.2,2.3,0.3,3.5" + ' ' +
+									"l0.1,0.7c0.1,1.1,0.2,2.1,0.2,3.2l0,0.4c0,0.5,0.1,1,0,1.4c-0.1,0.8,0,1.5,0.1,2.2c0,0.1,0,0.2,0,0.3c0,0.1,0,0.2,0,0.3" + ' ' +
+									"c0,0.1,0,0.2,0,0.3c0,0.3,0,0.5,0,0.7c0,0.4,0.1,0.8,0.2,1.2c0.1,0.6,0.2,1.2,0.2,1.8c0.1,1,0.2,2,0.2,3l0.1,0.9" + ' ' +
+									"c-0.3,0.5-0.5,1.1-0.6,1.7c0,0.5,0.1,1,0.2,1.4c0,0.1,0.1,0.3,0.1,0.4l0.1,0.4l0.7,0.5c0.2,0.2,0.5,0.4,0.7,0.5" + ' ' +
+									"c0,0.1,0.1,0.1,0.1,0.2c0.2,0.3,0.4,0.9,1.2,1.2l0.4,0.2l0.4-0.2c0.1,0,0.2,0,0.4,0.1c0.3,0.1,0.6,0.2,1.1,0.2c0.1,0,0.3,0,0.4,0" + ' ' +
+									"l0.4-0.1l0.7-0.7c0.3-0.4,0.7-0.8,1.1-1.2c0.1-0.1,0.1-0.1,0.2-0.1c0.6-0.2,1.3-0.3,1.9-0.5l2.3-0.6c1.2-0.3,2.4-0.6,3.6-0.9" + ' ' +
+									"c0.8-0.2,1.6-0.4,2.5-0.5c0.2,0,0.5,0,0.8,0c0.2,0,0.3,0,0.5,0c0.5,0,1-0.1,1.4-0.1c1-0.1,1.9-0.2,2.7,0c0.2,0,0.4,0.1,0.6,0.1" + ' ' +
+									"l0.2,0c0.3,0.1,0.7,0.1,1,0c1.7-0.3,2.5-1.2,2.5-3C279.5,245.4,278.9,244.6,278.4,243.9L278.4,243.9z"}), 
+								React.createElement("path", {d: "M85.5,247.2c0-0.1,0-0.2-0.1-0.3l-0.1-0.4l-2.1-1.6l-1.9,0.2l-0.6,0.3c-0.4,0.2-0.7,0.4-1.1,0.6" + ' ' +
+									"c-0.5,0.3-1,0.5-1.5,0.7c-0.4,0.2-0.7,0.3-1.1,0.5c-0.8,0.4-1.7,0.7-2.7,1c-0.6,0.2-1.2,0.4-1.8,0.6c-1.2,0.5-2.4,0.8-3.6,1.1" + ' ' +
+									"c-0.7,0.2-1.3,0.4-1.9,0.7c-0.7,0.3-1.4,0.6-2,0.7c-0.3,0-0.7,0.1-1.1,0.3c-0.5,0.3-1.1,0.4-1.7,0.5c-0.3,0-0.5,0.1-0.7,0.2" + ' ' +
+									"c-0.7,0.2-1.5,0.4-2.2,0.5c-0.3,0.1-0.6,0.2-0.9,0.2c-0.4,0.1-0.8,0.2-1.2,0.3c-0.5,0.1-1,0.2-1.6,0.3c-0.7,0.1-1.4,0.3-2.1,0.5" + ' ' +
+									"c-0.8,0.2-1.6,0.4-2.3,0.7c-0.3,0.1-0.6,0.2-1,0.3c-0.3,0.1-0.6,0.2-0.9,0.2c-0.7,0.2-1.4,0.4-2.1,0.7c-0.8,0.3-1.7,0.6-2.5,0.9" + ' ' +
+									"c-0.6,0.2-1.2,0.4-1.8,0.6c-0.2,0.1-0.5,0.2-0.7,0.3c-0.1,0.1-0.3,0.1-0.4,0.2c-0.2,0.1-0.4,0.2-0.5,0.2c-1,0.2-1.9,0.5-2.7,0.9" + ' ' +
+									"c-0.6,0.3-1.1,0.5-1.7,0.7c-0.4,0.1-0.7,0.2-1.1,0.4c-0.2,0.1-0.5,0.2-0.7,0.3c-0.4,0.1-0.7,0.2-1,0.4c-0.5,0.2-0.9,0.4-1.3,0.4" + ' ' +
+									"c-0.7,0-1.3,0.4-1.7,1.1c-0.6,1.1-0.6,2.3,0,3.6c0.4,0.8,1.2,1.3,2.1,1.3c0.4,0,0.8-0.1,1.2-0.3c0.2-0.1,0.4-0.2,0.5-0.4" + ' ' +
+									"c0.1-0.1,0.3-0.2,0.4-0.3c0.4-0.2,0.9-0.4,1.3-0.5l0.4-0.1c1.6-0.6,3.2-1.2,4.8-1.8c0.1,0,0.3-0.1,0.5-0.2" + ' ' +
+									"c1.2-0.6,2.6-1.2,4.1-1.6l0.2,0c0.2-0.1,0.4-0.1,0.6-0.2c0.5-0.2,0.9-0.3,1.4-0.5c0.9-0.3,1.9-0.7,2.8-1c0.9-0.3,1.9-0.5,2.9-0.8" + ' ' +
+									"c0.4-0.1,0.8-0.2,1.2-0.3l1.2-0.3c1-0.3,2-0.5,3-0.8c1-0.2,2-0.5,3-0.7c1.3-0.3,2.6-0.6,3.8-0.9c1.7-0.4,3.4-0.9,5.1-1.3l1-0.3" + ' ' +
+									"c1-0.3,2.1-0.6,3.2-0.9c0.7-0.2,1.3-0.5,2-0.7c0.6-0.2,1.3-0.5,2-0.7c0.8-0.3,1.5-0.4,2.1-0.5c0.7-0.1,1.4-0.2,2.2-0.5" + ' ' +
+									"c0.8-0.3,1.5-0.9,1.8-1.7c0.3-0.8,0.3-1.7-0.1-2.5C85.6,247.4,85.6,247.3,85.5,247.2z"})
+							), 
+							React.createElement("rect", {x: "9.1", y: "201.6", width: "413", height: "60.7"})
+						), 
+						React.createElement("g", {id: "speedy_ortiz", className: "band_lineup_link tan", onClick: self.openBand.bind(this, "Speedy Ortiz")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M94.7,285.9c0.6-0.7,0.7-1.5,1-2.2c0.5-1.1,0.8-2.3,1.6-3.4c0.3-0.5,0.7-1,1-1.5c0.2-0.4,0.4-0.9,0.6-1.4" + ' ' +
+									"c0.1-0.2,0.2-0.4,0.3-0.7c0.5-0.9,1.5-1,2.3-0.3c0.3,0.3,0.6,0.6,0.8,1c0.1,0.4,0,0.7-0.2,1c-0.3,0.5-0.7,0.9-1.1,1.3" + ' ' +
+									"c-0.5,0.5-0.8,1-1.1,1.5c-0.3,0.6-0.6,1.2-1,1.8c-0.5,1-0.9,2-1.3,3c-0.2,0.7-0.6,1.3-0.8,2c-0.3,0.9-0.6,1.9-0.8,2.8" + ' ' +
+									"c-0.1,0.3,0,0.7,0.1,1c0.2,0.9-0.1,1.7-0.7,2.4c-0.1,0.1-0.4,0.2-0.5,0.2c-0.3-0.2-0.4,0-0.6,0.1c-0.4-0.1-0.7-0.2-1.1-0.3" + ' ' +
+									"c0-0.1-0.1-0.2-0.1-0.2c-0.4-0.3-0.7-0.4-0.9-0.6c-0.2-0.7-0.3-1.3-0.5-1.9c0.1-0.1,0.2-0.2,0.3-0.3c0-0.2,0-0.5,0.1-0.6" + ' ' +
+									"c0.3-0.6,0.3-1.3,0.2-1.9c-0.2-1.2-0.3-2.4-0.7-3.5c-0.2-0.8-0.4-1.7-0.8-2.5c-0.3-0.5-0.5-1.1-0.7-1.6c-0.3-0.8-0.8-1.3-1.4-1.9" + ' ' +
+									"c-0.5-0.4-0.8-0.9-1.4-1.1c-0.4-0.2-0.8-0.3-1.2-0.5c-0.2-0.1-0.4-0.1-0.6-0.2c-1-0.6-2-0.3-2.8,0.3c-0.5,0.4-0.9,0.8-1.2,1.3" + ' ' +
+									"c-0.4,0.6-0.9,1.1-1.3,1.7c-0.8,1.3-1.5,2.7-2.1,4.1c-0.4,1.1-1,2.1-1.4,3.2c-0.3,0.9-0.6,1.9-0.8,2.8c0,0.1,0,0.3,0,0.4" + ' ' +
+									"c0.4,0.5,0.6,1,1.2,1.2c0.6,0.2,1.1,0.5,1.7,0.6c0.8,0.1,1.6,0.3,2.4,0.4c0.1,0,0.2,0,0.3,0.1c1,0.5,2.2,0.6,3.2,1.1" + ' ' +
+									"c0.7,0.3,1.3,0.7,1.9,1.1c0.8,0.6,1.7,0.9,2.5,1.3c0.7,0.3,1.3,0.7,1.9,1.1c0.8,0.5,1.6,1,2.3,1.6c0.6,0.5,1.2,1.2,1.8,1.8" + ' ' +
+									"c0.6,0.8,1.2,1.6,1.8,2.5c0.7,1.1,1.3,2.2,1.9,3.3c0.5,0.9,0.8,1.9,1,3c0.1,0.6,0.3,1.3,0.3,1.9c0,0.6-0.1,1.1-0.2,1.7" + ' ' +
+									"c0,0.1-0.1,0.2-0.1,0.4c-0.2,1-0.6,1.9-1.2,2.7c-0.8,1-1.6,1.9-2.6,2.7c-0.8,0.6-1.7,1.2-2.5,1.7c-2.1,1.4-4.5,2.4-6.9,3.1" + ' ' +
+									"c-1.5,0.4-3,0.8-4.6,0.9c-1,0-1.9-0.1-2.9-0.2c-1-0.2-2-0.4-2.9-0.8c-0.7-0.4-1.5-0.8-2.1-1.3c-0.6-0.5-1.1-1.2-1.6-1.9" + ' ' +
+									"c-0.3-0.4-0.5-0.9-0.7-1.4c-0.4-1.2-0.7-2.5-0.5-3.8c0-0.2,0-0.3,0-0.5c0.6-0.7,0.8-1.7,1.1-2.7c0.1-0.1,0.2-0.1,0.4-0.2" + ' ' +
+									"c0.1-0.1,0.2-0.1,0.5-0.3c0,0.6,0,1-0.1,1.5c-0.1,0.7-0.2,1.3-0.2,2c0,0.1,0,0.3,0,0.4c0,1.4,0.5,2.7,1.3,3.8" + ' ' +
+									"c0.4,0.5,0.8,0.9,1.4,1.2c0.2,0.1,0.4,0.3,0.6,0.4c0.9,0.5,2,0.8,3,1c1,0.1,2,0.2,3,0c0.8-0.2,1.7-0.3,2.5-0.5" + ' ' +
+									"c1.1-0.2,2.1-0.6,3.1-1c1.6-0.7,3.1-1.5,4.5-2.4c1.9-1.2,3.5-2.6,4.6-4.5c0.4-0.7,0.6-1.5,0.6-2.3c0-1-0.2-1.9-0.5-2.8" + ' ' +
+									"c-0.1-0.4-0.3-0.7-0.5-1c-0.7-1.2-1.4-2.4-2.2-3.6c-0.6-0.9-1.2-1.8-2.1-2.5c-1.1-0.9-2.4-1.6-3.6-2.3c-0.5-0.3-1-0.4-1.5-0.7" + ' ' +
+									"c-1.2-0.6-2.3-1.3-3.5-1.8c-0.9-0.4-1.8-0.8-2.8-0.8c-0.4,0-0.7-0.2-1.1-0.3c-0.9-0.2-1.8-0.2-2.7-0.4c-0.6-0.2-1.1-0.3-1.5-0.7" + ' ' +
+									"c-0.5-0.5-1.1-0.8-1.5-1.4c-0.1-0.2-0.2-0.3-0.3-0.5c-0.1-0.1-0.1-0.2-0.2-0.3c-0.7-0.6-0.9-1.4-0.7-2.2c0.2-1.2,0.6-2.3,1.1-3.4" + ' ' +
+									"c0.4-0.9,0.7-1.9,1.1-2.8c0.4-0.9,0.8-1.8,1.2-2.7c0.6-1.2,1.3-2.3,1.9-3.4c0.6-1,1.3-2,2.2-2.8c0.7-0.7,1.6-1.1,2.5-1.3" + ' ' +
+									"c0.8-0.2,1.6-0.1,2.4,0.1c1.4,0.4,2.8,0.9,4,1.8c0.6,0.4,1.1,1,1.6,1.6c0.5,0.6,0.9,1.3,1.3,2c0.2,0.3,0.3,0.6,0.4,0.9" + ' ' +
+									"c0.1,0.3,0.3,0.6,0.4,0.9c0.1,0.2,0.1,0.3,0.2,0.5c0.4,1.3,0.8,2.5,1.2,3.8C94.6,285.7,94.6,285.8,94.7,285.9z"}), 
+								React.createElement("path", {d: "M273.4,307.9c0.5,0.3,1,0.4,1.5,0.5c0.6,0.1,1.2,0.2,1.8,0.3c0.7,0.1,1.4,0.3,2,0.4" + ' ' +
+									"c0.4,0.1,0.8,0.2,1.2,0.3c0.4,0.1,0.7,0.2,1.1,0.2c1.2,0.1,2.5,0.2,3.7,0.3c0.2,0,0.5,0,0.7-0.1c0.6-0.1,0.7-0.1,1.3,0.3" + ' ' +
+									"c0,0.3,0.1,0.5,0.1,0.8c-0.1,0.3-0.3,0.5-0.6,0.7c-0.1,0-0.3,0.2-0.4,0.3c-0.4,0.3-0.8,0.4-1.3,0.4c-0.4,0-0.8,0.1-1.3,0.1" + ' ' +
+									"c-1-0.1-2-0.1-3-0.4c-1.1-0.3-2.2-0.5-3.4-0.7c-1.3-0.2-2.5-0.4-3.8-0.6c-0.1,0-0.2,0-0.3,0c0,0.1-0.1,0.3-0.1,0.4" + ' ' +
+									"c0.2,0.6-0.1,1.2-0.3,1.8c-0.2,0.6-0.5,1.3-0.7,1.9c-0.1,0.3-0.2,0.7-0.2,1.1c-0.2,0.9-1.1,1.1-1.8,0.7c-0.2-0.2-0.5-0.3-0.7-0.4" + ' ' +
+									"c-0.2-0.2-0.3-0.4-0.5-0.6c0-0.3-0.1-0.6-0.1-0.9c0-0.3,0.1-0.6,0.2-0.9c0.1-0.3,0.4-0.6,0.5-1c0.2-0.7,0.4-1.4,0.5-2" + ' ' +
+									"c-0.4-0.4-0.8-0.7-1.2-1c-0.1-0.4-0.2-0.7-0.3-1.1c0.1-0.2,0.2-0.5,0.3-0.8c0.1-0.2,0.2-0.3,0.4-0.4c0.4-0.3,0.9-0.5,1.3-0.8" + ' ' +
+									"c0.2-0.1,0.4-0.4,0.5-0.6c0.2-0.5,0.2-1,0.3-1.5c0.2-0.8,0.4-1.6,0.6-2.4c0.3-1.2,0.5-2.3,0.7-3.5c0.1-0.7,0.3-1.4,0.4-2.1" + ' ' +
+									"c0.1-0.4,0.2-0.9,0.3-1.3c0.2-0.7,0.4-1.5,0.6-2.2c-0.6-0.2-1,0-1.2,0.4c-0.3,0.5-0.6,0.6-1.2,0.6c-0.4,0-0.8-0.1-1.2-0.2" + ' ' +
+									"c-0.2-0.2-0.3-0.4-0.5-0.6c-0.4-0.6-0.4-1,0-1.6c0.5-0.8,1.2-0.9,2-1c0.1,0,0.2,0,0.3,0c0.5-0.3,1.1-0.2,1.7-0.3" + ' ' +
+									"c0.5-0.1,0.9-0.2,1.4-0.3c0.4-0.1,0.8-0.3,1.1-0.1c0.8,0.3,1.7,0.1,2.6,0.2c0.5,0,1,0,1.5,0c0.2,0,0.4-0.1,0.6-0.1" + ' ' +
+									"c1.1-0.1,2.1,0.1,3.2,0.3c0.5,0.1,1,0.1,1.4,0.5c0.2,0.1,0.3,0.3,0.6,0.5c0.2-0.3,0.3-0.6,0.5-1c0.7-0.2,1.4-0.5,2.1-0.6" + ' ' +
+									"c0.9-0.2,1.9-0.2,2.8-0.3c0.5-0.1,1.1-0.1,1.6-0.2c0.6-0.1,1.2-0.2,1.7-0.2c1.3-0.1,2.6-0.3,3.9-0.4c0.8-0.1,1.5-0.3,2.3-0.3" + ' ' +
+									"c0.3,0,0.7-0.1,1-0.2c0.3,0,0.6-0.1,1-0.1c0.8,0.1,1.5-0.2,2.2-0.3c0.2,0,0.3-0.1,0.4-0.1c0.6,0,1.2-0.1,1.7-0.4" + ' ' +
+									"c0.9-0.4,1.8,0.2,2.2,0.9c0,0.1,0.1,0.2,0.1,0.3c0.4,0.5,0.2,1.1-0.1,1.6c-0.3,0.5-0.8,0.6-1.3,0.5c-1.1-0.1-2.3,0-3.4,0" + ' ' +
+									"c-0.6,0-1.3,0.1-1.9,0.1c-0.4,0-0.7,0.1-1.1,0.1c-0.9,0.1-1.8,0.2-2.7,0.3c-0.2,0-0.4,0.2-0.5,0.2c0.2,0.5,0.4,0.9,0.5,1.3" + ' ' +
+									"c-0.3,0.5-0.5,1-1,1.3c-0.3,0.2-0.4,0.5-0.5,0.9c-0.4,1.4-0.8,2.8-1.2,4.2c-0.3,1.1-0.5,2.1-0.7,3.2c-0.1,0.7-0.3,1.4-0.4,2" + ' ' +
+									"c-0.3,1.4-0.5,2.8-0.8,4.3c-0.1,0.6-0.1,1.1-0.1,1.8c0.2-0.2,0.5-0.4,0.8-0.1c0,0.6,0.1,1.3,0.1,1.9c0,0.4-0.2,0.8-0.3,1.2" + ' ' +
+									"c0,0.2-0.1,0.3-0.2,0.5c-0.1,0.4-0.1,0.8-0.2,1.1c-0.3,0.7-0.3,1.5-0.4,2.3c0,0.1,0,0.3-0.1,0.4c-0.2,0.7-0.9,1-1.6,0.7" + ' ' +
+									"c-0.5-0.2-0.9-0.4-1.3-0.9c-0.4-0.6-0.5-1.2-0.4-1.8c0.3-1.4,0.5-2.8,0.5-4.2c0-0.7,0.1-1.5,0.2-2.2c0.2-0.6,0-1.2,0.2-1.8" + ' ' +
+									"c0.2-0.7,0.3-1.5,0.4-2.2c0.1-0.7,0.2-1.4,0.3-2.1c0.1-0.8,0.3-1.5,0.5-2.2c0.2-0.8,0.3-1.5,0.5-2.3c0.2-0.8,0.3-1.6,0.7-2.4" + ' ' +
+									"c0.2-0.4,0.2-0.8,0.3-1.1c0.2-0.6,0.4-1.2,0.5-1.8c0.1-0.6,0.2-1.1,0.3-1.7c-0.8-0.1-1.5-0.1-2.3,0.1c-0.1,0-0.3,0-0.5,0.1" + ' ' +
+									"c-0.9,0.1-1.7,0.1-2.6,0.2c-0.4,0-0.8,0.2-1.1,0.3c-0.1,0-0.3,0.1-0.3,0.2c-0.2,0.3-0.5,0.4-0.8,0.5c0,0.2,0,0.4,0,0.5" + ' ' +
+									"c0.3,1,0,1.8-0.7,2.5c-0.6,0.6-1.2,1.1-1.8,1.7c-0.4,0.4-0.8,0.8-1.2,1.2c-0.8,0.7-1.6,1.3-2.3,2c-0.9,0.9-2,1.5-2.9,2.4" + ' ' +
+									"c-0.2,0.3-0.6,0.5-0.9,0.7c-1.1,1-2.2,2-3.3,3C274.2,307.2,273.8,307.5,273.4,307.9z M277.1,292.3c-0.1,0.1-0.4,0.3-0.5,0.6" + ' ' +
+									"c-0.3,0.8-0.6,1.6-0.8,2.4c-0.3,1.1-0.6,2.3-0.9,3.4c-0.4,1.5-0.7,3-1,4.5c0,0.2,0,0.4,0,0.6c0.1,0,0.2,0,0.2,0" + ' ' +
+									"c0.5-0.4,1-0.7,1.4-1.1c0.7-0.6,1.4-1.3,2.1-1.9c1.4-1.1,2.8-2.3,4-3.6c0.7-0.7,1.4-1.3,2-2c0.4-0.4,0.8-0.8,0.9-1.3" + ' ' +
+									"c0.2-0.6,0-1-0.6-1.2c-1-0.4-2-0.4-3.1-0.4C279.7,292.1,278.5,292.2,277.1,292.3z"}), 
+								React.createElement("path", {d: "M256.1,273.7c0.6-0.5,1.2-1,1.7-1.4c0.4,0,0.7,0.1,0.9,0.1c1.6,0.2,2.6,1.2,3.5,2.4c0.4,0.5,0.8,1,1.1,1.5" + ' ' +
+									"c0.3,0.5,0.6,1.1,0.9,1.6c0.3,0.8,0.8,1.5,1,2.4c0.1,0.6,0.5,1.2,0.7,1.8c0.3,1,0.7,1.9,0.6,2.9c0,0.1,0,0.3,0,0.4" + ' ' +
+									"c0.3,1.5,0.4,3,0.4,4.5c0,1.1,0,2.2-0.2,3.3c-0.2,0.9-0.3,1.9-0.5,2.8c-0.1,0.6-0.4,1.2-0.6,1.8c-0.1,0.2-0.1,0.4-0.1,0.6" + ' ' +
+									"c-0.1,1.3-0.7,2.5-1.1,3.7c-0.1,0.4-0.2,0.9-0.4,1.3c-0.4,1-0.9,1.9-1.4,2.8c-0.3,0.6-0.6,1.2-1,1.8c-0.6,1-1.2,2-2.1,2.7" + ' ' +
+									"c-0.1,0.1-0.1,0.1-0.2,0.2c-0.4,0.8-1.1,1.3-1.8,1.9c-0.3,0.3-0.5,0.6-0.8,0.8c-0.9,0.9-2,1.6-3.2,2.1c-0.9,0.5-1.8,0.9-2.7,1.2" + ' ' +
+									"c-0.8,0.3-1.6,0.4-2.4,0.6c-0.7,0.1-1.4,0.2-2.1,0.3c-0.7,0.1-1.4,0.1-2.1,0c-0.4-0.1-0.8-0.1-1.2-0.1c-1.1-0.2-2.1-0.5-2.9-1.2" + ' ' +
+									"c-0.7-0.5-1.3-1.1-1.7-1.9c-0.8-1.5-1-3-1.2-4.7c-0.3-2.3-0.1-4.6,0.2-6.8c0.2-1.6,0.4-3.2,0.7-4.7c0.1-0.8,0.4-1.5,0.5-2.3" + ' ' +
+									"c0.2-1,0.6-1.9,0.7-2.9c0-0.4,0.3-0.8,0.4-1.2c0.2-0.7,0.5-1.4,0.7-2.1c0.5-1.3,0.9-2.6,1.4-3.9c0.5-1.5,1.3-2.9,2-4.3" + ' ' +
+									"c0.6-1.2,1.4-2.2,2.2-3.3c0.4-0.5,0.8-1,1.2-1.5c0.5-0.5,0.9-1,1.5-1.5c1.1-0.9,2.3-1.7,3.6-2.2c0.8-0.3,1.7-0.3,2.6,0" + ' ' +
+									"C255.4,273.4,255.8,273.6,256.1,273.7z M257.8,275.2c0.1,0.1,0.3,0.2,0.3,0.3c0.4,0.9,0.8,1.7,0.9,2.6c0.1,0.5,0,1,0.1,1.4" + ' ' +
+									"c0.1,0.8-0.3,1.4-0.9,1.9c-0.4,0.4-0.9,0.3-1.2-0.2c-0.3-0.4-0.5-0.8-0.4-1.4c0.1-1.2,0-2.3-0.7-3.4c-0.4-0.6-0.9-1-1.6-1.1" + ' ' +
+									"c-0.5,0-1.1,0.2-1.6,0.4c-0.8,0.3-1.4,1-2.1,1.5c-0.6,0.5-1,1.1-1.5,1.6c-0.3,0.4-0.7,0.7-1,1.1c-0.4,0.5-0.7,1-1,1.5" + ' ' +
+									"c-0.8,1.3-1.7,2.6-2.2,4c-0.5,1.4-1.1,2.7-1.7,4c-0.6,1.6-1.1,3.2-1.6,4.8c-0.4,1.3-0.7,2.7-1,4.1c-0.3,1.4-0.6,2.8-0.8,4.2" + ' ' +
+									"c-0.1,0.3-0.1,0.7-0.1,1c-0.1,0.7-0.2,1.5-0.3,2.2c-0.1,0.8,0,1.5,0,2.3c0,0.5,0,1.1,0,1.6c0,1.5,0.3,2.9,1.3,4.1" + ' ' +
+									"c0.2,0.2,0.5,0.3,0.7,0.6c0.4,0.5,1.1,0.6,1.7,0.8c0.6,0.2,1.3,0.2,1.9,0.2c1.1,0.1,2.3-0.1,3.4-0.4c1.1-0.3,2.1-0.6,3.2-1.1" + ' ' +
+									"c1-0.5,2-1.1,2.9-1.7c0.4-0.2,0.7-0.5,1-0.8c0.9-0.9,1.9-1.8,2.6-2.9c0.3-0.5,0.8-0.9,1.1-1.5c0.7-1.3,1.6-2.6,2.1-4" + ' ' +
+									"c0.6-1.4,1.2-2.8,1.6-4.3c0.5-1.9,1-3.8,1.2-5.7c0.1-1.1,0.2-2.3,0.3-3.4c0-0.3,0-0.6,0-1c-0.1-1-0.1-2-0.3-2.9" + ' ' +
+									"c-0.2-1-0.3-2.1-0.6-3.1c-0.2-0.8-0.6-1.6-0.8-2.5c-0.2-0.5-0.3-1-0.5-1.4c-0.5-0.9-1.1-1.8-1.7-2.6c-0.3-0.4-0.6-0.8-0.9-1.3" + ' ' +
+									"c-0.4-0.5-0.6-0.6-1.3-0.4C258.2,274.8,257.9,274.8,257.8,275.2z"}), 
+								React.createElement("path", {d: "M169,320.9c-0.3-0.2-0.7-0.6-1.1-0.8c-0.4-0.2-0.8-0.4-1.2-0.6c-0.5-0.2-0.9-0.4-1.1-1" + ' ' +
+									"c-0.1-0.3-0.3-0.6-0.3-1c0-0.6,0.2-1,0.7-1.3c0.6-0.4,1.2-0.7,1.9-0.9c0.2,0,0.4-0.2,0.6-0.3c0.3-1.5,0.6-3,1-4.5" + ' ' +
+									"c0.2-0.7,0.2-1.5,0.3-2.3c0.2-1.2,0.4-2.4,0.5-3.7c0.1-0.7,0.1-1.5,0.2-2.2c0-0.5,0.1-1,0.1-1.6c0-0.9,0.1-1.9,0.1-2.8" + ' ' +
+									"c0-1-0.1-2.1,0.1-3.1c0.1-0.7,0-1.3-0.1-2c0-0.5,0-1-0.1-1.5c-0.8-0.3-1.5-0.5-2.2,0.1c-0.3,0.2-0.7,0.2-1.1,0.2" + ' ' +
+									"c-0.2,0-0.4-0.1-0.5-0.1c-0.4-0.3-0.6-0.5-0.9-0.8c0,0,0,0,0,0c-0.2-0.3-0.4-0.5-0.5-0.8c-0.1-0.7,0.2-1.3,0.6-1.9" + ' ' +
+									"c0.3-0.1,0.5-0.3,0.8-0.4c0.7-0.2,1.3-0.1,1.9,0.2c0.2,0.1,0.4,0.1,0.6,0.1c0.8,0.1,1.6,0.1,2.4,0.3c0.4,0.1,0.9,0.1,1.3,0.2" + ' ' +
+									"c0.8,0.2,1.6,0.3,2.5,0.4c1.1,0.1,2.1,0.2,3.2,0.2c0.8,0,1.5,0.1,2.3,0.1c0.4,0,0.8,0.1,1.2,0.2c0.7,0.2,1.4,0.3,2.1,0.6" + ' ' +
+									"c0.4,0.1,0.8,0.3,1.1,0.6c0.4,0.2,0.8,0.5,1.2,0.7c0.7,0.4,1.2,1,1.8,1.5c0.4,0.4,0.7,0.8,1.1,1.2c0.2,0.2,0.4,0.4,0.6,0.7" + ' ' +
+									"c0.2,0.3,0.5,0.6,0.7,1c0.2,0.3,0.2,0.6,0.5,0.8c0.1,0,0.1,0.2,0.1,0.3c0,0.1,0,0.2,0.1,0.3c0.6,0.7,0.6,1.6,0.8,2.5" + ' ' +
+									"c0.1,0.5,0.2,1.1,0.1,1.7c-0.1,0.3-0.1,0.7-0.2,1.1c-0.2,1.1-0.9,2-1.4,3c-0.7,1.2-1.7,2.2-2.4,3.3c-0.5,0.7-1.2,1.3-1.8,1.9" + ' ' +
+									"c-0.6,0.6-1.2,1.1-1.8,1.6c-0.9,0.7-1.7,1.4-2.6,2.1c-0.7,0.6-1.5,1.1-2.3,1.6c-0.7,0.5-1.4,0.9-2.2,1.3c-0.3,0.1-0.6,0.3-0.9,0.4" + ' ' +
+									"c-0.7,0.3-1.3,0.7-2,0.9c-1.1,0.3-2.2,0.7-3.2,1c-0.4,0.1-0.6,0.3-0.8,0.6C170.1,320.6,169.8,320.9,169,320.9z M187.6,295.4" + ' ' +
+									"c0-0.1,0-0.2-0.1-0.3c-0.3-0.3-0.5-0.6-0.9-0.9c-0.6-0.4-1.2-0.9-1.8-1.2c-0.8-0.4-1.6-0.7-2.5-0.8c-0.4-0.1-0.9,0-1.3-0.2" + ' ' +
+									"c-0.6-0.2-1.3-0.3-1.9-0.3c-0.9,0-1.8,0-2.7,0c-0.7,0-1.3,0-2-0.1c-0.4,0-0.6,0.1-0.8,0.4c-0.1,0.2-0.2,0.3-0.3,0.5" + ' ' +
+									"c0.1,0.3,0.2,0.6,0,0.9c0,0.1,0,0.2,0,0.3c0,0.6,0,1.3,0,1.9c0,1-0.1,2-0.1,3.1c0,0.7-0.1,1.5-0.1,2.2c0,0.5-0.1,1-0.2,1.5" + ' ' +
+									"c0,0.6-0.1,1.1-0.1,1.7c0,0.4,0,0.8,0,1.2c-0.1,1.4-0.6,2.7-0.5,4.1c0,0.1,0,0.1-0.1,0.2c-0.1,0.6-0.2,1.2-0.3,1.9" + ' ' +
+									"c-0.2,1.3-0.4,2.5-0.6,3.8c-0.1,0.4-0.1,0.8-0.2,1.3c0.8-0.2,1.6-0.5,2.3-0.7c0.1,0,0.2-0.1,0.3-0.1c0.7-0.4,1.4-0.7,2.1-1.1" + ' ' +
+									"c0.9-0.5,1.7-1,2.6-1.5c1-0.6,2-1.2,2.9-2c0.3-0.2,0.6-0.5,0.9-0.7c0.7-0.6,1.5-1,2.1-1.8c0.2-0.3,0.5-0.6,0.8-0.9" + ' ' +
+									"c0.5-0.6,1.1-1.1,1.6-1.7c0.6-0.7,1.1-1.3,1.6-2.1c0.3-0.5,0.7-0.9,0.9-1.5c0.2-0.6,0.4-1.1,0.5-1.7c0.1-0.7,0.2-1.5-0.1-2.2" + ' ' +
+									"c-0.1-0.3-0.2-0.7-0.4-1c-0.2-0.5-0.6-0.9-0.8-1.4C188.2,295.8,188,295.5,187.6,295.4L187.6,295.4z"}), 
+								React.createElement("path", {d: "M325.8,299.7c0.4-0.4,0.8-0.8,1.2-1.3c0.4-0.5,0.7-1,1-1.4c0.3-0.4,0.7-0.9,1.1-1.3c0.4-0.4,0.8-0.8,1-1.4" + ' ' +
+									"c-0.6,0.1-1.1,0.1-1.6,0.2c-0.9,0.2-1.8,0.2-2.7,0.6c-0.1,0-0.2,0-0.3,0.1c-1.1,0.2-2.1,0.4-3.2,0.6c-0.5,0.1-1,0.2-1.5,0.3" + ' ' +
+									"c-0.8,0.1-1.4,0.5-2.1,0.9c-0.3,0.2-0.7,0.2-1,0.1c-0.7-0.3-1.2-0.8-1.5-1.6c-0.3-0.8,0-1.4,0.5-2c0.3-0.3,0.7-0.4,1.1-0.4" + ' ' +
+									"c0.5,0,0.9,0.1,1.4,0.1c1.2,0.1,2.3,0,3.4-0.4c0.5-0.2,1.1-0.3,1.6-0.4c0.8-0.2,1.6-0.5,2.4-0.5c1.2-0.1,2.4-0.6,3.6-0.7" + ' ' +
+									"c0.6,0,1.3-0.3,1.9-0.6c0.8-0.3,1.5-0.7,2.3-1c0.5,0.3,0.9,0.6,1.3,0.9c0.2,0.2,0.4,0.4,0.6,0.7c0.2,0.3,0.3,1.8,0.2,2.2" + ' ' +
+									"c-0.1,0.5-0.4,0.7-0.8,0.9c-0.2,0.1-0.4,0.3-0.6,0.5c-0.4,0.1-0.7,0.1-1.1,0.2c-0.2,0.1-0.4,0.2-0.6,0.3c-0.7,0.7-1.4,1.5-2,2.2" + ' ' +
+									"c-1.1,1.3-2.2,2.5-3.2,3.8c-0.6,0.8-1.2,1.6-1.8,2.5c-0.9,1.2-1.7,2.4-2.6,3.5c-0.7,0.8-1.2,1.8-1.9,2.6c-0.7,0.8-1.3,1.7-1.9,2.5" + ' ' +
+									"c-0.4,0.6-0.9,1.2-1.3,1.8c-0.1,0.1-0.1,0.2-0.1,0.4c0.7-0.1,1.4-0.2,2.1-0.3c1-0.1,2-0.2,3.1-0.3c0.5,0,1.1-0.1,1.6-0.2" + ' ' +
+									"c0.5-0.1,1-0.1,1.5-0.1c0.8,0,1.6-0.2,2.5-0.3c1.2-0.2,2.5-0.3,3.7-0.5c0.2,0,0.5-0.1,0.7-0.1c0.8-0.1,1.6-0.3,2.5-0.4" + ' ' +
+									"c0.3,0,0.6-0.1,0.8-0.2c0.7-0.2,1.4-0.3,2.1,0.1c0.3,0.7,0.5,1.4,0,2.1c-0.2,0.4-0.6,0.6-0.9,0.6c-1,0.2-2.1,0.4-3.1,0.4" + ' ' +
+									"c-0.8,0-1.5,0.2-2.3,0.3c-1.6,0.2-3.2,0.5-4.8,0.7c-1.6,0.2-3.2,0.4-4.8,0.5c-1.4,0.1-2.7,0.3-4.1,0.6c-0.7,0.1-1.3,0.2-1.9,0.5" + ' ' +
+									"c-0.4,0.1-0.7,0.5-1.1,0.8c-0.3,0.3-0.7,0.6-1,1c-0.7-0.2-1.3-0.4-1.9-0.6c-0.3-0.8-0.8-1.4-0.8-2.2c-0.1-0.7,0.2-1.2,0.8-1.6" + ' ' +
+									"c0.2-0.1,0.3-0.3,0.5-0.5c0,0-0.1-0.1-0.1-0.1c0.4-0.1,0.7-0.1,1.1-0.3c0.2-0.1,0.5-0.2,0.6-0.4c0.9-0.8,1.5-1.8,2.2-2.7" + ' ' +
+									"c0.2-0.3,0.4-0.5,0.7-0.8c0.4-0.4,0.8-0.8,1-1.4c0-0.1,0.1-0.2,0.2-0.3c0.7-1,1.5-2,2.2-3c0.5-0.7,1.1-1.4,1.6-2.1" + ' ' +
+									"c0.3-0.5,0.6-1,1-1.5c0.2-0.3,0.5-0.4,0.5-0.9c-0.3,0-0.5,0.1-0.8,0.1c-0.3-0.5-0.6-1-0.9-1.5c0.2-0.7,0.4-1.3,0.6-2" + ' ' +
+									"c0.1,0.2,0.3,0.4,0.4,0.5c0.2-0.1,0.3-0.2,0.5-0.2C324.8,298.6,325.7,298.6,325.8,299.7z"}), 
+								React.createElement("path", {d: "M105.7,323.8c-0.6-0.6-1.4-0.9-1.5-1.8c0.3-1.5,0.8-2.9,0.7-4.4c0-0.5,0.1-1,0.1-1.5" + ' ' +
+									"c0.1-1.4,0.2-2.7,0.3-4.1c0-0.4,0.2-0.8,0.2-1.3c0.1-0.4,0.1-0.9,0.1-1.4c-0.1-0.1-0.2-0.2-0.3-0.2c-0.6-0.1-0.8-0.6-0.9-1.1" + ' ' +
+									"c-0.1-0.3,0-0.6,0.3-0.9c0.1,0,0.1-0.1,0.2-0.1c0.9-0.3,1.1-1,1.2-1.8c0-0.8,0.1-1.5,0.3-2.3c0.1-0.3,0.1-0.7,0.1-1" + ' ' +
+									"c0.1-0.7,0.2-1.5,0.4-2.2c0.1-0.5,0.1-0.9,0.2-1.4c0-0.3,0-0.6,0-1c0-0.3,0.1-0.6,0.1-0.8c0.1-0.7,0.2-1.3,0.4-2" + ' ' +
+									"c0.2-0.9,0.4-1.9,0.7-2.9c-0.2,0-0.4,0-0.5,0.1c-1.1,0.6-2,1.4-2.7,2.4c-0.4,0.5-0.8,0.9-1.6,0.9c-0.2-0.1-0.5-0.2-0.8-0.3" + ' ' +
+									"c0-0.1-0.1-0.2-0.1-0.3c-1-0.5-1.1-1.4-0.4-2.3c0.6-0.8,0.6-0.8,1.3-0.9c0.7-0.5,1.2-0.9,1.8-1.3c0.6-0.4,1.3-0.7,2-1" + ' ' +
+									"c0.7-0.4,1.4-0.8,2.2-1.1c0.6-0.3,1.2-0.5,1.8-0.8c0.8-0.4,1.8-0.4,2.6-0.9c0.1-0.1,0.3,0,0.4-0.1c0.1,0,0.4,0,0.4-0.1" + ' ' +
+									"c0.3-0.3,0.7-0.3,1-0.3c0.2,0,0.5-0.1,0.7-0.1c1-0.2,1.9-0.2,2.9,0c0.5,0.1,1,0.2,1.4,0.3c1.2,0.5,2.2,1.2,3.1,2.2" + ' ' +
+									"c0.5,0.6,0.9,1.2,1.3,1.8c0.4,0.7,0.6,1.5,0.7,2.3c0,0.8-0.3,1.5-0.7,2.2c-0.9,1.3-2,2.5-3.2,3.6c-0.9,0.9-1.9,1.7-2.9,2.6" + ' ' +
+									"c-0.9,0.8-1.8,1.6-2.7,2.3c-0.7,0.6-1.4,1.1-2.1,1.6c-0.3,0.2-0.5,0.4-0.8,0.6c-0.6,0.4-1.1,0.9-1.7,1.3c-0.6,0.4-1.2,0.8-1.8,1.2" + ' ' +
+									"c-0.5,0.3-1,0.6-1.5,0.9c-0.2,0.1-0.3,0.3-0.3,0.5c-0.1,0.6-0.1,1.3-0.2,1.9c0,0.2,0,0.4,0,0.6c0.3,0,0.6,0.1,0.8,0.1" + ' ' +
+									"c0.1,0.4,0.2,0.6,0.2,0.9c0,0.1,0,0.3,0,0.5c-0.2,1.2-0.4,2.4-0.6,3.6c-0.1,1.5-0.6,2.9-0.9,4.3c-0.1,0.6-0.2,1.1-0.2,1.7" + ' ' +
+									"c0,0.5-0.3,0.9-0.4,1.4C106.5,323.8,106.1,323.8,105.7,323.8z M112,291.6c-0.3,0.8-0.7,1.6-1,2.4c-0.2,0.4-0.2,0.9-0.4,1.3" + ' ' +
+									"c-0.4,0.7-0.6,1.4-0.7,2.1c-0.2,0.9-0.3,1.8-0.4,2.6c-0.1,0.7-0.4,1.5-0.4,2.2c0,0.8-0.2,1.5-0.4,2.2c0,0.1,0.1,0.3,0.1,0.4" + ' ' +
+									"c0.6-0.4,1.2-0.8,1.7-1.1c0.8-0.5,1.6-1.2,2.4-1.8c1.1-0.9,2.2-1.8,3.2-2.7c1-0.9,2.1-1.6,3-2.6c0.7-0.8,1.5-1.5,2.3-2.2" + ' ' +
+									"c0.4-0.4,0.8-0.8,1.1-1.3c0.3-0.5,0.6-0.9,0.6-1.4c0.1-1-0.4-1.8-1-2.5c-0.4-0.5-1-0.8-1.6-1c-1.3-0.5-2.6-0.4-3.9-0.1" + ' ' +
+									"c-0.5,0.1-1,0.3-1.5,0.5c-0.5,0.2-1,0.3-1.4,0.5c-0.6,0.2-1.1,0.4-1.7,0.6c-0.1,0-0.1,0.1-0.2,0.2c0.2,0.2,0.4,0.4,0.5,0.5" + ' ' +
+									"C112.1,290.8,112.1,291.1,112,291.6z"}), 
+								React.createElement("path", {d: "M165.6,311.7c0.1,0.1,0.1,0.2,0.2,0.3c0,0.4,0.1,0.8,0.1,1.1c0.1,0.6-0.2,1.1-0.4,1.7" + ' ' +
+									"c-0.4,0.8-0.9,1.4-1.7,1.8c-0.7,0.4-1.3,0.7-2,1c-0.1,0-0.3,0.1-0.4,0.2c-0.3,0.1-0.5,0.2-0.8,0.3c-1.5,0.4-2.9,1-4.4,1.3" + ' ' +
+									"c-1.4,0.3-2.9,0.5-4.3,0.5c-0.8,0-1.6,0-2.4-0.2c-1.6-0.3-2.8-1.1-3.5-2.6c-0.3-0.6-0.6-1.2-0.6-1.8c-0.2-1.9-0.1-3.7,0.1-5.5" + ' ' +
+									"c0.1-1.1,0.3-2.2,0.5-3.2c0-0.2,0.1-0.4,0.1-0.6c-0.6-0.7-1-1.5-0.6-2.7c0.2-0.4,0.8-0.6,1.4-0.8c0.1-0.1,0.1-0.3,0.2-0.4" + ' ' +
+									"c0.3-1.1,0.6-2.1,0.9-3.2c0.2-0.7,0.4-1.4,0.6-2.1c0.2-0.7,0.5-1.3,0.7-2c0-0.1,0-0.3,0.1-0.4c-0.4-0.1-0.8-0.2-1.1-0.3" + ' ' +
+									"c-0.3-0.3-0.5-0.5-0.8-0.8c0,0,0-0.2-0.1-0.3c-0.1-0.3-0.4-0.6-0.2-0.9c0.3-0.4,0.6-0.8,1-1.1c0.1-0.1,0.2-0.1,0.3-0.1" + ' ' +
+									"c0.3,0,0.6,0,0.8-0.1c0.6-0.1,1.2-0.3,1.7-0.6c0.2-0.3,0.5-0.6,0.7-0.9c0.5-0.6,1.3-0.6,1.9-0.1c0.2,0.1,0.4,0.3,0.6,0.4" + ' ' +
+									"c1.2,0,2.2-0.4,3.3-0.9c1.7-0.8,3.3-1.6,5.1-2.2c0.4-0.2,0.9-0.2,1.4-0.2c0.2,0,0.5,0.1,0.6,0.3c0.4,0.6,0.9,1.1,0.7,2" + ' ' +
+									"c0,0.1-0.1,0.2-0.2,0.3c-0.4,0.4-0.8,0.6-1.4,0.4c-0.3-0.1-0.5-0.1-0.8,0c-0.6,0.2-1.2,0.3-1.8,0.6c-0.5,0.2-1,0.5-1.6,0.8" + ' ' +
+									"c-1.2,0.5-2.4,0.9-3.6,1.4c-0.7,0.3-1.5,0.5-2.2,0.7c-0.4,0.1-0.7,0.4-0.8,0.7c-0.5,1-1,2.1-1.4,3.2c-0.2,0.6-0.6,1.2-0.7,1.9" + ' ' +
+									"c-0.2,0.7-0.4,1.3-0.6,1.9c0,0.1,0,0.3-0.1,0.5c0.5,0,0.9-0.2,1.3-0.4c0.7-0.3,1.4-0.6,2.1-0.9c0.4-0.2,0.9-0.4,1.3-0.7" + ' ' +
+									"c0.2-0.1,0.3-0.2,0.5-0.3c0.7-0.2,1.4-0.4,2.1-0.6c0.2-0.1,0.5,0,0.8,0c0.5,0.1,0.9,0.2,1.5,0.3c0,0.2,0,0.4,0.1,0.6" + ' ' +
+									"c-0.5,0.3-0.8,0.8-1.4,1c-0.3,0.1-0.5,0.3-0.8,0.4c-0.1,0-0.1,0.1-0.2,0.1c-1.1,0.1-1.8,0.9-2.7,1.3c-0.9,0.4-1.9,0.9-2.8,1.5" + ' ' +
+									"c-0.8,0.4-1.6,0.9-2.4,1.4c-0.2,0.1-0.4,0.3-0.4,0.6c-0.1,0.6-0.3,1.2-0.4,1.8c-0.2,0.9-0.4,1.7-0.5,2.6c-0.1,1.1-0.3,2.3-0.3,3.5" + ' ' +
+									"c0,0.8,0.1,1.7,0.4,2.5c0.1,0.3,0.4,0.7,0.6,0.8c0.6,0.3,1.2,0.7,2,0.7c1.1,0.1,2.2,0.1,3.2-0.2c0.9-0.2,1.9-0.2,2.8-0.6" + ' ' +
+									"c0.6-0.3,1.2-0.5,1.8-0.5c0.4,0,0.7-0.3,1.1-0.4c0.9-0.4,1.8-0.7,2.7-1.1c1-0.5,1.8-1.3,2.3-2.3" + ' ' +
+									"C164.8,311.9,165.2,311.8,165.6,311.7z"}), 
+								React.createElement("path", {d: "M143.2,290.6c-0.2-0.2-0.4-0.4-0.6-0.6c-0.9-0.3-1.7,0-2.5,0.4c-0.9,0.4-1.8,0.8-2.7,1.2" + ' ' +
+									"c-0.9,0.4-1.8,0.8-2.7,1.3c-0.4,0.2-0.7,0.5-1.1,0.7c-0.4,0.2-0.8,0.5-1.2,0.7c-1,0.5-1.7,1.2-1.9,2.3c-0.2,1.3-0.6,2.5-0.9,3.8" + ' ' +
+									"c-0.1,0.6-0.2,1.2-0.4,1.8c0.2,0,0.4,0,0.5,0c1.4-0.6,2.9-1.1,4.3-1.7c0.7-0.3,1.3-0.7,2-0.9c0.8-0.2,1.5-0.8,2.4-0.8" + ' ' +
+									"c0.2,0,0.3-0.1,0.5-0.2c0.3,0.2,0.7,0.4,0.7,0.9c0,0.4-0.1,0.7-0.5,0.8c-0.6,0.2-1.1,0.4-1.4,1c0,0.1-0.1,0.1-0.2,0.1" + ' ' +
+									"c-1.1,0.6-2.1,1.2-3.2,1.7c-0.7,0.4-1.4,0.7-2.1,1c-0.6,0.3-1.2,0.6-1.8,0.8c-0.3,0.1-0.5,0.3-0.9,0.4c-0.1,0.1-0.1,0.3-0.2,0.5" + ' ' +
+									"c-0.1,0.1-0.3,0.1-0.4,0.2c-0.1,0.3-0.2,0.6-0.3,0.9c-0.1,0.6-0.1,1.1-0.2,1.7c-0.1,1.5-0.2,3,0,4.4c0.1,0.7,0.2,1.5,0.6,2.2" + ' ' +
+									"c0.3,0.5,0.5,0.9,1.1,1.2c0.1,0,0.1,0,0.2,0.1c0.7,0.7,1.6,0.6,2.4,0.8c0.1,0,0.3,0,0.4,0c1.6,0.2,3-0.3,4.4-0.9" + ' ' +
+									"c0.8-0.3,1.5-0.7,2.2-1.2c1.2-1,2-2.2,2.3-3.7c0-0.2,0.1-0.3,0.1-0.6c0.4,0,0.8,0.1,1.1,0.1c0.7,1,0.5,2,0.2,2.9" + ' ' +
+									"c-0.2,0.6-0.6,1.2-0.8,1.8c-0.4,0.9-1.1,1.5-1.9,2c-0.3,0.2-0.7,0.4-1,0.7c-0.6,0.4-1.3,0.5-1.9,0.8c-1,0.4-2,0.6-3,0.7" + ' ' +
+									"c-0.9,0.1-1.9,0.1-2.8-0.2c-0.6-0.2-1.2-0.3-1.8-0.5c-0.4-0.1-0.7-0.3-1.1-0.5c-0.8-0.4-1.4-1.1-1.8-1.9c-0.5-0.8-0.8-1.6-1-2.4" + ' ' +
+									"c-0.2-1-0.3-2-0.3-3c0-0.7,0-1.4,0-2.1c0.1-1,0.2-1.9,0.3-2.9c0-0.4,0.1-0.9,0.1-1.3c0-0.1,0-0.2,0-0.3c-0.4-0.7,0-1.3,0.3-2" + ' ' +
+									"c0.1-0.2,0.2-0.4,0.2-0.5c0.2-1,0.3-2,0.5-3c0.1-0.5,0.3-0.9,0.3-1.4c0-0.6,0.2-1.1,0.4-1.6c0.2-0.6,0.1-1.1-0.2-1.5" + ' ' +
+									"c-0.4-0.6-0.2-1.2,0-1.8c0.1-0.2,0.3-0.4,0.5-0.5c0.6-0.2,0.9-0.6,1.1-1.2c0.2-0.7,0.5-1.3,0.7-2c0.2-0.4,0.2-0.9,0.4-1.3" + ' ' +
+									"c0.3-0.8,0.4-0.9,1.2-0.8c0.7,0.1,1.3,0.4,1.6,1c0.2,0.5,0.2,1.1,0,1.6c-0.2,0.3-0.5,0.6-0.8,1c0.4,0,0.7-0.1,1-0.3" + ' ' +
+									"c0.6-0.3,1.2-0.6,1.7-0.9c0.8-0.4,1.5-0.8,2.3-1.1c0.7-0.3,1.5-0.6,2.2-0.9c0.9-0.3,1.8-0.4,2.7-0.3c0.3,0,0.7,0.2,0.9,0.5" + ' ' +
+									"c0.5,0.4,0.8,0.8,0.8,1.5c0,0.6-0.1,0.8-0.6,1C143.5,290.5,143.4,290.6,143.2,290.6z"}), 
+								React.createElement("path", {d: "M211.2,288.6c0.2-0.1,0.4-0.2,0.5-0.3c0.6-0.4,1.4-0.4,1.8,0.1c0.4,0.5,0.9,1,0.7,1.8c0,0.1,0,0.3,0,0.4" + ' ' +
+									"c-0.6,1-1.1,1.9-1.4,2.9c-0.4,1-0.8,1.9-1.3,2.9c-0.1,0.1-0.1,0.2-0.2,0.4c-0.2,0.7-0.4,1.4-0.6,2.1c-0.3,1-0.7,2-1,3" + ' ' +
+									"c-0.4,1.4-1.1,2.8-1.6,4.1c-0.3,0.8-0.8,1.7-1.1,2.5c-0.2,0.5-0.3,1.1-0.5,1.7c-0.2,0.5-0.4,1.1-0.6,1.6c-0.3,0.8-0.6,1.7-0.9,2.5" + ' ' +
+									"c-0.2,0.6-0.4,1.1-0.6,1.7c-0.5,1.4-0.9,2.7-1.4,4.1c-0.2,0.6-0.3,1.1-0.5,1.7c-0.1,0.3-0.3,0.7-0.5,1c-0.9,0.4-1.6,0.2-2.1-0.7" + ' ' +
+									"c-0.1-0.3-0.3-0.5-0.4-0.8c-0.1-0.3-0.2-0.6-0.1-0.8c0.1-0.4,0.3-0.9,0.5-1.3c0.5-0.8,0.9-1.6,1.1-2.5c0,0,0,0,0-0.1" + ' ' +
+									"c0.4-0.9,0.8-1.9,1.2-2.8c0-0.1,0.1-0.2,0.1-0.3c0.5-1.4,0.9-2.8,1.4-4.2c0.3-0.9,0.8-1.9,1.1-2.8c0.1-0.2,0.1-0.5,0.2-0.8" + ' ' +
+									"c-0.1-0.1-0.2-0.1-0.3-0.2c-0.7-0.1-1.2-0.6-1.6-1.2c-0.5-0.7-1-1.4-1.5-2.1c-0.2-0.3-0.4-0.5-0.7-0.8c-0.6-0.8-1.3-1.5-1.9-2.3" + ' ' +
+									"c-0.9-1-1.7-2.1-2.2-3.4c-0.2-0.4-0.5-0.7-0.9-0.8c-0.3-0.5-0.5-0.9-0.5-1.4c0-0.2-0.1-0.5-0.2-0.7c-0.3-0.6-0.4-1.3-0.2-2" + ' ' +
+									"c0.1-0.3,0.3-0.5,0.5-0.8c0.5-0.1,0.9-0.2,1.4-0.3c0.3,0.2,0.6,0.3,0.9,0.5c0.3,0.5,0.5,0.9,0.8,1.3c0.1,0.1,0.1,0.3,0.1,0.5" + ' ' +
+									"c0,0.5,0,1,0.1,1.5c0,0.2,0.2,0.4,0.3,0.7c0.5,1.6,1.6,2.8,2.6,4c0.5,0.7,1.1,1.3,1.6,2c0.3,0.3,0.6,0.6,0.9,0.9" + ' ' +
+									"c0.3,0.2,0.5,0.2,0.8,0.1c0.6-0.2,1.2-0.3,1.8-0.1c0.3-0.9,0.6-1.9,0.9-2.8c0.5-1.3,0.9-2.6,1.4-3.9c0.5-1.5,1-3.1,1.5-4.7" + ' ' +
+									"C211.1,289.6,211.1,289.1,211.2,288.6z"}), 
+								React.createElement("path", {d: "M309.5,319c-1.1,0.6-2,0.3-2.5-0.7c-0.2-0.4-0.3-0.8-0.3-1.2c0-1.1,0.3-2.1,0.6-3.1" + ' ' +
+									"c0.2-0.7,0.3-1.4,0.4-2.1c0.3-1.8,0.6-3.7,1-5.5c0.2-1.2,0.5-2.5,0.7-3.7c0.2-1.3,0.7-2.6,1-3.9c0.2-0.9,0.3-1.8,0.5-2.7" + ' ' +
+									"c0.1-0.7,0.3-1.3,0.5-2c0.2-0.8,0.3-1.5,0.5-2.3c0.2-0.8,0.4-1.5,0.5-2.3c0-0.2,0.1-0.4,0-0.6c-0.1-0.5-0.1-0.9,0.1-1.4" + ' ' +
+									"c0.1-0.1,0.1-0.2,0.1-0.3c0.2-0.1,0.4-0.3,0.5-0.4c0.1-0.1,0.2-0.1,0.3-0.1c0.6-0.1,1.4,0.4,1.7,0.9c0.1,0.2,0.2,0.4,0.3,0.5" + ' ' +
+									"c0.2,0.3,0.2,0.5,0.1,0.8c-0.2,0.8-0.4,1.5-0.6,2.3c-0.2,0.7-0.4,1.4-0.5,2.1c-0.2,0.9-0.4,1.7-0.6,2.6c-0.1,0.5-0.3,1.1-0.4,1.6" + ' ' +
+									"c-0.2,1-0.4,1.9-0.6,2.9c-0.2,0.7-0.4,1.4-0.5,2.2c-0.3,1.3-0.5,2.7-0.8,4c-0.2,1.4-0.4,2.8-0.7,4.1c-0.3,1.1-0.3,2.2-0.4,3.4" + ' ' +
+									"c-0.2,1-0.3,2-0.4,3c0,0.3,0,0.6-0.1,0.9C309.7,318.3,309.6,318.7,309.5,319z"}), 
+								React.createElement("path", {d: "M187.6,295.4c0,0.1,0,0.2,0,0.2c0.3,0.2,0.2,0.6,0.4,0.9c-0.3,0.2-0.6,0.5-0.8,0.7" + ' ' +
+									"c-0.3-0.2-0.5-0.3-0.8-0.5c0,0-0.1,0.1-0.1,0.1c-0.1-0.3-0.1-0.5-0.2-0.8c0.6-0.1,0.5-0.6,0.5-1.1" + ' ' +
+									"C186.9,295,187.1,295.5,187.6,295.4L187.6,295.4z"}), 
+								React.createElement("path", {d: "M185.5,295.9c0,0-0.1,0-0.1-0.1c0,0,0-0.1,0-0.1c0,0,0.1,0,0.1,0C185.6,295.9,185.5,295.9,185.5,295.9z"})
+							), 
+							React.createElement("rect", {x: "8.1", y: "269.3", width: "414.7", height: "60.3"})
+						), 
+						React.createElement("g", {id: "aygamg", className: "band_lineup_link pink", onClick: self.openBand.bind(this, "All Young Girls Are Machine Guns")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M98.9,409.8c0.9,0.6,1.8,0.7,2.7,0.9c2.4,0.5,4.8,1,7.2,1.3c1.4,0.2,2.6,0.6,3.7,1.5" + ' ' +
+									"c0.1,0.1,0.3,0.1,0.4,0.2c0.3-0.4,0.2-0.9-0.1-1.2c-0.2-0.2-0.4-0.4-0.6-0.7c-1-1-1-2.1-0.5-3.3c0.5-0.2,1-0.4,1.5-0.6" + ' ' +
+									"c0-0.5-0.3-0.5-0.6-0.6c-1.2-0.4-1.6-0.7-2.6-1.7c-0.3-0.8-0.1-1.7,0-2.5c0.6-0.9,1.6-1.1,2.5-1.4c1.3-0.4,2.7-0.8,4.1-1" + ' ' +
+									"c1.9-0.2,3.7-0.7,5.6-1.2c1.8-0.5,3.7-1,5.5-1.5c0.7-0.2,1.5-0.3,2.2,0c0.8,0.3,1.5,0.5,2.3,0.8c0.8,0.3,1.1,0.9,1,1.6" + ' ' +
+									"c-0.1,0.7-0.5,1.2-1.4,1.3c-0.5,0.1-1,0.1-1.5,0c-0.6-0.1-1.2,0-1.8,0.2c-2.4,0.7-4.9,1.4-7.3,2.2c-0.5,0.2-0.9,0.5-1.3,0.7" + ' ' +
+									"c-0.8,2.1-0.8,2.2-0.7,3.5c0.6,0.2,1.2,0.3,1.9,0.2c1.7-0.3,3.4-0.5,5.2-0.8c0.7-0.1,1.4-0.2,2.1-0.2c0.5-0.1,1-0.1,1.5-0.2" + ' ' +
+									"c0.7,0.3,1.4,0.6,2.1,0.9c0.2,0.1,0.2,0.2,0.5,0.9c-0.3,0.5-0.9,0.7-1.5,0.9c-2.9,1-5.9,1.7-9,2.1c-1.1,0.1-2.3,0.3-3.4,0.4" + ' ' +
+									"c-0.4,1.1-0.2,2.1-0.1,3c0.5,0.5,1,0.6,1.6,0.7c1.7,0.3,3.4,0.2,5.1-0.2c1.5-0.3,2.9-0.6,4.4-0.8c0.7-0.1,1.4,0,2,0.2" + ' ' +
+									"c0.7,0.3,1.5,0.6,2.2,0.9c0.2,0.1,0.3,0.2,0.5,0.3c0.2,0.6,0,1.1-0.1,1.6c-0.7,0.8-1.5,1-2.6,1c-0.4,0-0.9,0.1-1.3,0.1" + ' ' +
+									"c-0.2,0-0.5,0.1-0.7,0.1c-3.2,0.3-6.3,0.5-9.5,0.8c-0.7,0.1-1.5,0.1-2.2,0.3c-1.6,0.3-3.1,0.2-4.4-1.1c-0.5-0.5-0.8-1-0.9-1.7" + ' ' +
+									"c0-0.6-0.1-1.3-0.1-1.9c-0.2-0.1-0.3-0.2-0.5-0.2c-1.1-0.1-2.3-0.2-3.4-0.4c-0.4,0-0.8-0.1-1.2-0.2c-1.9-0.3-3.8-0.7-5.7-1" + ' ' +
+									"c-1.1-0.2-2.3-0.4-3.3-0.8c-0.8-0.3-1.6-0.4-2.6-0.4c0.1,0.5,0.4,0.8,0.7,1.2c0.6,0.6,1.2,1.3,1.7,1.9c0.1,1-0.1,1.7-0.8,2.4" + ' ' +
+									"c-0.9,0.8-1.8,0.8-2.8,0.5c-0.6-0.4-1.2-0.8-1.8-1.3c-0.5-0.5-0.9-1.1-1.3-1.6c-1.3-1.9-2.2-3.9-2.6-6.1c-0.2-1.2-0.5-2.3-0.8-3.5" + ' ' +
+									"c-0.3-0.9-0.6-1.8-1-2.6c-1.1-0.8-1.4-2-2-3.1c0.2-0.4,0.3-0.8,0.5-1.1c0.3-0.5,0.7-0.8,1.3-0.9c1.6-0.2,3.3-0.2,4.9-0.3" + ' ' +
+									"c1.7-0.1,3.5,0,5.2-0.3c1.5-0.2,3-0.4,4.5-0.4c1.1,0,2.3,0.1,3.4,0.2c1.4,0.1,2.5,0.9,3.6,1.7c0.7,0.5,0.8,1.1,0.6,1.9" + ' ' +
+									"c-0.1,0.6-0.4,1.2-1,1.7c-1,0.9-2.1,1.7-3.2,2.5c-1.8,1.3-3.6,2.5-5.4,3.7C99.3,409.3,99.2,409.5,98.9,409.8z M102.5,401.3" + ' ' +
+									"c-0.5,0-0.8-0.1-1.1,0c-0.5,0.1-1.1,0.1-1.6,0.1c-1.5,0.1-3.1,0.3-4.6,0.4c-0.5,0-0.9,0.2-1.2,0.5c-0.7,1.6-1,3.2-0.1,4.9" + ' ' +
+									"c0.4-0.2,0.7-0.3,1-0.4c2.1-1.4,4.3-2.8,6.4-4.2C101.6,402.4,102.1,401.9,102.5,401.3z"}), 
+								React.createElement("path", {d: "M168.7,415.4c-0.8-0.5-1.7-1.1-2.5-1.6c-0.4-0.9-0.7-1.8-0.6-2.8c0.1-0.8-0.3-1.4-0.5-2.2" + ' ' +
+									"c-0.3-1.2-1-2.2-1.7-3.2c-0.4,0-0.5,0.3-0.6,0.5c-0.4,1-0.7,2.1-1.1,3.1c-0.5,1.3-1.1,2.6-1.6,3.9c-0.1,0.2-0.1,0.4-0.2,0.6" + ' ' +
+									"c-0.6,1.1-0.7,2.4-0.8,3.6c-0.1,1-0.3,2-1,2.8c-0.4,0.1-0.8,0.3-1.2,0.5c-0.9,0.4-1.7,0.1-2.5-0.4c-0.8-0.6-1.3-1.4-1.7-2.3" + ' ' +
+									"c-0.3-0.7-0.3-1.4,0.2-2.1c0.3-0.5,0.5-1.1,0.9-1.5c0.3-0.3,0.5-0.8,0.7-1.3c1.1-2.7,2.3-5.4,3.3-8.2c0.4-1,0.6-2,0.8-3" + ' ' +
+									"c0.1-0.4,0.1-0.8,0-1.2c-0.4-1-0.1-2,0.1-2.9c0.1-0.7,0.6-1.2,1.4-1.6c0.4,0,0.9,0.1,1.4,0.1c0.3,0,0.6,0.1,0.9,0.1" + ' ' +
+									"c1-0.2,1.9,0.2,2.7,0.8c0.5,0.9,0.9,1.9,1.2,2.9c0.2,0.9,0.6,1.8,1.1,2.6c0.6,1.1,1.2,2.2,1.8,3.3c0.2,0.3,0.4,0.6,0.5,0.8" + ' ' +
+									"c0.5,0.1,0.7-0.2,0.9-0.5c2.1-2.8,4.7-5.1,7.2-7.6c0.6-0.6,1.1-1.2,1.6-1.8c0.7-0.8,1.5-1,2.6-0.7c0.9,0.3,1.8,0.4,3,0.7" + ' ' +
+									"c0,0,0.2,0.2,0.5,0.5c-0.1,1.1-0.3,2.2-0.4,3.2c-0.3,2.3-0.6,4.5-0.8,6.8c-0.2,3.1-0.2,6.3-0.3,9.4c0,0.1,0,0.3,0,0.4" + ' ' +
+									"c0,2.3,0.2,2.7,1.5,4.5c0,0.8-0.4,1.5-0.8,2.2c-0.3,0.5-0.8,0.8-1.4,0.8c-1.4,0.2-2.7-0.2-3.5-1.4c-0.3-0.4-0.5-0.9-0.5-1.4" + ' ' +
+									"c-0.1-1.7-0.3-3.4-0.4-5.1c-0.1-1.3,0-2.7,0-4c0.1-2.9,0.2-5.8,0.4-8.7c-0.2,0-0.4-0.1-0.4,0c-1.8,1.9-3.5,3.8-5,5.9" + ' ' +
+									"c-0.6,0.8-1,1.7-1.2,2.7c-0.1,0.3-0.1,0.6-0.2,0.9c-0.4,0.9-1,1.5-2,1.6C169.8,415.2,169.3,415.3,168.7,415.4z"}), 
+								React.createElement("path", {d: "M92.4,363.9c0.1,0.8,0.1,1.4-0.2,2c-0.2,0.4-0.2,0.9-0.1,1.3c0.4,1.4,0.8,2.8,1.3,4.1" + ' ' +
+									"c0.2,0.6,0.5,1.1,0.8,1.6c0.2,0.3,0.4,0.6,0.5,0.9c0.3,0.7,0.4,1.4,0,2.2c-0.2,0.3-0.2,0.5-0.4,0.9c-0.6,0.2-1.2,0.4-1.7,0.5" + ' ' +
+									"c-1.2,0-1.9-0.7-2.7-1.2c-0.4-0.5-0.6-1.1-0.7-1.8c-0.3-2.2-1-4.2-1.6-6.4c-0.1-0.4-0.2-0.8-0.8-0.9c-0.9,0.2-1.8,0.4-2.7,0.6" + ' ' +
+									"c-0.9,0.2-1.8,0.3-2.6,0.4c-0.4,0.5-0.4,1-0.5,1.5c-0.3,1.9-0.5,3.8-0.8,5.6c-0.2,1.3-0.3,2.6-0.4,3.9c0,0.7-0.4,1.3-0.6,2.1" + ' ' +
+									"c-0.4,0.2-0.9,0.3-1.4,0.5c-0.5-0.1-1.1-0.3-1.5-0.4c-0.6-0.5-1.1-0.9-1.7-1.3c-0.1-0.6-0.1-1.3-0.2-1.8c0.3-1,0.6-1.9,0.8-2.7" + ' ' +
+									"c0.4-2.2,0.7-4.4,1.1-6.7c-0.7-0.2-1.3-0.4-1.8-0.6c-0.2-0.9-0.2-0.9,0.1-1.9c0.6-0.5,1.2-1.1,2.2-1.1c0.1-0.7,0.3-1.5,0.4-2.2" + ' ' +
+									"c0.3-2.2,0.6-4.3,0.9-6.5c0.2-1.5,0.5-3,0.8-4.4c0.4-1.7,0.5-3.3,0.5-5c0.4-0.6,0.9-0.9,1.6-0.7c0.3,0.1,0.7-0.1,1-0.1" + ' ' +
+									"c0.7-0.1,1.3-0.1,1.8,0.4c0.2,0.2,0.4,0.3,0.7,0.3c0.9,0.3,1.3,0.9,1.4,1.8c0.6,2.9,1.8,5.6,2.8,8.4c0.5,1.4,0.9,2.7,1.4,4.1" + ' ' +
+									"c0.2,0.7,0.5,1.3,0.7,1.9C91.5,363.4,91.9,363.6,92.4,363.9z M83.5,356c-0.5,1-0.4,1.9-0.6,2.8c-0.2,0.8-0.3,1.7-0.4,2.5" + ' ' +
+									"c-0.1,0.9-0.5,1.7-0.2,2.7c1.3-0.3,2.6-0.4,3.8-1C85.5,360.6,84.6,358.3,83.5,356z"}), 
+								React.createElement("path", {d: "M203.7,355c0.4-0.3,0.9-0.7,1.3-0.9c1.5-0.1,2.9,0,4.4,0.6c0.2,0.6,0.4,1.3,0.7,2c0.6,2,1.7,3.8,2.8,5.6" + ' ' +
+									"c0.9,1.6,2,3.1,3,4.6c0.8,1.1,1.6,2.1,2.5,3.2c0.1,0.1,0.3,0.2,0.6,0.4c0-1.8,0-3.4,0-5.1c0-0.8-0.1-1.6-0.2-2.4" + ' ' +
+									"c0-0.1,0-0.3,0-0.4c0.2-2.1,0.3-4.3,0.5-6.4c0.1-0.6,0.3-1.2,0.4-1.7c0.5-0.2,0.9-0.4,1.1-0.5c1.2,0.1,2.1,0.2,3.1,0.3" + ' ' +
+									"c0.5,0.6,0.6,1.3,0.5,2c-0.5,2.6-0.6,5.3-0.5,7.9c0.2,3.6,0.2,7.2,0.3,10.8c0,1.1,0.1,2.2-0.4,3.3c-1.4,1.1-2.9,0.8-4.5,0.4" + ' ' +
+									"c-1.1-2-2.6-3.8-4.1-5.7c-1.2-1.6-2.7-3.1-3.7-4.8c-0.7-1.2-1.6-2.3-2.5-3.5c-0.1,0.4-0.3,0.8-0.3,1.1c-0.1,2.6-0.9,5.1-1.3,7.6" + ' ' +
+									"c-0.1,0.6-0.2,1.2-0.3,1.8c0,0.6-0.2,1.1-0.5,1.5c-0.3,0.6-0.9,0.8-1.5,0.9c-1.5,0.2-3-0.8-3.4-2.2c-0.1-0.2-0.1-0.5-0.2-0.8" + ' ' +
+									"c1.3-2.7,1.6-5.6,2-8.5c0.2-1.7,0.4-3.5,0.6-5.2c0.1-1.2-0.1-2.5-0.2-3.7c0-0.3-0.1-0.7-0.1-1C203.6,355.8,203.7,355.4,203.7,355z"
+									}), 
+								React.createElement("path", {d: "M82.3,420c-0.7-1.6-1.3-2.8-1.9-4.1c1.1-1.1,0.6-2.2-0.1-3.3c-0.1-0.1-0.2-0.2-0.4-0.4" + ' ' +
+									"c-1.2-0.3-2.5-0.1-3.8,0c-0.7,0.1-1.4-0.1-2.1,0.5c-0.1,0.5-0.3,1-0.5,1.6c-0.4,1.3-0.9,2.5-1.2,3.8c-0.3,1-0.6,2.1-0.8,3.2" + ' ' +
+									"c-0.1,0.7-0.4,1.2-0.9,1.7c-1.2,0.7-2.4,1-3.7,0.3c-0.3-0.3-0.7-0.7-1-1c-0.2-0.2-0.4-0.4-0.5-0.6c-0.3-1.1-0.4-2.2,0-3.2" + ' ' +
+									"c0.2-0.4,0.3-0.8,0.6-1c0.6-0.6,0.8-1.4,1.1-2.1c0.3-0.7,0.6-1.3,0.9-2c0.3-0.8,0.7-1.7,0.9-2.5c0.4-1.3,0.8-2.6,1.1-3.9" + ' ' +
+									"c0.4-1.5,0.7-3.1,1-4.7c0.1-0.8,0.1-1.7,0-2.5c-0.1-1-0.1-2,0.2-3c1-0.8,2.1-1.6,2.1-3.1c0.3-0.2,0.5-0.4,0.7-0.6" + ' ' +
+									"c0.2,0,0.3-0.1,0.4-0.1c0.9,0,1.7,0.5,2.5,0.9c0.8,0.5,1.3,1.1,1.6,2.1c1,4,2.7,7.8,4.6,11.5c1,1.9,1.8,3.9,2.5,5.9" + ' ' +
+									"c0.6,1.5,1,3.1,1.8,4.6c0.5,1,0.1,2-0.6,2.7c-0.2,0.2-0.5,0.3-0.8,0.3C84.7,421.2,83.4,420.9,82.3,420" + ' ' +
+									"C82.3,419.9,82.1,419.8,82.3,420z M76.3,404.4c-0.4,1.1-0.8,2.2-0.8,3.4c0.9,0.2,1.7,0.1,2.1-0.8" + ' ' +
+									"C77.4,406.1,77.1,405.2,76.3,404.4z"}), 
+								React.createElement("path", {d: "M380.8,403.3c0,1.1,0.2,2.1,0.7,3c0.7,1.3,1.6,2.5,2.8,3.5c1,0.8,1.9,1.5,3,2.2c1.4,0.8,2.8,1.8,4,2.8" + ' ' +
+									"c1,0.9,1.8,2,2.5,3.2c0,0.8-0.4,1.4-0.7,2.1c-1,0.4-1.9,0.9-2.9,1c-1.6,0.3-3.2,0.8-4.8,1.2c-2.4,0.6-4.8,0.7-7.3,0.4" + ' ' +
+									"c-0.9-0.1-1.8-0.3-2.5-0.8c-0.8-0.5-1.2-1.2-1.2-2.1c0-0.6,0.5-1.1,1.1-1c0.3,0,0.6,0.1,0.9,0.2c0.6,0.2,1.2,0.3,1.9,0.2" + ' ' +
+									"c0.2,0,0.5,0.1,0.7,0.1c0.6,0.1,1.2,0.3,1.8,0.2c2-0.2,4-0.6,6-1.3c0.3-0.1,0.5-0.3,0.8-0.4c-0.3-0.9-0.8-1.4-1.5-1.8" + ' ' +
+									"c-1.5-0.9-3-1.9-4.4-2.8c-1.6-1.1-3.1-2.4-4.2-4c-0.9-1.3-1.5-2.8-1.8-4.4c-0.3-1.5-0.5-2.9-0.6-4.4c-0.1-1.2,0-2.3,0.7-3.3" + ' ' +
+									"c0.7-0.4,1.3-0.6,2-0.5c0.6,0.1,1.3,0,1.9,0.1c0.8,0,1.6,0.2,2.2,0.7c0.2,0.2,0.5,0.3,0.8,0.4c0.7,0.2,1.2,0.6,1.6,1.3" + ' ' +
+									"c0.3,0.6,0.7,1,1.5,1.2c0.8-1.5,2.1-2.6,2.7-4.3c0.1-0.4,0.6-0.8,0.9-1.2c1.6-0.7,3,0.1,4.4,0.5c0.6,1.9,0.5,3-0.9,3.9" + ' ' +
+									"c-1.7,1.2-2.4,3-3.3,4.7c-0.2,0.5-0.2,1.1-0.3,1.6c-0.1,0.7-0.3,1.3-0.8,1.7c-0.7,0.5-1.4,1-2.2,1.2c-1,0.1-1.8-0.3-2.6-0.9" + ' ' +
+									"c-0.5-0.4-0.9-1-1.1-1.7c-0.2-0.8-0.7-1.4-1.3-2C381.2,403.3,381.1,403.3,380.8,403.3z"}), 
+								React.createElement("path", {d: "M348.4,417.1c1.2-0.9,1.8-2.2,2.3-3.6c1-2.8,2-5.6,2.5-8.6c0.2-1,0.3-2,0.1-3c0-0.1-0.1-0.3-0.1-0.4" + ' ' +
+									"c0.2-1.5,0.3-2,1.9-2.2c1.2-0.2,2.4,0,3.6,0.3c0.8,0.2,1.4,0.7,1.5,1.6c0.2,2.3,0.8,4.5,2.1,6.5c0.5,0.8,0.8,1.7,1.2,2.6" + ' ' +
+									"c0.1,0.3,0.3,0.5,0.4,0.9c0.1-0.2,0.3-0.3,0.3-0.4c0.2-0.8,0.3-1.7,0.5-2.5c0.3-1.6,0.7-3.2,1-4.8c0.1-0.3,0.1-0.7,0.1-1" + ' ' +
+									"c0-0.1,0-0.3,0-0.4c0.1-1.2,0.5-1.7,2-2c0.6,0.1,1.3,0.4,2,0.2c0.4-0.1,0.9,0,1.3,0.4c0,0.2,0.2,0.5,0.1,0.8" + ' ' +
+									"c-0.1,1-0.3,2.1-0.5,3.1c-0.4,2-0.9,4-1.3,6c-0.3,1.8-0.4,3.6-0.6,5.3c-0.1,0.8-0.3,1.7-0.1,2.5c0,0.2-0.1,0.5-0.1,0.7" + ' ' +
+									"c-0.2,1.7-1.3,2.7-3,2.7c-0.9,0-1.7-0.3-2.4-0.8c-0.3-0.2-0.6-0.6-0.7-0.9c-0.6-2-1.6-3.7-2.6-5.5c-0.6-1.1-1-2.3-1.5-3.4" + ' ' +
+									"c-0.2-0.4-0.4-0.8-0.6-1.2c-0.1-0.1-0.2-0.2-0.4-0.3c-0.3,1-0.6,1.9-0.9,2.9c-0.2,0.7-0.4,1.4-0.7,2.1c-0.3,0.9-0.8,1.8-1,2.8" + ' ' +
+									"c-0.2,0.6-0.2,1.2-0.3,2c-0.3,0.9-1,1.7-2.5,2c-1.2-0.3-2.7-0.3-3.6-2C348.4,418.6,348.2,417.9,348.4,417.1L348.4,417.1z"}), 
+								React.createElement("path", {d: "M264.8,412.2c-0.3,2.5-0.9,4.9-0.2,7.3c0.1,0.4,0,0.9-0.2,1.3c-0.3,0.5-0.5,1-0.8,1.4" + ' ' +
+									"c-0.2,0.1-0.5,0.2-0.7,0.3c-1.7,1.2-4.6-0.5-4.8-2.6c-0.1-0.6-0.1-1.4,0.2-1.9c0.4-0.8,0.5-1.7,0.6-2.6c0.3-1.8,0.5-3.6,0.8-5.3" + ' ' +
+									"c0.2-1.3,0.2-2.7,0-4c-0.1-0.3-0.1-0.7-0.1-1c-0.1-1,0.4-1.7,1.2-2.4c1.3-0.3,2.7-0.1,4.1,0.5c0.8,0.3,1.3,1.1,1.4,1.8" + ' ' +
+									"c0.4,1.6,1.4,2.7,2.3,4c1,1.6,2,3.1,3,4.6c0,0.1,0.2,0.1,0.2,0.2c0.3,0,0.3-0.3,0.3-0.4c0.5-2.6,0.7-5.2,0.6-7.9" + ' ' +
+									"c0-0.6-0.1-1.2-0.3-1.8c-0.2-0.9-0.2-1.8,0.4-2.7c0.2-0.1,0.6-0.4,0.9-0.6c1,0.1,2,0.2,3,0.2c1,0.1,1.5,0.8,1.7,1.6" + ' ' +
+									"c0.1,0.5,0.1,1-0.1,1.5c-0.3,1.2-0.4,2.4-0.5,3.7c-0.1,2.4-0.2,4.8-0.6,7.1c-0.2,1.2-0.4,2.5-0.6,3.7c-0.1,0.4-0.1,0.8,0,1.2" + ' ' +
+									"c0.1,1.2-0.2,2.4-0.8,3.5c-0.7,0.6-1.6,0.6-2.4,0.5c-0.7-0.1-1.4-0.2-2.1-0.4c-0.8-0.7-1.3-1.5-1.5-2.6c-0.3-1.1-0.9-2.1-1.5-3.1" + ' ' +
+									"c-0.5-0.8-1-1.7-1.5-2.6c-0.5-0.8-1-1.6-1.5-2.4C265.2,412.3,265,412.3,264.8,412.2z"}), 
+								React.createElement("path", {d: "M298.3,359.5c-1.3,0-2.4-0.7-3.5-1.2c-0.1-0.3-0.2-0.5-0.3-0.7c-0.3-1.4,0.4-2.4,1.8-2.8" + ' ' +
+									"c0.6-0.1,1.2-0.2,1.7-0.3c0.7-1.1,1.7-1.4,3-1c0.5,0.2,1,0.3,1.6,0.2c0.4-0.1,0.8-0.1,1.1,0.2c0.4,0.4,1,0.5,1.5,0.5" + ' ' +
+									"c0.2,0,0.4,0,0.6,0c2.3,0,4.5,0.4,6.7,0.7c1.1,0.2,2.1,0.4,3.1,1c1.4,0.8,1.7,1.1,1.7,2.9c-0.9,1.4-2.1,2.5-3.4,3.6" + ' ' +
+									"c-1.7,1.4-3.5,2.8-5.3,4.1c-0.5,0.4-1,0.8-1.4,1.2c0,0.4,0.3,0.4,0.4,0.4c1.1,0.1,2.3,0.2,3.4,0.4c1.5,0.1,3.1,0.3,4.5,0.8" + ' ' +
+									"c0.8,0.3,1.4,0.6,1.9,1.3c0.2,0.4,0.6,0.7,0.8,1c0,0.6-0.3,0.8-0.8,1c-0.2,0-0.5-0.1-0.8-0.2c-1.9-0.6-3.9-0.6-5.9-0.8" + ' ' +
+									"c-1-0.1-2-0.1-3-0.2c-0.7,0-1.4,0-2.1,0c-0.6,0-1.1,0.2-1.6,0.7c-0.1,0.4-0.3,1-0.4,1.5c-0.6,0.8-1.3,1.3-2.3,1.7" + ' ' +
+									"c-0.3-0.1-0.6-0.2-1-0.3c-1.5-0.4-2.5-2-2.6-3.7c0-0.4,0.1-0.8,0.1-1.2c0-0.9,0.1-1.8,0.1-2.7c0-1,0-2,0-3" + ' ' +
+									"C298.2,362.9,298.3,361.2,298.3,359.5z M311.7,358.5c-0.6-0.5-1.2-0.6-1.8-0.7c-1.7-0.1-3.5-0.2-5.2-0.2c-0.5,0-0.9,0.3-0.9,0.8" + ' ' +
+									"c0,0.2,0,0.5-0.1,0.7c0,1.7-0.1,3.5-0.1,5.2c0,0.3,0,0.6,0,1c0.3-0.2,0.6-0.3,0.8-0.4c0.6-0.5,1.3-1,1.9-1.4" + ' ' +
+									"c1.2-0.9,2.4-1.9,3.6-2.8C310.6,360,311.1,359.3,311.7,358.5z"}), 
+								React.createElement("path", {d: "M222.4,403.3c0.5-0.2,1-0.2,1.5-0.1c0.7,0.1,1.3,0.4,2,0.4c0.8,0.1,1.4,0.7,1.6,1.6c0.6,2.5,1.2,5,1.9,7.5" + ' ' +
+									"c0.1,0.4,0.3,0.7,0.4,1.1c0.7,0.2,1.3,0.3,1.9,0.2c1.8-0.2,3.6-0.3,5.5-0.9c-0.3-1.4-0.5-2.7-0.7-4c-0.2-1.1-0.4-2.2-0.1-3.3" + ' ' +
+									"c0.2-0.2,0.5-0.3,0.7-0.5c1.3-0.1,2.5,0.3,3.7,0.4c0.7,0,1.1,0.6,1.1,1.4c0,0.6,0,1.3,0,1.9c0,0.4,0,0.9,0.1,1.3" + ' ' +
+									"c0.1,0.8,0.3,1.6,0.4,2.2c0.6,0.9,1.7,0.5,2.2,1.5c0.2,0.6-0.2,1.3-0.3,2.1c-0.3,0.3-0.7,0.6-1.1,1c0.1,1.4,0.5,2.7,0.9,4" + ' ' +
+									"c0.3,1.4,0.7,2.7,1.1,4.3c-0.1,0.3-0.2,1-0.4,1.6c-0.8,0.9-1.8,1.2-3,0.7c-0.3-0.1-0.7-0.2-1-0.3c-0.3-0.2-0.6-0.4-0.8-0.6" + ' ' +
+									"c-1-1.6-2-3.2-2.6-5c-0.2-0.8-0.3-1.4,0-2.2c0.2-0.2,0.5-0.5,0.8-0.7c-0.2-0.5-0.3-1-0.5-1.5c-0.3-0.1-0.6-0.2-0.9-0.2" + ' ' +
+									"c-2,0.2-4,0.3-5.9,0.5c-0.3,0.4-0.2,0.8,0,1.1c0.3,0.5,0.6,0.9,0.9,1.4c0.5,1,0.3,2-0.2,2.9c-0.3,0.6-1,0.9-1.7,1.1" + ' ' +
+									"c-0.3,0.1-0.6,0.1-0.9,0.2c-1.3-0.4-2.8-0.8-3.6-2.2c0.3-1.3,0.3-2.6-0.1-3.9c-0.7-2.7-1.3-5.4-2-8.1c-0.2-0.9-0.7-1.6-1-2.5" + ' ' +
+									"c-0.3-0.6-0.6-1.2-0.7-1.8C221.5,404.8,221.6,403.9,222.4,403.3z"}), 
+								React.createElement("path", {d: "M316.9,413.2c0.1-0.4,0.1-0.9,0.2-1.3c0.6-0.5,1.3-0.6,1.9-0.6c2.1-0.1,4.3-0.3,6.4,0.1" + ' ' +
+									"c0.9,0.1,1.9,0.1,2.8,0.2c1.1,0.1,2.1,0.5,3.1,1.1c1.2,0.7,1.7,1.8,1.5,3.2c-0.2,1.1-0.6,2.1-1.2,3c-1.3,1.8-3,3.1-5,3.8" + ' ' +
+									"c-1.4,0.5-2.8,0.8-4.3,0.9c-1.6,0.1-3.2,0.2-4.8,0c-1.3-0.1-2.4-0.6-3.5-1.2c-1.5-0.7-2.3-2.1-2.8-3.5c-1-2.9-1-5.7-0.1-8.7" + ' ' +
+									"c0.5-1.7,1.2-3.2,2.2-4.7c0.9-1.5,2.2-2.6,3.7-3.4c0.4-0.2,0.8-0.3,1.2-0.5c0.2-0.1,0.4-0.1,0.6-0.2c0.8-0.7,1.6-0.6,2.5-0.3" + ' ' +
+									"c0.4,0.1,0.9,0.1,1.3,0.2c0.4,0.1,0.9,0.2,1.3,0.2c0.6,1,0.5,2,0.3,3c-0.2,0.6-0.7,1-1.2,1.3c-0.7,0.3-1.4,0.5-2.2,0.4" + ' ' +
+									"c-0.9-0.1-1.6,0.2-2.1,0.8c-0.8,0.9-1.5,1.8-2,3c-0.5,1.1-0.8,2.1-1,3.3c-0.3,1.7-0.3,3.4,0.4,5c0.5,1.2,1.3,1.9,2.5,2" + ' ' +
+									"c2.5,0.2,4.9-0.2,7.1-1.6c0.6-0.4,1-0.9,1.3-1.4c0.2-0.4,0.3-0.8,0.4-1.3c0.1-0.4-0.2-0.8-0.6-1c-0.4-0.1-0.8-0.3-1.2-0.3" + ' ' +
+									"c-0.8,0-1.6-0.2-2.5-0.1c-1.4,0.2-2.8,0-4.1,0.1C317.9,414.7,317.4,414.1,316.9,413.2z"}), 
+								React.createElement("path", {d: "M138.4,354.4c0.5-0.9,1.2-1.1,2-1c0.9,0.1,1.8,0.2,2.7,0.3c0.2,0.3,0.4,0.6,0.6,0.9c1.6,3.5,4,6.4,6.8,9" + ' ' +
+									"c0.9,0.9,1.7,1.8,2.6,2.7c0.3,0.3,0.6,0.5,0.9,0.9c0.2-0.2,0.3-0.3,0.4-0.5c0.6-2.7,1.3-5.3,2-8c0.3-1.1,0.5-2.3,0.9-3.5" + ' ' +
+									"c0.4-1.4,0.9-2.8,1.2-4.3c0.2-0.8,0.2-0.8,1.3-1.5c1.1,0.2,2.2,0.5,3.2,0.7c0.6,0.9,0.7,1.7,0.4,2.6c-0.2,0.6-0.5,1.2-0.7,1.8" + ' ' +
+									"c-0.5,1.2-0.9,2.4-1.2,3.7c-0.2,0.8-0.5,1.6-0.7,2.4c-0.6,2.3-1.2,4.6-1.7,7c-0.6,3-1.1,6.1-1.1,9.2c0,0.5,0.1,1.1,0.1,1.6" + ' ' +
+									"c-0.3,0.5-0.5,1-0.8,1.5c-0.4,0.2-0.8,0.5-1.3,0.7c-0.8-0.3-1.6-0.6-2.4-0.9c-0.2-0.3-0.3-0.5-0.4-0.7c-0.5-0.7-0.5-1.5-0.3-2.3" + ' ' +
+									"c0.3-1.3,0.5-2.6,0.5-4c0-0.1-0.1-0.3-0.1-0.5c-0.7-0.3-1.5-0.7-2.5-1.1c-0.3-0.5-0.6-1.1-1.1-1.7c-0.9-1.2-1.8-2.5-2.9-3.6" + ' ' +
+									"c-1.5-1.3-2.9-2.8-4.1-4.3c-0.2-0.3-0.4-0.6-0.6-0.8c-0.9-1.2-1.7-2.5-2.6-3.7C138.8,356.2,138.4,355.4,138.4,354.4z"}), 
+								React.createElement("path", {d: "M172.7,355.7c0.4-1.1,0.1-2.2,1.3-2.7c0.9,0.2,1.8,0.4,2.7,0.6c0.1,0.2,0.3,0.4,0.4,0.7" + ' ' +
+									"c0.3,1.1,0.7,2.3,0.9,3.5c0.3,1.8,0.5,3.5,0.6,5.3c0,1.1,0,2.3,0,3.4c-0.2,2.3-0.6,4.4-1.4,6.5c-0.7,1.9-1.9,3.5-3.5,4.8" + ' ' +
+									"c-1.2,1-2.6,1.4-4.2,1c-1.3-0.3-2.1-0.8-2.9-1.9c-1.2-1.7-1.8-3.6-2.2-5.6c-0.4-2.1-0.1-4.1,0.3-6.1c0.5-2,1.4-3.8,2.5-5.6" + ' ' +
+									"c1-1.6,2.5-2.6,4.1-3.3C171.7,356.2,172.2,355.9,172.7,355.7z M170.2,374.3c0.7-0.4,1.1-0.8,1.3-1.3c0.5-1.2,1.1-2.5,1.5-3.7" + ' ' +
+									"c0.6-2.1,0.7-4.2,0.7-6.4c0-0.6-0.2-1.2-0.4-1.7c0-0.1-0.1-0.2-0.2-0.3c-0.2,0-0.4-0.1-0.7-0.1c-0.3,0.3-0.6,0.6-0.8,0.9" + ' ' +
+									"c-1,1.6-1.9,3.3-2.2,5.2c-0.1,0.3-0.1,0.6-0.1,0.9c-0.3,1.3-0.3,2.7-0.1,4C169.3,372.6,169.6,373.5,170.2,374.3z"}), 
+								React.createElement("path", {d: "M241.9,356.5c-0.5,1.5-1.7,1.8-2.8,2.1c-0.6-0.1-1.1-0.1-1.6-0.2c-1,0.8-1.7,1.8-2.3,2.8" + ' ' +
+									"c-0.8,1.5-1.4,3.2-1.6,5c-0.2,2,0.1,3.9,1.4,5.5c0.7,1,1.8,1.3,2.9,1.2c1.1-0.1,2.1-0.4,3.1-1c1.6-1,2.9-2.3,3.8-4" + ' ' +
+									"c0.1-0.2,0.2-0.4,0.2-0.6c-0.3-0.4-0.6-0.4-1-0.3c-1.4,0.1-2.9,0.2-4.3,0.3c-1.4,0.1-2.9,0.1-4.4-0.4c-0.5-0.4-0.8-0.9-0.6-1.8" + ' ' +
+									"c0.2-0.1,0.4-0.3,0.7-0.4c0.4-0.1,0.8-0.2,1.2-0.2c1.4-0.1,2.8-0.4,4.1-0.4c1.1-0.1,2.3-0.3,3.4-0.3c1.6,0,3.2,0.2,4.7,0.3" + ' ' +
+									"c0.9,0.1,1.2,0.5,1.3,1.4c0.1,0.9,0,1.7-0.3,2.5c-0.3,0.6-0.5,1.2-0.8,1.8c0.1,0.3,0.4,0.2,0.6,0.4c0.2,0.2,0.2,0.4,0.4,0.7" + ' ' +
+									"c0.4,0,0.8,0,0.9,0.6c-0.2,0.3-0.4,0.6-0.7,0.9c-0.2,0-0.2,0-0.2,0c-0.3-0.7-1.4-0.6-1.6-1.5c-0.2,0.2-0.4,0.4-0.6,0.6" + ' ' +
+									"c-0.2,0.2-0.4,0.4-0.6,0.6c-1.3,1.4-2.8,2.4-4.4,3.2c-0.6,0.3-1.2,0.4-1.8,0.6c-2.1,0.5-4.2,0.4-6.4,0c-2.5-0.4-3.9-2.1-4.8-4.2" + ' ' +
+									"c-0.6-1.4-1-2.8-1-4.3c0-1.1,0.1-2.2,0.3-3.3c0.3-1.2,0.6-2.3,1.1-3.4c0.9-2,2.1-3.7,3.8-5.1c1.2-0.9,2.6-1.4,4-1.5" + ' ' +
+									"c1-0.1,2,0.2,2.9,0.3c0.5,0.1,0.8,0.4,0.9,0.9C241.8,355.7,241.9,356.1,241.9,356.5z"}), 
+								React.createElement("path", {d: "M280.5,372.4c-0.9,0.4-1.7,0.9-2.6,1.3c-1.5,0.7-3.2,0.8-4.8,0.8c-1.8,0-3.7-0.1-5.5-0.4" + ' ' +
+									"c-1.8-0.4-3.6-0.6-5.1-1.9c-0.5-0.4-0.9-0.9-1.2-1.5c-0.6-1.1-0.9-2.2-0.9-3.4c0-2.3,0.2-4.6,1-6.8c0.4-1.1,1-2,1.8-2.9" + ' ' +
+									"c1-1.1,2.1-2,3.3-2.8c1.4-1,2.9-1.3,4.5-1.4c0.9-0.1,1.8,0.1,2.7,0.1c0.8,0,1.6,0.3,2.3,0.6c0.6,0.2,1,0.6,1.2,1.3" + ' ' +
+									"c0.1,0.5,0.2,1.1,0.3,1.6c-0.3,0.5-0.5,0.9-0.7,1.3c-1.1,0.6-2.1,0.3-3-0.2c-0.3-0.2-0.6-0.4-0.9-0.5c-0.4-0.2-0.9-0.2-1.3-0.3" + ' ' +
+									"c-0.7,0.4-1.4,0.7-2.1,1.1c-2.5,1.7-4,4.7-4,7.8c0,0.6,0,1.3,0.1,1.9c0.1,0.5,0.2,1.1,0.5,1.6c0.2,0.5,0.6,0.9,1.2,1.1" + ' ' +
+									"c1.1,0.4,2.3,0.7,3.5,0.7c1.5,0,3.1-0.1,4.5-0.7c0.5-0.2,1-0.5,1.2-1.1c-0.3-0.7-0.9-0.9-1.5-1.1c-0.9-0.3-1.7-0.5-2.6-0.8" + ' ' +
+									"c-0.9-0.3-1.7-0.6-2.6-0.9c-0.5-0.2-0.9-0.5-1.4-1c0-0.4,0-0.8-0.1-1.2c0.1-0.1,0.2-0.2,0.2-0.2c0.7-0.3,1.3-0.3,2.1-0.2" + ' ' +
+									"c0.4,0.1,0.8,0.2,1.2,0.1c2.4-0.1,4.6,0.6,6.8,1.3c1.1,0.3,2.1,0.8,3,1.7c0.5,0.5,0.8,1.1,0.6,1.9c-0.1,0.9-0.3,1.8-1,2.4" + ' ' +
+									"C280.8,371.9,280.7,372.2,280.5,372.4z"}), 
+								React.createElement("path", {d: "M281.3,415.5c-0.3-0.6-0.6-1.1-0.8-1.5c0-0.8,0.3-1.3,0.8-1.7c0.1-1.4,0.3-2.8,0.4-4.3" + ' ' +
+									"c0-0.6,0.1-1.2-0.1-1.8c-0.2-0.5-0.1-1.1-0.1-1.6c0-0.9,0.4-1.5,1-2c0.2-0.2,0.6-0.3,1-0.4c0.7-0.1,1.5-0.1,2.2,0.2" + ' ' +
+									"c0.9,0.4,1.8,0.4,2.6,0.2c1.1-0.2,2.1-0.6,3.2-0.9c0.4-0.1,0.8-0.3,1.2-0.4c1,0.2,1.8,0.4,2.7,0.6c0.4,0.1,0.8,0.4,1.2,0.6" + ' ' +
+									"c0.4,0.8,0.5,1.5-0.1,2.3c-0.6,0.3-1.3,0.5-2.1,0.6c-1,0.2-2,0.5-3,0.7c-0.8,0.2-1.6,0.4-2.4,0.7c-0.6,0.2-1.2,0.4-1.8,0.6" + ' ' +
+									"c-0.4,1.7-0.7,3.3-0.5,4.9c0.7,0.3,1.4,0.2,2.1,0.1c2.4-0.3,3-0.4,5.5-0.1c0.1,0.1,0.2,0.2,0.4,0.4c0.1,0.2,0.2,0.3,0.3,0.5" + ' ' +
+									"c-0.1,0.1-0.1,0.3-0.2,0.4c-0.6,0.5-1.3,0.7-2.1,0.8c-2,0.5-4,1-6,1.4c-0.3,0.3-0.4,0.7-0.4,1.1c0.2,1.7,0.1,3.4,0.7,5.1" + ' ' +
+									"c0.3,0,0.7,0.1,1,0.1c0.7-0.1,1.4-0.2,2.1-0.3c1.4-0.3,2.7,0.1,3.9,0.7c0.6,0.3,0.7,0.8,0.7,1.4c-0.1,1.3-0.8,2.1-2.1,2.4" + ' ' +
+									"c-0.6,0.1-1.2,0.2-1.8,0.3c-0.8,0.2-1.7,0.3-2.4,0.9c-0.4,0.3-0.9,0.4-1.3,0.6c-1.7,0.7-3.2-0.1-4.3-1.2c-0.3-0.8-0.9-1.6-0.7-2.5" + ' ' +
+									"c0.1-0.3,0.1-0.6,0-0.9c-0.2-1.5-0.4-3.1-0.6-4.6C281.4,417.9,281.3,416.7,281.3,415.5z"}), 
+								React.createElement("path", {d: "M196.1,400.7c1.2-0.1,2.5,0.4,3.7,0.8c0.5,0.1,0.7,0.5,0.9,1c0.6,1.5,1,3.1,1.4,4.7" + ' ' +
+									"c0.9,3.8,1.8,7.7,2.9,11.5c0.1,0.4,0.3,0.7,0.4,1.1c0.2,0.5,0.4,1,0.6,1.5c-0.2,0.7-0.4,1.3-0.6,2c-0.5,0.2-0.9,0.5-1.4,0.6" + ' ' +
+									"c-0.7,0.2-1.5,0.1-2.1-0.4c-0.3-0.2-0.7-0.4-1.1-0.6c-0.1-0.3-0.3-0.6-0.4-0.9c-0.3-0.5-0.4-1.1-0.4-1.7c-0.1-1.1-0.4-2.2-0.7-3.4" + ' ' +
+									"c-0.1-0.4-0.3-0.7-0.4-1.1c-1.1-0.3-2.1-0.1-3.1-0.1c-0.5,0.2-0.6,0.6-0.7,1c-0.3,1.2-0.6,2.3-0.8,3.5c-0.1,0.4-0.1,0.9-0.1,1.3" + ' ' +
+									"c0.1,1-0.2,2-0.7,2.8c-1.9,1-2.9,0.8-4.7-1.1c-0.1-0.5-0.2-1.1-0.3-1.5c0.6-2.2,1.1-4.3,1.7-6.4c0.5-1.8,1.2-3.6,1.8-5.4" + ' ' +
+									"c0.6-1.5,1.2-3,1.8-4.6c0.4-1,0.7-2,1-3C194.9,401.8,195.1,401.1,196.1,400.7z M196.6,411.8c0.5,0.2,0.9,0.2,1.3-0.3" + ' ' +
+									"c-0.2-0.5-0.3-1.1-0.5-1.8C196.8,410.3,196.7,411,196.6,411.8z"}), 
+								React.createElement("path", {d: "M348.4,417.1c-0.3,0.7-0.6,1.5-0.8,2.2c-0.4,1.6-1.5,2.8-2.1,4.1c-1.4,0.5-2.6,0.7-4,0" + ' ' +
+									"c-0.6-0.5-1.1-1.3-1.6-2.1c-0.9-1.6-2-3.2-2.8-4.9c-0.8-1.6-1.7-3.1-2.1-4.9c-0.3-1.2-0.8-2.3-1.1-3.4c-0.2-0.5-0.3-1.1-0.4-1.6" + ' ' +
+									"c-0.4-1.4-0.8-2.8-1.2-4.1c0.4-0.9,0.4-0.9,1.4-1.7c0.9,0.1,2,0.2,3,0.4c0.4,0.1,0.7,0.3,1.1,0.5c0.3,0.7,0.4,1.4,0.5,2.2" + ' ' +
+									"c0.1,1.1,0.3,2.2,0.5,3.2c0.5,2.2,1.2,4.4,2.2,6.5c0.5,1,1,2.1,1.5,3.1c0.1,0.1,0.2,0.2,0.3,0.3c0.9-2.6,0.7-10.1-0.9-14.6" + ' ' +
+									"c0.1-0.2,0.2-0.5,0.3-0.9c0.2-0.2,0.5-0.4,0.8-0.6c0.3,0,0.6,0,0.9,0.1c0.8,0.4,1.6,0.4,2.5,0.2c0.1,0,0.2,0,0.3,0" + ' ' +
+									"c0.5,0.2,0.8,0.5,0.9,0.9c0.1,0.3,0.1,0.6,0.2,0.9c0.1,1.2,0.2,2.5,0.4,3.7c0.3,2,0.3,4.1,0.4,6.1c0.1,1.2-0.1,2.4-0.1,3.6" + ' ' +
+									"C348.3,416.5,348.4,416.8,348.4,417.1L348.4,417.1z"}), 
+								React.createElement("path", {d: "M181,359.1c0.4-0.3,0.8-0.6,1.2-0.9c1.2,0.2,2.3,0.3,3.4,0.5c0.3,0.6,0.5,1.3,0.4,2" + ' ' +
+									"c-0.2,3.6,0.3,7,1.6,10.4c0.4,1.1,1,2,1.7,3.1c0.3-0.3,0.5-0.5,0.6-0.8c0.4-0.8,0.7-1.5,1-2.3c0.5-1.8,0.9-3.7,0.9-5.6" + ' ' +
+									"c0-1.4-0.1-2.8-0.2-4.2c-0.1-1.4-0.2-2.9-0.4-4.3c-0.1-0.6,0-1.2,0.1-1.8c0.1-0.5,0.5-0.9,1.1-0.8c0.6,0.1,1.2,0.2,1.7,0.3" + ' ' +
+									"c0.5-0.1,1-0.2,1.5-0.2c0.1,0.4,0.3,0.7,0.3,1.1c0.1,0.7,0.1,1.4,0.2,2.1c0,0.8,0.1,1.7,0.2,2.5c0.4,2.4,0.5,4.9,0.3,7.3" + ' ' +
+									"c-0.2,2.7-0.8,5.4-2,7.9c-0.8,1.5-1.9,2.6-3.3,3.6c-0.8,0.5-1.7,0.6-2.7,0.3c-0.9-0.3-1.7-0.7-2.3-1.5c-0.6-1-1.3-2-1.9-3" + ' ' +
+									"c-0.4-0.6-0.8-1.3-1.1-2c-0.4-0.8-0.9-1.5-0.9-2.5c0,0,0-0.1,0-0.1c-0.9-2.1-1-4.4-1.3-6.6c-0.2-1.2-0.1-2.4-0.2-3.6" + ' ' +
+									"C180.8,359.7,180.9,359.4,181,359.1z"}), 
+								React.createElement("path", {d: "M357.3,357.8c0.1,1.1,0.3,1.9,0,2.9c-0.3,0.2-0.6,0.4-0.9,0.6c-1,0.6-2.1,0.6-3.1,0.1" + ' ' +
+									"c-1.1-0.6-2.3-0.7-3.5-0.5c-1.5,0.2-2.9,0.6-4.2,1.5c-0.2,0.1-0.4,0.3-0.5,0.5c0,0.7,0.5,1,1,1.3c1.3,0.7,2.5,1.4,3.9,1.9" + ' ' +
+									"c2.5,1,5,1.9,7.6,2.8c0,0,0.1,0,0.1,0.1c2.2,0.8,1.9,1.2,1.8,2.7c0,0.2,0,0.5-0.1,0.7c-0.4,0.7-0.9,1.1-1.6,1.4" + ' ' +
+									"c-0.4,0.2-0.9,0.4-1.3,0.7c-1.9,1.1-3.9,1.6-6,1.6c-0.9,0-1.8-0.2-2.6-0.3c-0.7-0.1-1.5-0.4-2.2-0.6c-0.7-0.2-1.1-0.7-1.4-1.3" + ' ' +
+									"c-0.3-0.6-0.2-1.2,0.2-1.7c1.1-0.2,2.2,0.6,3.3-0.1c1.8,0.6,3.6,1,5.2-0.4c-0.2-0.6-0.7-0.8-1.1-0.9c-1.3-0.5-2.5-1-3.8-1.4" + ' ' +
+									"c-2.1-0.8-4.1-1.5-6-2.6c-0.8-0.5-1.6-1-2.2-1.7c-0.6-0.6-0.9-1.4-1-2.3c-0.1-0.8,0.4-1.4,1-1.9c0.5-0.4,1.1-0.7,1.6-1.1" + ' ' +
+									"c0.6-0.4,1.2-0.7,1.9-0.9c0.9-0.3,1.9-0.6,2.8-1c1.4-0.5,2.9-0.7,4.4-0.7c0.5,0,1.1,0,1.6-0.1c1.3-0.1,2.7,0.1,4,0.4" + ' ' +
+									"C356.5,357.4,356.9,357.6,357.3,357.8z"}), 
+								React.createElement("path", {d: "M327,355.8c0.7,0.4,1,1,1,1.8c0,1,0.1,2.1,0.2,3.1c0.1,0.8,0.2,1.7,0.3,2.5c0.2,1.9,0.5,3.8,0.7,5.6" + ' ' +
+									"c0.2,1.2,0.5,1.5,1.8,1.6c1.4,0,2.8,0.1,4.1-0.4c1.5-0.5,3.2-0.3,4.7-0.4c0.4,0,0.8,0.3,1.2,0.5c0.3,1.3,0.1,2.4-0.7,3.4" + ' ' +
+									"c-0.6,0.3-1.2,0.6-1.9,1c-0.6-0.1-1.2-0.1-1.9-0.2c-0.6-0.1-1.3,0.1-1.9-0.3c-0.1-0.1-0.2-0.1-0.3,0c-1.5,0.1-3,0-4.4,0.6" + ' ' +
+									"c-1.1,0.5-2.2,0.8-3.6,1.1c-0.6-0.3-1.4-0.6-2-0.9c-0.7-1-0.8-2-1-3c0.1-0.2,0.1-0.4,0.2-0.6c0.5-0.7,0.5-1.5,0.4-2.3" + ' ' +
+									"c-0.1-1.3-0.2-2.7-0.3-4c-0.2-1.8-0.5-3.5-0.8-5.3c-0.1-0.7-0.3-1.4-0.3-2.1c-0.1-1.4,0.8-2.2,2.1-1.9c0.4,0.1,0.8,0.2,1.2,0.2" + ' ' +
+									"C326.3,355.9,326.6,355.8,327,355.8z"}), 
+								React.createElement("path", {d: "M103.1,353c-0.1,0.8-0.1,1.6-0.2,2.3c-0.1,1.5,0.2,2.9,0.3,4.3c0.2,2,0.4,4,0.6,6c0.1,1.6,0.3,3.2,0.4,4.7" + ' ' +
+									"c0.3,0.5,0.7,0.7,1.3,0.8c0.8,0.1,1.5,0.1,2.2-0.2c1.4-0.5,2.8-0.4,4.2,0.3c1,0.5,1.2,1.4,0.4,2.2c-1.1,1-2.3,1.8-3.8,1.8" + ' ' +
+									"c-1.6,0-3.2,0.1-4.8,0.2c-0.4,0-0.9,0.1-1.5,0.1c-0.4-0.2-1-0.4-1.5-0.6c-1.3-0.5-2-1.9-1.9-3.2c0-0.2,0.1-0.4,0.1-0.6" + ' ' +
+									"c0.3-1.1,0.3-2.2,0.1-3.4c-0.2-1.1-0.2-2.2-0.3-3.3c-0.2-2.1-0.5-4.2-0.7-6.2c-0.1-0.8-0.2-1.7-0.3-2.5c-0.1-0.8-0.1-1.6-0.2-2.4" + ' ' +
+									"c-0.1-0.9,0.6-1.6,1.5-1.7c1.1,0,2.2,0.2,3.2,0.7C102.6,352.3,102.9,352.7,103.1,353z"}), 
+								React.createElement("path", {d: "M222,422.3c0.1,0.6,0.2,1,0.4,1.5c-0.2,0.2-0.4,0.4-0.7,0.6c-1.5,0.9-3,1.1-4.7,0.9" + ' ' +
+									"c-2.1-0.2-4.1-0.8-6-1.6c-1.7-0.7-3-1.8-4-3.3c-0.8-1.3-1.4-2.8-1.3-4.5c0.1-3.2,1.6-5.7,3.8-7.8c0.7-0.7,1.6-1.2,2.5-1.7" + ' ' +
+									"c0.8-0.4,1.7-0.9,2.5-1.4c0.9-0.6,1.9-0.8,3-0.6c0.6,0.1,1.3,0,1.9,0.4c0.6,0.4,0.9,0.8,0.8,1.5c-0.1,0.7-0.3,1.4-1.1,1.6" + ' ' +
+									"c-0.9,0.3-1.9,0.7-2.8,1.1c-2.5,1-4.4,2.8-5.3,5.4c-0.9,2.7-0.5,5.4,3,6.8c0.5,0.2,1.1,0.4,1.7,0.4c0.4,0,0.8,0.1,1.2,0.2" + ' ' +
+									"c0.6,0,1.2,0.1,1.8,0C219.8,421.8,220.8,422,222,422.3z"}), 
+								React.createElement("path", {d: "M130.2,366.8c0,0.6,0.1,1.1,0.1,1.4c-0.3,0.8-0.9,1-1.5,1.1c-1.4,0.3-2.9,0.7-4.4,0.7" + ' ' +
+									"c-1.1,0.1-2.2,0.3-3.3,0.4c-0.2,0-0.4,0.1-0.6,0.1c-1-0.1-1.9,0.1-2.8,0.2c-1,0.2-1.9,0.1-2.8-0.3c-0.3-0.1-0.7-0.2-0.8-0.3" + ' ' +
+									"c-1.5-1-1.6-2.3-1.3-3.7c0.2-1.1,0.2-2.3,0.1-3.4c-0.2-1.8-0.3-3.6-0.5-5.3c-0.1-0.6-0.2-1.2-0.3-1.8c-0.1-0.5-0.2-1.1-0.3-1.6" + ' ' +
+									"c-0.1-0.7-0.1-0.7,0.3-1.8c0.6-0.4,1.3-0.4,2-0.3c0.9,0.1,1.9,0.3,2.6,1.1c0.3,0.8,0.5,1.7,0.5,2.7c0,1.5,0.3,2.9,0.4,4.3" + ' ' +
+									"c0.1,1.3,0.3,2.6,0.5,3.8c0.1,0.6,0.2,1.2,0.3,1.6c0.5,0.4,0.8,0.6,1.3,0.6c1.8,0.1,3.6,0.1,5.4-0.3" + ' ' +
+									"C126.9,365.8,128.5,366.3,130.2,366.8z"}), 
+								React.createElement("path", {d: "M255.4,422c-0.2,0.6-0.3,1.3-1,1.9c-0.6,0.1-1.2,0.2-1.9,0.3c-0.5-0.2-1.1-0.4-1.7-0.5" + ' ' +
+									"c-0.7-0.8-1-1.7-1.1-2.8c0-1.4-0.1-2.8-0.2-4.2c-0.1-1.8-0.3-3.7-0.5-5.5c-0.1-0.6-0.1-1.3-0.1-1.9c-0.1-1.3-0.2-2.6-0.4-3.8" + ' ' +
+									"c-0.1-0.5,0.1-1,0.4-1.4c0.8-0.4,1.6-0.5,2.5-0.1c0.3,0.2,0.8,0.2,1.2,0.3c0.6,0.1,1,0.3,1.4,0.8c0.2,0.5,0.2,1,0.1,1.6" + ' ' +
+									"c-0.3,1.8-0.1,3.6,0.1,5.4c0.1,0.9,0.1,1.8,0.2,2.7c0.1,1.4,0.3,2.9,0.4,4.3C255,419.9,255.2,420.8,255.4,422z"}), 
+								React.createElement("path", {d: "M285.3,355.4c0.4-0.2,0.8-0.4,1.2-0.5c1.1,0.5,2.2,0.3,3.2,0.5c0.7,0.3,1,0.9,0.9,1.6c0,0.3,0,0.7-0.1,1" + ' ' +
+									"c-0.4,1.7-0.2,3.4-0.2,5c0.1,1.5,0.2,3,0.4,4.5c0.1,1.1,0.2,2.3,0.4,3.4c0.1,0.4,0.2,0.8,0.5,1.1c0.5,0.6,0.5,1.3,0.1,1.9" + ' ' +
+									"c-0.2,0.3-0.3,0.6-0.4,0.8c-1.6,0.9-3,0.5-4.4-0.3c-0.6-0.8-0.7-1.7-0.9-2.6c-0.4-2.8-0.6-5.6-0.8-8.4c-0.1-1.2,0-2.4-0.1-3.6" + ' ' +
+									"c0-0.7,0-1.5-0.1-2.2C285,356.9,285.1,356.2,285.3,355.4z"}), 
+								React.createElement("path", {d: "M198.6,369.5c0-0.1,0-0.3,0-0.4c0,0,0.1,0,0.1,0C198.7,369.3,198.7,369.4,198.6,369.5" + ' ' +
+									"C198.7,369.5,198.6,369.5,198.6,369.5z"}), 
+								React.createElement("path", {d: "M272.7,425.5C272.7,425.5,272.7,425.5,272.7,425.5c0.1,0.1,0.1,0.1,0,0.2c0,0-0.1,0-0.1,0" + ' ' +
+									"C272.6,425.6,272.6,425.5,272.7,425.5z"}), 
+								React.createElement("polygon", {points: "238.4,362.3 238.5,362.4 238.4,362.3   "}), 
+								React.createElement("path", {d: "M238.4,362.3c-0.1-0.1-0.2-0.2-0.3-0.3l0,0C238.2,362.1,238.3,362.2,238.4,362.3L238.4,362.3z"}), 
+								React.createElement("polygon", {points: "238.1,362 238,361.9 238.1,362   "})
+							), 
+							React.createElement("rect", {x: "8.1", y: "338.3", width: "414.3", height: "84.7"})
+						), 
+						React.createElement("g", {id: "atmosphere", className: "band_lineup_link tan", onClick: self.openBand.bind(this, "Atmosphere")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M555.3,78.9c-0.6,0.6-0.9,1.3-1.6,1.3c-0.6-0.2-0.4-0.8-0.8-1.2c-0.3,0.2-0.6,0.5-1,0.6" + ' ' +
+									"c-0.3,0.1-0.7-0.1-1.1-0.1c-0.4-0.1-0.7-0.1-1.1-0.2c-0.3-0.3-0.5-0.6-0.8-0.8c-1.1,0.3-2.1,0.4-3.1-0.1c-0.5-0.3-1.1-0.6-1.2-1.3" + ' ' +
+									"c0.2-1.4,0.3-2.8,0.1-4.2c-0.1-0.5-0.1-1-0.1-1.5c0-0.3,0-0.7-0.1-1c-0.1-0.6-0.2-1.3-0.2-1.9c0-1.6-0.2-3.2-0.5-4.7" + ' ' +
+									"c-0.2-1-0.3-2-0.3-3.1c-0.1-2.3-0.4-4.6-0.6-6.8c-0.1-1.1-0.3-2.1-0.4-3.2c-0.5-0.1-1,0-1.4,0.2c-2.9,1.2-5.9,1.6-8.9,1.7" + ' ' +
+									"c-0.6,0-1.1,0.1-1.7,0.1c-0.2,0-0.3,0.1-0.6,0.2c-1.2,3.9-2.4,7.7-3.5,11.7c-0.5,0.6-1,1.2-1.7,1.5c-0.7-0.1-0.6-0.8-1-1.2" + ' ' +
+									"c-0.3,0.1-0.7,0.2-0.9,0.3c-1.3,0-2.1-0.7-2.6-1.8c-1.6,0.2-2.9-0.3-3.8-1.7c0.1-0.3,0.1-0.6,0.2-0.8c0.7-1.3,1-2.7,1.6-4.1" + ' ' +
+									"c0.2-0.4,0.2-0.8,0.4-1.2c0.8-1.5,1.3-3.2,1.8-4.8c0.2-0.6,0.3-1.3,0.4-1.9c0.2-1.3,0.6-2.5,1.3-3.7c0.1-0.2,0.1-0.3,0.2-0.5" + ' ' +
+									"c0.1-0.4,0.3-0.9,0.4-1.3c0.1-0.5,0.4-1,0.4-1.6c0-0.1,0.1-0.3,0.1-0.4c0.2-0.8,0.6-1.5,0.8-2.2c0.2-0.7,0.3-1.5,0.5-2.2" + ' ' +
+									"c0.1-0.3,0.2-0.5,0.4-0.8c0.1-0.2,0.3-0.4,0.3-0.6c0.4-1.7,1.3-3.2,1.7-4.9c0-0.1,0.1-0.3,0.1-0.4c0.1-1.8,1.1-3.5,1.3-5.3" + ' ' +
+									"c0-0.2,0.1-0.5,0.2-0.7c0.7-1.3,1-2.7,1.4-4.1c0.6-1.8,1.4-3.6,2.1-5.4c0.3-0.8,0.6-1.6,0.9-2.3c0.9-2,1.9-4,3.1-5.8" + ' ' +
+									"c0.2-0.3,0.6-0.6,0.9-1c0.4-1.3-0.1-2.8,0.7-4.1c0.3-0.3,0.7-0.7,1-1.1c0.7-0.3,1.1,0.1,1.5,0.3c1.1-0.3,2.2-0.6,3.4-0.9" + ' ' +
+									"c0.2,0.3,0.3,0.6,0.4,0.7c0.7,0,1.2,0.1,1.7,0.1c0.6,0.4,0.9,0.9,0.9,1.5c0,1.6,0.2,3.1,0.5,4.6c0.4,2.1,0.5,4.3,0.7,6.4" + ' ' +
+									"c0.2,2.1,0.5,4.2,0.7,6.3c0.3,2.4,0.6,4.7,0.9,7.1c0.2,2,0.4,3.9,0.7,5.9c0.4,2.1,0.5,4.2,0.9,6.3c0.2,1.2,0.2,2.4,0.4,3.6" + ' ' +
+									"c0.2,1.1,0.2,2.3,0.8,3.3c0,0.1,0.1,0.2,0,0.3c-0.2,1.4-0.2,2.8,0.2,4.2c0.1,0.5,0.1,1,0.1,1.5c0,0.5,0,1,0.2,1.4" + ' ' +
+									"c0.4,1.3,0.4,2.7,0.6,4c0.2,1.3,0.2,2.6,0.3,3.9c0.1,1.6,0.3,3.2,0.5,4.7c0.1,1,0.2,2.1,0.3,3.1c0.4,2.8,0.4,5.6,1,8.4" + ' ' +
+									"C555.4,77.8,555.3,78.4,555.3,78.9z M544.2,33.4c0-0.1,0-0.2,0-0.1C544.1,33.2,544.2,33.3,544.2,33.4L544.2,33.4L544.2,33.4z" + ' ' +
+									 "M522.6,55.9C522.6,56,522.5,56,522.6,55.9C522.5,56,522.5,55.9,522.6,55.9c0-0.1,0.1-0.2,0-0.1C522.6,55.7,522.6,55.8,522.6,55.9" + ' ' +
+									"z M530.7,30c0.2-0.1,0.3-0.3,0.1-0.7C530.8,29.7,530.8,29.9,530.7,30c-0.4,0.3-0.5,0.8-0.4,1.3C530.8,30.9,530.8,30.5,530.7,30z" + ' ' +
+									 "M533.3,21.6c-0.1,0.4-0.2,0.8-0.2,1.2c-0.6,0.9-1.1,2.3-1.2,3.6c-0.6,0.7-0.7,1.5-0.8,2.6c0.5-1,0.8-1.8,0.7-2.7" + ' ' +
+									"c0.7-1.1,0.9-2.4,1.2-3.6C533.3,22.4,533.2,21.9,533.3,21.6c0.4-0.3,0.5-0.7,0.5-1.2C533.3,20.7,533.3,21.1,533.3,21.6z" + ' ' +
+									 "M543.7,28.9c0,0.6,0.1,1.1,0.1,1.7c0.1-0.4,0.2-0.9,0.1-1.3C543.9,29.1,543.7,29,543.7,28.9c0-0.3,0.2-0.6-0.2-0.9" + ' ' +
+									"C543.4,28.4,543.5,28.7,543.7,28.9z M529.9,32.6c0.1-0.2,0.4-0.4,0-0.7C529.9,32.2,529.9,32.4,529.9,32.6" + ' ' +
+									"c-0.6,0.8-0.6,1.7-0.8,2.5C529.5,34.3,529.9,33.5,529.9,32.6z M526.2,44.7c-0.2,0.1-0.3,0.1-0.1,0.4" + ' ' +
+									"C526.2,44.9,526.2,44.7,526.2,44.7c0-0.1,0.1-0.1,0.1-0.1c0.4-1.2,0.8-2.4,1.2-3.5c0,0-0.1-0.1-0.2-0.1" + ' ' +
+									"C526.6,42.3,526.3,43.4,526.2,44.7z M539.3,23c-0.2,0.2-0.3,0.4-0.4,0.5c-0.2,0.6-0.4,1.1-0.6,1.7c-1,3.1-1.9,6.2-2.9,9.2" + ' ' +
+									"c-1.1,3.6-2.2,7.3-3.3,10.9c-0.1,0.2-0.1,0.5,0.2,0.7c1-0.2,2-0.5,3-0.8c1-0.3,2.1-0.4,3.1-0.8c1-0.3,2.1-0.4,3.1-0.9" + ' ' +
+									"c0-0.4,0-0.8-0.1-1.1c-0.3-1.2-0.5-2.4-0.5-3.6c0-0.2,0-0.4,0-0.6c-0.3-0.8-0.2-1.6-0.2-2.4c0-0.5,0-1-0.1-1.5" + ' ' +
+									"c-0.5-2.7-0.7-5.4-0.9-8.2C539.8,25.2,539.7,24.2,539.3,23z M529,35.8c-0.6,1.1-1,2.4-1.1,3.6c0.4-1.3,0.8-2.2,1.1-3.2" + ' ' +
+									"C529,36.2,529,36,529,35.8z M544.4,34.2c0,0.8,0,0.8,0.3,1C544.6,34.8,544.5,34.5,544.4,34.2z M543.3,25" + ' ' +
+									"C543.3,25,543.2,25,543.3,25c-0.1,0.4-0.1,0.7-0.1,1.1c0,0,0.1,0,0.1,0C543.3,25.7,543.3,25.4,543.3,25z M546.7,51.2" + ' ' +
+									"C546.7,51.2,546.6,51.2,546.7,51.2c0,0.4,0,0.7,0,1.1c0,0,0.1,0,0.1,0C546.7,51.9,546.7,51.5,546.7,51.2z M547.2,55.6" + ' ' +
+									"c0,0-0.1,0-0.1,0c0,0.3,0,0.6,0,0.9c0,0,0.1,0,0.1,0C547.2,56.2,547.2,55.9,547.2,55.6z M545.3,40.1c-0.1,0-0.1,0-0.2,0" + ' ' +
+									"c0,0.3,0.1,0.6,0.1,0.8c0,0,0,0,0.1,0C545.3,40.7,545.3,40.4,545.3,40.1z M548.1,63.8C548,63.8,548,63.8,548.1,63.8" + ' ' +
+									"c-0.1,0.3-0.1,0.5-0.1,0.8c0,0,0.1,0,0.1,0C548.1,64.4,548.1,64.1,548.1,63.8z M546.9,54.8c0.2-0.2,0.1-0.4,0-0.6" + ' ' +
+									"C546.9,54.5,546.9,54.6,546.9,54.8z M546.3,50.3C546.4,50.3,546.4,50.3,546.3,50.3c0.1-0.2,0.1-0.4,0.1-0.6c0,0-0.1,0-0.1,0" + ' ' +
+									"C546.3,49.9,546.3,50.1,546.3,50.3z M533.6,33.8c0.1-0.2,0.1-0.3,0.1-0.3c0-0.1,0-0.1-0.1-0.2C533.7,33.5,533.7,33.6,533.6,33.8z" + ' ' +
+									 "M547.7,62.6c0.1-0.2,0.1-0.2,0.1-0.3c0-0.1,0-0.1-0.1-0.2C547.8,62.2,547.7,62.3,547.7,62.6z M544.6,36.2c0,0,0.1,0,0.1,0" + ' ' +
+									"c0-0.1,0-0.2,0-0.4c0,0,0,0-0.1,0C544.6,36,544.6,36.1,544.6,36.2z M545,38.3c-0.1,0.2-0.1,0.2-0.1,0.3c0,0.1,0,0.1,0.1,0.2" + ' ' +
+									"C545,38.6,545,38.5,545,38.3z M523.1,54.5C523,54.5,523,54.5,523.1,54.5c-0.1-0.1-0.1,0-0.1,0c0,0.1,0.1,0.1,0.1,0.1" + ' ' +
+									"C523,54.6,523.1,54.6,523.1,54.5z M523.3,53.8c0,0,0-0.1,0-0.1C523.3,53.7,523.3,53.7,523.3,53.8" + ' ' +
+									"C523.2,53.7,523.3,53.7,523.3,53.8z M524.1,51.2c0,0,0,0.1,0,0.1C524.1,51.2,524.1,51.2,524.1,51.2" + ' ' +
+									"C524.1,51.1,524.1,51.1,524.1,51.2C524.1,51.1,524.1,51.1,524.1,51.2z M525.8,45.9C525.8,45.9,525.9,45.8,525.8,45.9" + ' ' +
+									"c0-0.1,0-0.1-0.1-0.1C525.8,45.8,525.8,45.9,525.8,45.9C525.8,45.9,525.8,45.9,525.8,45.9z M527.5,40.2" + ' ' +
+									"C527.5,40.2,527.6,40.2,527.5,40.2c0.1-0.1,0.1-0.1,0.1-0.2c0,0-0.1,0-0.1,0C527.5,40.1,527.5,40.2,527.5,40.2z M530.6,43.8" + ' ' +
+									"L530.6,43.8L530.6,43.8L530.6,43.8z M544.1,31.4C544.1,31.4,544,31.4,544.1,31.4c0,0.1,0,0.1,0,0.1" + ' ' +
+									"C544.1,31.5,544.1,31.4,544.1,31.4C544.1,31.4,544.1,31.4,544.1,31.4z M536.5,24.5c0,0,0-0.1,0-0.1c0,0,0,0-0.1,0" + ' ' +
+									"C536.5,24.4,536.5,24.4,536.5,24.5C536.5,24.5,536.5,24.5,536.5,24.5z M533.2,35.3L533.2,35.3l0,0.1L533.2,35.3z M534.5,17.9" + ' ' +
+									"l0,0.1L534.5,17.9L534.5,17.9z"}), 
+								React.createElement("path", {d: "M617.5,21.9c0,0.4,0.1,0.7,0.1,1.2c0.4-0.2,0.7-0.3,1-0.4c0.3,0.1,0.6,0.3,1,0.4c0.1,0.3,0.3,0.6,0.4,0.9" + ' ' +
+									"c-0.1,0.3-0.1,0.6-0.2,0.9c-0.2,0.5-0.2,0.9-0.2,1.4c0.2,5.1,0.4,10.2,0.2,15.3c-0.1,2.7,0,5.3,0,8c0,1.3-0.1,2.6-0.1,3.9" + ' ' +
+									"c0,1.4,0,2.9,0,4.3c0,3.1,0,6.2,0.1,9.3c0,0.8,0,1.6,0,2.4c0,0.7,0,1.4,0.2,2.1c0.2,0.6,0.1,1.3-0.2,1.9c-0.4,0.3-0.7,0.5-1.1,0.8" + ' ' +
+									"c-0.8-0.3-0.7-1.1-1-1.7c-0.2,0-0.5,0-0.6,0.1c-0.3,0.2-0.5,0.4-0.7,0.6c-1.2,0-1.3,0-2.3-1.1c-0.2,0-0.4,0-0.6,0.1" + ' ' +
+									"c-0.2,0-0.5,0.1-0.7,0.1c-1-0.2-2-0.5-2.9-1c-0.4-0.6-0.6-1.3-0.5-2.1c0.1-1,0-2.1,0.3-3.1c0.1-0.2,0-0.5,0-0.7" + ' ' +
+									"c0-0.4-0.1-0.8-0.1-1.3c0-1.2,0.2-2.4,0-3.6c0.2-2.4,0-4.7,0.4-7.1c0.1-0.3,0.1-0.6,0-0.8c-0.1-0.5-0.2-0.9,0-1.4" + ' ' +
+									"c0.1-0.2-0.1-0.4-0.2-0.7l0,0c0.1-0.2,0.3-0.4,0.3-0.6c0-0.7-0.3-1.4-0.2-2.1c0.1-0.7,0.1-1.3,0-1.9c0-0.8-0.1-1.6,0.1-2.4" + ' ' +
+									"c-0.2-0.1-0.3-0.2-0.4-0.3c-0.1,0.1-0.2,0.1-0.3,0.2c-0.3,0.5-0.6,1-0.9,1.4c-0.7,1.2-1.4,2.3-2.1,3.5c-0.3,0.6-0.6,1.1-1.1,1.9" + ' ' +
+									"c-0.2,0.1-0.7,0.4-1.2,0.7c-0.3-0.3-0.6-0.5-0.9-0.9c-0.3,0.1-0.7,0.2-1.3,0.4c-0.8-0.3-1.7-0.5-2.6-0.8c-0.3,0.1-0.7,0.1-1,0.2" + ' ' +
+									"c-1.6-0.6-2.9-1.7-4-3.1c-0.1,0.4-0.2,0.6-0.3,0.9c-0.3,2-0.6,4.1-0.9,6.1c-0.4,2.6-1,5.2-1.6,7.8c-0.3,1.1-0.6,2.2-0.8,3.3" + ' ' +
+									"c-0.1,0.2-0.1,0.5-0.1,0.7c0,0.6,0.1,1.1,0.1,1.6c-1.3,1.6-1.7,1.7-3,0.6c-0.4,0.2-0.8,0.4-1.2,0.6c-0.9,0-1.7-0.4-2.3-1.2" + ' ' +
+									"c-0.9-0.1-1.7-0.1-2.4-0.7c-0.8-0.6-1.6-1.2-1.8-2.2c-0.1-0.7-0.2-1.4,0-2.1c0.9-3,1.7-5.9,2.3-9c0.5-2.3,0.9-4.6,1.2-6.9" + ' ' +
+									"c0.2-1.6,0.3-3.2,0.4-4.7c0.1-1.1,0.3-2.2,0.4-3.4c0.4-3.9,0.7-7.8,0.6-11.8c0-0.5-0.1-0.9-0.2-1.4c-0.1-0.6-0.1-0.6,0.3-1.5" + ' ' +
+									"c0.5-0.1,1.1-0.2,1.8-0.3c-0.1-0.7-0.1-1.3,0.4-1.9c0.5-0.4,1.3-0.4,2.1-0.7c0.3,0.1,0.5,0.3,0.8,0.3c0.3,0.1,0.6,0.2,0.9,0.2" + ' ' +
+									"c0.9,0,1.8,0,2.8,0c0.2,0.6,0.8,0.8,1.3,0.9c0.9,0.1,1.3,0.6,1.5,1.4c0.2,0.8,0.6,1.5,0.9,2.2c1.3,3.3,2.5,6.8,3.3,10.3" + ' ' +
+									"c0.1,0.3,0.1,0.6,0.5,0.6c0.7-1.1,1.2-2.5,1.9-3.7c0.6-1.2,1.2-2.4,1.8-3.7c0.6-1.3,1.1-2.6,1.7-3.9c0.8-0.3,1.7-0.5,2.7-0.4" + ' ' +
+									"c0.2-0.3,0.4-0.5,0.6-0.7c-0.1-0.2-0.1-0.3-0.1-0.4c-0.4-0.4-0.6-0.9-0.6-1.5c0.5-1,1.3-1.3,2.4-1.1c0.8,0.2,1.7,0.1,2.4,0.6" + ' ' +
+									"c0.2,0.1,0.6,0.2,0.8,0.1C615.9,21.6,616.7,21.9,617.5,21.9L617.5,21.9z M618,62.1c0,0-0.1,0-0.1,0c0,0,0,0,0,0.1" + ' ' +
+									"C617.9,62.2,618,62.1,618,62.1c0-0.2,0.2-0.4,0.2-0.7c0-0.7,0.1-1.4,0.1-2.1c0-2,0.3-4,0.1-6c-0.1-0.5,0-0.9,0-1.4" + ' ' +
+									"c0.1-1.2,0.1-2.4,0.1-3.6c-0.1-1.3-0.2-2.5,0-3.8c0.2-1.4,0-2.8,0-4.2c0-1.4-0.1-2.9-0.1-4.4c0-0.9-0.1-1.7-0.1-2.6" + ' ' +
+									"c-0.2,0.4-0.3,0.9-0.4,1.3c0,0.2,0,0.5,0,0.7c0.1,1.3,0.1,2.7,0,4c-0.1,1.8,0,3.6,0,5.3c0,1.4,0.2,2.8,0,4.2" + ' ' +
+									"c-0.1,0.6-0.1,1.3,0,1.9c0.1,0.8,0.1,1.5-0.5,2.2c0.2,0.1,0.4,0.1,0.5,0.2c0,1.4,0,2.8,0,4.1c0,0.3,0.1,0.6,0.1,1" + ' ' +
+									"C617.7,59.6,617.8,60.9,618,62.1z M617.9,63.3c0,0.7-0.3,1.4,0,2.3C617.9,64.7,617.9,64,617.9,63.3z M617.3,47.2" + ' ' +
+									"c0,0.9,0,1.4,0,1.9C617.4,48.6,617.5,48.1,617.3,47.2z M610.1,42.9L610.1,42.9L610.1,42.9L610.1,42.9z"}), 
+								React.createElement("path", {d: "M800.3,13.1c0.1-0.1,0.4-0.2,0.6-0.4c0.2,0.1,0.4,0.1,0.5,0.2c0.7,0.6,1.4,0.6,2.2,0.5" + ' ' +
+									"c2.7-0.2,5.4-0.3,8.1,0c2.9,0.3,5.8,0.9,8.7,1.6c1.9,0.5,3.6,1.3,5.1,2.6c0.7,0.6,1.6,1.2,2.2,1.9c1,1.1,1.3,2.4,0.7,3.8" + ' ' +
+									"c-0.5,1.3-1.2,2.5-2.3,3.5c-2.2,2-4.6,3.8-7.1,5.6c-2,1.5-4,2.9-6.1,4.3c-0.8,0.6-1.6,1.1-2.5,1.6c-0.1,0.1-0.3,0.2-0.4,0.4" + ' ' +
+									"c0.4,0.6,0.9,0.9,1.3,1.3c1.1,1,2.2,2,3.2,3.1c0.9,0.9,1.7,2,2.6,3c1.2,1.3,2.3,2.7,3.2,4.2c0.6,1,1.3,1.8,2,2.7" + ' ' +
+									"c1.1,1.5,2.2,3,3.3,4.6c0.8,1.1,1.6,2.3,2.5,3.4c0.1,0.2,0.3,0.3,0.4,0.4c0.8,0.3,1.3-0.5,2.1-0.1c0.1,0.3,0.2,0.6,0.3,0.9" + ' ' +
+									"c0,0.6-0.6,1.1-0.1,1.7c0.3-0.1,0.5-0.2,0.9-0.4c0.5,0.3,0.8,0.7,0.6,1.4c-0.1,0.3-0.1,0.6-0.1,0.9c-0.3,0.6-0.6,1.3-1,1.9" + ' ' +
+									"c-0.5,0.8-1,0.9-1.9,0.3c-0.3-0.2-0.5-0.4-0.8-0.7c-0.4,0-0.8,0.1-1.3,0.2c-1.1-0.8-2.2-1.5-3.3-2.3c-0.2-0.1-0.4-0.3-0.5-0.5" + ' ' +
+									"c-1.2-1.5-2.4-3-3.5-4.6c-2.9-4.3-5.9-8.6-9.2-12.8c-0.6-0.7-1.2-1.4-1.8-2.2c-0.6-0.8-1.4-1.4-2.1-2c-0.1,0-0.2,0-0.3,0" + ' ' +
+									"c0,0.3-0.1,0.5,0,0.8c0.2,1.8,0.5,3.6,0.8,5.4c0.4,2.7,0.9,5.4,1.6,8c0.6,2.4,1.3,4.9,2.2,7.2c0.3,0.9,0.4,1.7-0.1,2.6" + ' ' +
+									"c-0.8,0.5-1.6,0.5-2.2-0.3c-0.3,0-0.5,0.1-0.7,0.1c-1.1,0.1-1.9-0.3-2.6-1c-0.3-0.3-0.6-0.6-1-0.7c-1.3-0.6-2.3-1.4-2.9-2.7" + ' ' +
+									"c-0.4-0.8-0.7-1.5-0.9-2.3c-0.1-0.5-0.3-1-0.5-1.5c-0.5-1.4-0.9-2.7-1.2-4.2c-0.4-1.6-0.8-3.2-1.1-4.8c-0.2-1-0.3-2.1-0.5-3.2" + ' ' +
+									"c-0.2-1.6-0.5-3.2-0.7-4.8c-0.2-1.9-0.4-3.7-0.5-5.6c-0.1-1.4-0.1-2.9-0.4-4.3c-0.1-0.3,0-0.7-0.1-1c-0.1-0.9,0.1-1.8-0.2-2.6" + ' ' +
+									"c-0.2-0.4,0.2-0.8,0.1-1.2c-0.2-0.7-0.3-1.5-0.4-2.3c-0.1-0.6-0.1-1.3-0.2-1.9c0-0.3-0.2-0.6-0.3-1c-1.3-0.6-2.6-1.2-3.1-2.6" + ' ' +
+									"c-0.5-0.5-1.2-0.6-1.5-1.3c0.1-0.4,0.3-0.8,0.4-1.2c0.9-0.8,2-1,2.9-1.5c0-0.5-0.1-0.9-0.1-1.4c0-0.7,0.4-1.1,1.1-1" + ' ' +
+									"c0.7,0.1,1.4,0.2,2.2,0.4C797.5,13.1,798.8,13.5,800.3,13.1z M819.5,21.3c0.2-0.6,0-1.1-0.6-1.4c-1-0.5-2.1-0.7-3.2-0.9" + ' ' +
+									"c-3.4-0.4-6.7-0.1-10.1,0.6c-0.5,0.1-0.9,0.2-1.3,0.6c0.2,1.3,0.3,2.5,0.5,3.8c0.2,1.3,0.3,2.5,0.5,3.8c0.3,1.3,0.1,2.6,0.5,3.9" + ' ' +
+									"c0.7-0.3,1.2-0.8,1.8-1.2c0.6-0.5,1.2-1,1.9-1.5c1-0.7,1.9-1.3,2.8-2.1c1.7-1.4,3.5-2.7,5.2-4C818.1,22.3,818.7,21.9,819.5,21.3z"}
+									), 
+								React.createElement("path", {d: "M739.9,42.7c0.5-0.5,0.5-0.9,0.5-1.4c0-0.7,0-1.4,0.1-2.1c0.2-3.4,0.6-6.8,0.6-10.2c0-1.1,0.1-2.2,0.2-3.4" + ' ' +
+									"c0-0.1,0-0.3,0.1-0.4c0.5-1,1-1.9,1.4-2.7c1-0.6,1.7-1.2,2.6-0.6c1.2-0.3,2.2-0.5,3.3-0.7c0.6,0.9,1.6,0.9,2.5,1.2" + ' ' +
+									"c0.4,0.3,0.6,0.7,0.5,1.2c0,0.3,0,0.7-0.1,1c-0.2,1.1-0.2,2.2-0.2,3.4c-0.1,2.4-0.3,4.9-0.5,7.3c-0.1,2.1-0.3,4.2-0.5,6.3" + ' ' +
+									"c0,0.4,0,0.8,0,1.3c0.4,0.2,0.8,0.3,1.1,0.5c0.5,0.2,1,0.4,1.4,0.7c0.8,0.4,0.9,1.2,0.3,1.9c-0.3,0.4-0.8,0.7-1.3,0.8" + ' ' +
+									"c-0.3,0-0.7,0.1-1,0.1c-0.3,0.1-0.6,0.2-0.8,0.3c-0.1,0.2-0.2,0.3-0.2,0.4c-0.1,2-0.3,4-0.4,6c-0.1,1.3-0.1,2.5-0.2,3.8" + ' ' +
+									"c-0.1,2.2-0.1,4.5,0.1,6.7c0,0.3,0,0.6-0.1,0.8c-0.4,0.6-0.7,1.3-1.5,1.7c-0.2-0.2-0.4-0.4-0.6-0.6c-0.2-0.2-0.4-0.4-0.6-0.7" + ' ' +
+									"c-0.3,0.1-0.6,0.3-0.9,0.4c-0.6,0.1-1.1,0-1.7,0c-0.3-0.3-0.6-0.7-1-1c-0.4,0.1-0.8,0.2-1.2,0.4c-0.6-0.1-1.1-0.4-1.6-0.4" + ' ' +
+									"c-1-0.1-1.5-0.6-1.9-1.5c0.6-1.1,0.6-2.3,0.6-3.5c0-1.2,0-2.3,0.1-3.5c0.1-1.6,0.3-3.2,0.4-4.7c0.1-0.6,0.1-1.2,0.2-1.8" + ' ' +
+									"c0-0.2-0.1-0.4-0.2-0.7c-1.1-0.2-2.1,0.3-3.2,0.3c-1.1,0-2.2,0.2-3.4,0.3c-1.1,0.1-2.1,0.2-3.3,0.3c-0.1,0.2-0.2,0.4-0.2,0.6" + ' ' +
+									"c0,3.2-0.1,6.5,0,9.7c0,0.6,0.3,1.2,0.5,1.8c-0.1,0.9-0.2,2-0.3,3c-0.4,0.5-0.9,1.1-1.6,1.3c-0.3-0.3-0.7-0.6-1.1-0.9" + ' ' +
+									"c-0.8,0-1.6,0.3-2.5,0c-0.3-0.3-0.7-0.6-1.1-0.9c-1,0.1-2.1-0.1-3.1-0.5c-0.8-0.5-0.9-1.3-0.8-2.2c0.1-1.2,0-2.3,0-3.5" + ' ' +
+									"c0-1.2,0-2.3,0-3.5c0-0.2,0-0.4,0-0.6c0.2-1.1,0.1-2.1,0.1-3.2c0.1-1.7,0.1-3.4,0.1-5.1c0-0.1,0-0.3,0-0.4c0.1-0.7,0.2-1.4,0-2.1" + ' ' +
+									"c-0.1-0.3,0-0.6,0-0.8c0.3-1.5,0.2-3,0.2-4.5c0-0.2,0-0.5,0.1-0.7c0-0.2,0.1-0.4,0.1-0.6c0-1-0.2-1.9,0.1-2.9" + ' ' +
+									"c0.2-0.9,0-1.9,0.1-2.8c0-1.4,0.1-2.8,0.2-4.2c0-0.1,0-0.3,0-0.4c-0.3-1.3,0.1-2.6,0-3.9c0-0.6,0.1-1.2,0.3-1.8" + ' ' +
+									"c0.3-0.6,0.7-1,1.3-1.2c0.4-0.1,0.9-0.2,1.4-0.4c0.9,0.5,1.8,0.6,2.8,0.1c0.3-0.1,0.6-0.1,1-0.1c0.3,0.4,0.8,0.7,1.4,0.8" + ' ' +
+									"c1.1,0.3,1.3,0.6,1.3,1.7c0,1.6,0,3.3,0,4.9c0,1.6-0.1,3.2,0,4.8c0.1,1.6,0,3.3,0,4.9c-0.1,1.9-0.1,3.7-0.1,5.6c0,0.6,0,1.3,0,2" + ' ' +
+									"c0.7,0.3,1.4,0.1,2.1,0c1.3-0.2,2.7-0.5,4-0.7c0.9-0.1,1.9-0.2,2.8-0.3C739.1,42.9,739.5,42.8,739.9,42.7z M747.9,50" + ' ' +
+									"c0,0,0,0.1,0,0.1c0,0,0.1-0.1,0.1-0.1c0,0,0-0.1,0-0.1C747.9,49.9,747.9,49.9,747.9,50z M747.9,51.7L747.9,51.7L747.9,51.7" + ' ' +
+									"L747.9,51.7z M748.5,40.2c0,0,0-0.1,0-0.1c0,0,0,0-0.1,0C748.5,40.1,748.4,40.1,748.5,40.2C748.4,40.2,748.5,40.2,748.5,40.2z" + ' ' +
+									 "M748.8,37.6L748.8,37.6L748.8,37.6L748.8,37.6z"}), 
+								React.createElement("path", {d: "M672.3,69.7c-1.8,1-3.8,1.6-5.8,1.9c-1.4,0.2-2.9,0.2-4.3-0.5c-0.1-0.1-0.3-0.1-0.4-0.2" + ' ' +
+									"c-1.7-0.6-3.4-1.2-5.1-1.7c-1.5-0.5-2.7-1.4-3.8-2.6c-0.6-0.6-0.8-1.4-0.7-2.2c0.1-0.4,0.2-0.8,0.3-1.3c1-0.7,2-1.5,3.1-2.2" + ' ' +
+									"c0.2,0.1,0.4,0.1,0.7,0.2c0,0.5,0.1,1,0.1,1.7c0.4-0.2,0.5-0.7,0.7-0.9c0.3-0.2,0.6-0.5,0.9-0.7c0.4,0,0.8-0.1,1.2-0.1" + ' ' +
+									"c0.2,0.1,0.3,0.3,0.5,0.4c0.1,0.3,0.1,0.5,0.2,0.8c0.1-0.1,0.2-0.1,0.4-0.2c0.7,0.2-0.1,0.9,0.4,1.1c0.3,0,0.3-0.3,0.5-0.5" + ' ' +
+									"c0.2,0,0.5,0,0.8,0c0,0.1,0.2,0.2,0.2,0.3c0,0.6-0.1,1.3-0.1,1.9c0,0.2,0,0.4,0.1,0.7c1.7-0.3,3.2-1,4.5-2" + ' ' +
+									"c0.7-0.5,1.3-1.1,1.9-1.7c0.6-0.7,1.1-1.5,1.4-2.4c0.4-1.5,0.7-3,0.2-4.6c-0.2-0.7-0.3-1.5-0.5-2.2c-0.7-1.7-1.6-3.4-2.8-4.8" + ' ' +
+									"c-0.8-0.9-1.6-1.8-2.5-2.6c-0.6-0.5-1.2-1-1.9-1.4c-1.4-0.9-2.8-1.8-4.3-2.6c-1.4-0.7-2.6-1.6-3.9-2.4c-0.5-0.3-0.8-0.7-1.2-1.2" + ' ' +
+									"c-1.1-1.3-2.2-2.7-2.9-4.3c-0.4-1-0.8-2-0.9-3.1c-0.1-1.4,0.1-2.8,0.6-4.1c0.1-0.2,0.2-0.4,0.3-0.6c1-1.1,2.1-2.1,3.6-2.6" + ' ' +
+									"c0.3-0.1,0.5-0.1,0.8-0.1c1.1-0.1,2.1-0.2,3.2-0.1c1.2,0.1,2.5,0.2,3.7,0.4c0.5,0.1,0.9,0.3,1.3,0.5c0.3,0.1,0.5,0.2,0.8,0.4" + ' ' +
+									"c0.2-0.4,0.3-0.7,0.4-1.1c0.3-1.7,0.6-3.3,0.9-5c0.2-1.4,0.2-1.4,1.3-2.5c0.7-0.1,1.4-0.3,2.1-0.5c0.6,0.4,1.1,0.7,1.7,1.1" + ' ' +
+									"c1.2-0.7,2.3-0.5,3.3,0.5c0,0.2,0.1,0.3,0.1,0.4c-0.3,2.2-0.5,4.5-0.9,6.7c-0.3,1.6-0.6,3.1-0.9,4.7c-0.2,1.1-0.3,2.1-0.4,3.2" + ' ' +
+									"c0,0.2,0,0.5,0.2,0.7c0.1-0.7,0.3-1.4,0.4-2c0.1-0.8,0.1-1.6,0.3-2.3c0.4-1.3,0.6-2.6,0.9-4c0.4-1.7,0.7-3.5,0.8-5.3" + ' ' +
+									"c0-0.1,0-0.3,0-0.4c0.1-0.6,0.4-0.9,1-1c0.1,0.1,0.3,0.3,0.3,0.5c0.2,0.7,0.3,1.5,0.1,2.2c-0.5,2.5-1,5.1-1.4,7.6" + ' ' +
+									"c-0.3,2-0.7,4.1-0.8,6.1c0,0.2,0,0.5-0.1,0.7c-0.2,0.7-0.2,1.3,0,1.7c-0.1,1.5-1.3,2-2,2.9c-0.9,0.2-0.9,0.2-1.7-0.1" + ' ' +
+									"c-0.7,0.2-1.4,0.4-2,0.6c-1.1-0.2-1.8-0.9-2.8-1c-0.1,0-0.1,0.1-0.2,0.2c0.1,0.1,0.2,0.3,0.3,0.4c0.6,0.4,1.2,0.8,1.9,1.2" + ' ' +
+									"c1.4,0.8,2.7,1.9,3.9,2.9c1.1,0.8,2.1,1.7,3.1,2.6c1.2,1.1,2.3,2.4,3.2,3.7c0.8,1.2,1.5,2.5,2.2,3.8c0.5,0.9,0.8,1.9,1.1,2.9" + ' ' +
+									"c0.3,1.1,0.6,2.2,0.6,3.3c0,1.4-0.2,2.7-0.9,3.9c-1,1.9-2.4,3.4-4.3,4.5c-0.4,0.2-0.9,0.5-1.3,0.9C673.6,69.2,673,69.5,672.3,69.7" + ' ' +
+									"c0-0.1,0-0.2-0.1-0.3c0,0,0.1,0,0.1-0.1c0,0,0,0.1-0.1,0.1c-0.1,0-0.2,0.1-0.4,0.1C672.1,69.6,672.2,69.7,672.3,69.7z M676,65.2" + ' ' +
+									"C676,65.2,676,65.3,676,65.2C675.9,65.3,676,65.2,676,65.2c0.1-0.1,0.2-0.2,0.3-0.3c0.1-0.1,0.2-0.2,0.3-0.3" + ' ' +
+									"c0.2,0,0.3-0.1,0.3-0.3c0,0,0.1-0.1,0.1-0.1c0,0,0,0.1-0.1,0.1c-0.1,0.1-0.2,0.2-0.3,0.3c-0.1,0.1-0.2,0.2-0.3,0.3" + ' ' +
+									"C676.2,65,676.1,65.1,676,65.2z M677.7,62.4c-0.1,0.1-0.3,0.2-0.1,0.4C677.6,62.6,677.6,62.5,677.7,62.4c0.1-0.1,0.3-0.1,0.3-0.2" + ' ' +
+									"c0.5-0.5,0.6-1.2,0.8-1.9c0.2-0.7,0.3-1.4,0.1-2.1c-0.3,1-0.6,1.9-0.9,2.8C677.9,61.5,677.8,61.9,677.7,62.4z M677.5,63.7" + ' ' +
+									"c0.2,0.3,0.4,0.2,0.5,0.1c0.5-0.5,0.9-1.4,1.1-2.4C678.6,62.2,678.1,62.9,677.5,63.7z M678.3,57.4c0.1-0.1,0.2-0.2,0.2-0.3" + ' ' +
+									"c0-0.3,0-0.5,0-0.8c0,0-0.1-0.1-0.2-0.1C678.3,56.6,678.3,57,678.3,57.4z M678.9,55.7l0.1-0.1l-0.1,0L678.9,55.7z"}), 
+								React.createElement("path", {d: "M634.3,27.3c-0.4-2.2-1.3-4.3-1.5-6.3c0.3-0.7,0.8-0.9,1.1-1c1-0.1,1.8-0.1,2.6-0.1" + ' ' +
+									"c0.2,0.2,0.5,0.5,0.8,0.9c1-0.2,1.9-0.5,2.7-1.2c0.1,0.3,0.2,0.7,0.2,1.1c0.3-0.3,0.5-0.5,0.8-0.8c0.4,0.4,0.1,0.9,0.5,1.3" + ' ' +
+									"c0.4,0,0.8,0,1.2,0c0.4,0.3,0.6,0.6,0.6,1.1c-0.1,1.4,0.4,2.8,0.8,4.1c0.9,3.3,1.8,6.6,2.8,9.9c0.9,3.2,1.7,6.3,2.4,9.5" + ' ' +
+									"c0.7,3.3,1,6.6,0.8,9.9c-0.2,3.6-1.1,7-2.8,10.2c-0.9,1.6-2.3,2.7-3.8,3.7c-0.5,0.3-1,0.3-1.4,0c-0.3-0.2-0.5-0.4-0.8-0.5" + ' ' +
+									"c-0.4,0-0.7,0-1,0c-0.9,0.2-1.7-0.1-2.4-0.7c-0.3-0.3-0.7-0.5-1.1-0.5c-1.7-0.1-2.8-1.1-3.8-2.3c-1.4-1.8-2.4-3.8-3.6-5.7" + ' ' +
+									"c-0.3-0.4-0.4-0.9-0.5-1.4c-0.6-2.6-1.2-5.1-1.5-7.7c-0.1-0.5-0.1-1-0.1-1.5c-0.1-0.8-0.1-1.6-0.2-2.4c-0.1-1.1,0-2.2,0-3.3" + ' ' +
+									"c0-0.4,0-0.8,0-1.2c0.1-0.7,0.1-1.4,0.2-2.1c0.1-0.4,0.2-0.8,0.2-1.2c0-1.2,0.4-2.2,0.8-3.2c0.4-1,0.7-1.9,1.1-2.9" + ' ' +
+									"c0.3-0.8,0.8-1.5,1.2-2.2c0.5-0.8,1.3-1.3,2.1-1.8C633.2,28.3,633.8,27.9,634.3,27.3z M637.9,40c-0.1,0.2-0.1,0.3-0.2,0.5" + ' ' +
+									"c-0.8,3.6-1,7.2-0.6,10.9c0.3,2.5,0.6,4.9,1.2,7.3c0.1,0.2,0,0.6,0.5,0.6c0.4-1.5,0.7-3,1-4.5c0.1-0.3,0.1-0.6,0.1-0.8" + ' ' +
+									"c0-2.8-0.1-5.5-0.5-8.2C639.1,43.8,638.6,41.9,637.9,40z M648.3,55.6c-0.3,0.3-0.5,0.6-0.7,0.9c-0.1,0.6-0.1,1.2-0.3,1.7" + ' ' +
+									"c-0.1,0.5-0.3,1.1-0.5,1.6c-0.1,0.3-0.1,0.6-0.3,0.8c-0.2,0.5,0,1-0.3,1.5c-0.3,0.5-0.5,1-0.8,1.5c-0.1,0.3-0.3,0.5-0.4,0.8" + ' ' +
+									"c-0.1,0.1-0.2,0.3,0.1,0.5c0.5-0.3,0.8-0.8,1-1.3c0.2-0.5,0.5-1,0.7-1.5C647.8,59.9,648.4,57.9,648.3,55.6z M648.1,55" + ' ' +
+									"c0.1-0.1,0.2-0.1,0.2-0.2c-0.1-1,0.1-2.1-0.3-3.1c-0.1-0.2,0-0.4,0-0.5c0-0.2,0-0.4-0.1-0.5c-0.5-0.6-0.4-1.3-0.4-2" + ' ' +
+									"c0-1.3-0.3-2.5-0.6-3.7c-0.1-0.2-0.2-0.4-0.3-0.5c-0.1,0.8,0,1.6,0.2,2.2c0.3,0.9,0.4,1.8,0.4,2.7c0,0.2,0,0.5,0,0.7" + ' ' +
+									"c0.2,1.5,0.3,3,0.5,4.6C647.9,54.7,648,54.9,648.1,55z"}), 
+								React.createElement("path", {d: "M857.8,67.8c0.1,0.5,0.6,0.5,1,0.7c0,0.5-0.3,0.7-0.7,1c-0.5,0.3-1,0.7-1.2,1.3c-2.1,1.1-4.3,1.3-6.5,0.6" + ' ' +
+									"c-0.7-0.2-1.4-0.4-2.2-0.6c-0.3-0.1-0.5-0.1-0.8-0.3c-1-0.5-2.1-1-3.1-1.6c-2.5-1.4-4.6-3.3-6.3-5.6c-0.1-0.2-0.3-0.4-0.4-0.6" + ' ' +
+									"c-2-2.1-2.8-4.8-3.6-7.5c-0.4-1.4-0.7-2.7-0.9-4.1c0-0.2-0.1-0.5-0.1-0.7c0.1-1.4-0.4-2.8-0.4-4.2c0-0.8-0.5-1.4-0.9-2" + ' ' +
+									"c-0.4-0.3-0.8-0.5-1.2-0.9c-0.9-0.9-0.7-2.1,0.4-2.7c0.4-0.2,0.9-0.5,1.4-0.7c0.1-0.2,0.1-0.4,0.2-0.5c0.1-1.5,0.2-3.1,0.6-4.6" + ' ' +
+									"c0.1-0.3-0.1-0.6-0.1-0.8c0-0.6-0.1-1.2-0.1-1.8c0-0.4,0.3-0.8,0.5-1.4c0-0.7,0-1.6,0-2.6c-0.4-0.4-0.9-0.7-1.5-1" + ' ' +
+									"c-0.2-0.3-0.4-0.6-0.6-1c-0.5-0.1-0.9-0.3-1.3-0.4c-0.7-1.1-0.7-1.1-0.5-2.3c0.7-0.9,1.8-1.1,2.8-1.3c1.1-0.3,2.1-0.4,2.8-1.4" + ' ' +
+									"c0.4,0.1,0.7,0.1,1,0.1c0.6,0.1,1.2,0.3,1.8,0.1c0.3-0.1,0.6,0,1,0.1c0.3,0,0.6,0.1,0.9-0.1c0.1-0.1,0.2-0.1,0.2-0.1" + ' ' +
+									"c1.2,0.3,2.3-0.2,3.4-0.5c2.8-0.7,5.5-1.4,8.3-2.1c1.1-0.3,2.2-0.5,3.3-0.7c0.1,0,0.3,0,0.4,0c0.9,0,1.8,0,2.8,0.1" + ' ' +
+									"c0.2,0.2,0.4,0.5,0.6,0.8c0.4,0.2,0.8,0.2,1.2,0.1c0.5-0.1,1.1-0.1,1.7-0.1c0.2,0,0.3,0.1,0.5,0.2c0.1,0.7-0.5,1.2-0.2,1.9" + ' ' +
+									"c0.2,0,0.4,0.1,0.6,0.1c1.3,0.2,1.3,0.2,1.6,1.5c-0.2,0.5-0.5,1.1-0.7,1.7c-0.2,0-0.5,0.1-0.7,0.1c-2-0.3-3.8,0.2-5.7,0.7" + ' ' +
+									"c-3.6,0.9-7.2,1.8-10.8,2.4c-0.9,0.1-1.9,0.2-2.8,0.4c-0.4,0.1-0.8,0.2-1.2,0.3c-0.3,1.8-0.7,8.5-0.6,10.2c0.9,0,1.8,0,2.6-0.1" + ' ' +
+									"c2-0.2,4-0.4,6-0.6c0.3,0,0.6,0,0.8-0.1c0.9-0.3,1.8-0.2,2.6,0c0.4,0.1,0.8,0.1,1.2,0.1c0.3,0,0.5,0,0.8,0" + ' ' +
+									"c0.2,0.5,0.4,0.9,0.5,1.2c0.9,0.5,1.7-0.4,2.4,0.2c0.3,0.5-0.3,0.7-0.3,1.2c0.1,0.2,0.1,0.3,0.2,0.5c-0.1,0.4-0.2,0.7-0.3,1.1" + ' ' +
+									"c1,0.4,1,0.4,1.3,1.1c-0.4,0.5-0.9,0.8-1.5,0.9c-0.9,0.2-1.7,0.5-2.6,0.6c-3,0.3-6.1,0.6-9.1,0.9c-1.4,0.2-2.8,0.4-4.2,0.6" + ' ' +
+									"c-0.3,0.1-0.6,0.2-0.9,0.3c-0.1,1.2,0.1,2.4,0.1,3.5c0,0.5,0.1,1,0.1,1.5c0.1,2.5,0.7,4.8,1.4,7.1c0.3,0.9,0.6,1.9,1,2.8" + ' ' +
+									"c0.5,1.1,1.2,2.1,2,3c0.4,0.5,0.9,0.9,1.3,1.3c0.3,0.3,0.7,0.4,1,0.6c0.7-0.1,1.2-0.3,1.6-0.7c0.9-0.8,1.9-1.2,3-1.2" + ' ' +
+									"c0.6-0.4,1-1.2,1.9-0.8c0.2,0.4,0.3,0.7,0.5,1.1c0.8-0.2,1.5-0.3,2.1-0.5c0.4,0.2,0.5,0.5,0.4,0.7c-0.4,0.6-0.4,1.3-0.3,1.9" + ' ' +
+									"c-0.1,0.7-0.8,1-0.8,1.8C857.2,68,857.5,67.9,857.8,67.8L857.8,67.8z M856.7,69c0-0.1,0.1-0.1,0.1-0.2c0,0-0.1-0.1-0.1-0.1" + ' ' +
+									"c-0.1,0-0.1,0.1-0.2,0.1C856.6,68.9,856.6,68.9,856.7,69z"}), 
+								React.createElement("path", {d: "M717.1,34.2c0.1,0,0.2,0,0.3,0.1l0,0c-0.2,1-0.9,1.8-1.5,2.5c-0.7,0.8-1.4,1.5-2.1,2.3" + ' ' +
+									"c-1.4,1.6-3.1,2.9-5,4.1c-2.2,1.4-4.4,2.7-6.9,3.5c-1.1,0.3-2.2,0.7-3.4,1c-0.4,0.1-0.9,0.1-1.5,0.2c0,0.2,0,0.5,0,0.9" + ' ' +
+									"c0.2,2.2,0.4,4.4,0.6,6.6c0.2,2.1,0.4,4.2,0.6,6.3c0,0.5,0.1,1,0.1,1.5c0.1,1.3,0.2,2.6,0.6,3.8c-0.2,1.2-0.9,1.9-1.8,2.4" + ' ' +
+									"c-0.4-0.3-0.7-0.7-1.1-1c-0.7,0.1-1.3,0.3-2,0.4c-0.6-0.4-1.3-0.8-1.9-1.1c-0.6,0-1.1,0-1.6,0c-0.5,0-0.9-0.2-1.3-0.5" + ' ' +
+									"c-0.5-0.4-0.8-1-0.7-1.7c0.3-1.5,0.2-3.1,0.1-4.6c0-0.7,0-1.4-0.1-2.1c-0.1-1.2-0.1-2.3-0.2-3.5c0-0.3-0.1-0.6-0.1-0.8" + ' ' +
+									"c0-2.6-0.4-5.2-0.5-7.8c-0.1-1-0.3-2-0.4-3.1c0-0.3-0.1-0.7-0.1-1c0.1-1.4-0.1-2.7-0.2-4.1c-0.2-1.4-0.3-2.9-0.5-4.3" + ' ' +
+									"c-0.3-0.4-0.5-0.7-0.8-1c-0.4,0.1-0.8,0.2-1.3,0.3c-0.5-0.2-1.1-0.4-1.7-0.6c-0.2-0.5-0.5-0.9-0.8-1.6c-0.3-0.1-0.7-0.3-1.1-0.5" + ' ' +
+									"c-0.2-0.5-0.2-1-0.1-1.4c0.4-0.6,0.9-1.1,1.5-1.4c0.4-0.2,0.7-0.5,1-0.7c0.2-0.2,0.5-0.3,0.7-0.5c1.1-0.5,2.2-1.1,3.3-1.6" + ' ' +
+									"c0.1-0.1,0.3-0.1,0.4-0.2c2-0.6,4-1.3,6-1.9c0.7-0.2,1.3-0.4,2-0.6c2.5-0.7,5-0.9,7.5-0.9c1.5,0,2.9,0.4,4.3,0.9" + ' ' +
+									"c1.4,0.4,2.8,0.7,4.1,1.5c0.2,0.1,0.5,0.1,0.8,0.2c0,0.6,0.5,0.9,1,1l0,0c0.1,0.2,0.2,0.2,0.3,0l0,0c0.7,0.6,1.5,1.1,1.9,1.9" + ' ' +
+									"c0.2,0.4,0.7,0.8,1.1,1.1c0.3,0.2,0.5,0.5,0.6,0.9l0,0c-0.2-0.1-0.4-0.2-0.6-0.3c0,0-0.1,0-0.1-0.1c0,0,0.1,0,0.1,0" + ' ' +
+									"c-0.1,0.5,0.2,0.9,0.5,1.2l0,0c0.3,1.2,0.3,2.5-0.1,3.7C717.1,33.7,717.2,34,717.1,34.2c-0.1,0.1-0.2,0.2-0.3,0.3l-0.1,0.1l0-0.1" + ' ' +
+									"C716.9,34.4,717,34.3,717.1,34.2z M714.5,35.9c0.9-0.5,1.5-1.2,1.9-2.1c0.1-0.3,0.1-0.5-0.2-0.7l0,0c-0.1-0.9,0.4-1.9-0.2-3" + ' ' +
+									"c-0.2,0.6-0.4,1-0.4,1.5c0,0.8-0.3,1.5-0.6,2.3c-0.5,1-1,1.9-1.7,2.7c-0.2,0.2-0.4,0.5-0.4,0.9c0,0,0,0-0.1,0.1c0,0,0-0.1,0-0.1" + ' ' +
+									"c0.5,0.1,0.9-0.1,1.1-0.5C714.1,36.4,714.2,36.1,714.5,35.9C714.6,35.9,714.6,36,714.5,35.9C714.6,36,714.6,36,714.5,35.9z" + ' ' +
+									 "M696.5,41c0.6-0.3,1.3-0.7,1.9-1.1c1-0.6,2.1-1.3,3.1-1.9c0.4-0.3,0.7-0.6,1.1-0.9c0.5-0.4,1-0.7,1.4-1.1c0.4-0.5,1-0.6,1.4-1.1" + ' ' +
+									"c0.6-0.8,1.1-1.6,1.9-2.2c0.1-0.1,0.2-0.2,0.2-0.4c0.3-0.7,0.7-1.3,1-2c0.3-0.7,0.3-1.5,0.1-2.2c-0.1-0.6-0.5-1.1-1.1-1.4" + ' ' +
+									"c-0.5-0.1-1.1-0.2-1.6-0.2c-0.3,0-0.6,0-0.8,0.1c-2.9,0.5-5.6,1.4-8.4,2.3c-0.5,0.2-1.1,0.4-1.5,0.9c0,0.5,0,1.1,0,1.7" + ' ' +
+									"c0,0.4,0.1,0.8,0.1,1.3c0.2,1.9,0.5,3.9,0.7,5.8c0.1,0.8,0.2,1.6,0.4,2.3C696.4,40.9,696.4,40.9,696.5,41z"}), 
+								React.createElement("path", {d: "M766.3,19.7c0.7,0.7,1.7,0.8,2.6,1.3c0.1,0.2,0.4,0.6,0.5,1c0.1,0.3,0.2,0.7,0.3,1.1" + ' ' +
+									"c0.8,0.2,1.7,0.1,2.5,0.1c0.6,0,1.2,0,1.8,0c0.1,0,0.2,0,0.3,0c1.5-0.3,3.1,0,4.6-0.2c1.5-0.1,3.1,0,4.6-0.1c0.6,0,1.1,0,1.7-0.2" + ' ' +
+									"c0.6-0.2,1.2-0.1,1.8,0c0.2,0.2,0.3,0.5,0.5,0.8c0.6,0.2,1.2,0.3,1.8,0.5c0.4,0.4,0.6,0.7,0.6,1.2c0,0.7-0.1,0.9-1.1,1.9" + ' ' +
+									"c-2.5,0.6-5,0.9-7.6,0.9c-0.2,0-0.5,0-0.7,0c-1.2,0.2-2.3,0-3.5,0.1c-1.3,0.1-2.6,0.1-3.9,0.4c-1.2,0.2-2.3,0.4-3.4,0.9" + ' ' +
+									"c-0.6,0.5-0.4,1.2-0.4,1.8c0.1,1.5,0.2,3,0.3,4.5c0.1,1.9,0.2,3.8,0.3,5.8c0.3,0,0.5,0.1,0.7,0.1c1-0.2,2-0.3,3-0.6" + ' ' +
+									"c0.5-0.1,0.9-0.1,1.4,0c1.3,0.2,2.7,0.6,4,0.3c0.2,0.2,0.5,0.3,0.7,0.5c0.2,0.1,0.4,0.2,0.6,0.3c0,0.5,0,0.9,0,1.4" + ' ' +
+									"c0.4,0.1,0.8,0.3,1.3,0.4c-0.1,0.3-0.1,0.5-0.2,0.8c-0.8,0.9-1.9,1.2-3,1.6c-2.4,0.8-4.9,1.2-7.4,1.6c-0.2,0-0.4,0.1-0.6,0.1" + ' ' +
+									"c-0.3,1.2-0.2,6.2,0.2,9c0.5,0,1.1,0,1.6,0c0.6,0,1.1,0,1.7-0.1c1.6-0.1,3.3-0.2,4.9-0.4c1.2-0.1,2.4-0.2,3.6-0.4" + ' ' +
+									"c1.1-0.1,2.2-0.3,3.3-0.7c0.6-0.2,1.3-0.3,1.9-0.4c0.9-0.1,1.9,0.1,2.7,0.5c0.6,0.3,1.3,0.5,2,0.2c0.1,0,0.3-0.1,0.4-0.1" + ' ' +
+									"c0.3,0,0.6,0.1,1,0.2c0.1,0.3,0.2,0.7,0.3,1c0.6,0.3,1.1,0.6,1.6,0.9c0.4,0.5,0.4,1,0.1,1.3c-0.4,0.5-0.9,1.1-1.6,1.3" + ' ' +
+									"c-1.6,0.4-3.2,0.8-4.8,1c-2.3,0.3-4.7,0.5-7,0.8c-1.9,0.2-3.8,0.5-5.7,0.8c-1.2,0.2-2.4,0.3-3.6,0.5c-0.5,0.1-0.9,0.2-1.3,0.3" + ' ' +
+									"c-0.6,0.7-1.1,1.4-1.5,1.9c-0.6,0.3-1,0.2-1.5,0.1c-0.3,0-0.6-0.2-0.8-0.1c-1.5,0.2-2.7-0.4-4-1c-0.3-0.2-0.6-0.2-0.9-0.4" + ' ' +
+									"c-0.5-0.3-1.1-0.5-1.6-0.8c-1.1-0.7-1.5-2.5-1-3.8c0.1-0.3,0.2-0.6,0.2-0.9c0-2.2,0.1-4.5,0.1-6.7c0-1.8-0.1-3.6-0.1-5.5" + ' ' +
+									"c0-0.7,0-1.4,0-2.1c0-0.7,0-1.3,0-2c-0.1-1.6-0.2-3.2-0.3-4.8c0-0.3,0-0.6,0-0.8c0.1-2.6-0.2-5.1-0.4-7.7" + ' ' +
+									"c-0.1-1.5-0.1-3.1-0.1-4.6c0-0.7-0.2-1.4,0.2-2.1c0.2-0.4,0.3-0.8,0.5-1.1c0.4-0.8,1.1-1.2,2-1.1c0.6,0,1.1,0,1.6-0.4" + ' ' +
+									"c0.1-0.1,0.3-0.1,0.4-0.1C765,19.8,765.7,19.8,766.3,19.7z"}), 
+								React.createElement("path", {d: "M583,14.2c0,0.1,0,0.2,0.1,0.3c0.1,0.1,0.4,0.2,0.5,0.4c0.1,0.2,0.2,0.4,0.3,0.6c0.6,0.2,1.2-0.3,1.7,0.3" + ' ' +
+									"c0,0.2,0.1,0.5,0.1,0.7c-0.1,0.2-0.1,0.3-0.2,0.3c-0.4,0.3-0.8,0.5-1.2,0.6c-0.8,0.2-1.6,0.5-2.4,0.8c-2.7,1.1-5.4,2.2-8.1,3.3" + ' ' +
+									"c-0.4,0.2-0.8,0.4-1,0.5c-0.5,0.8-0.3,1.6-0.4,2.3c-0.2,4.2-0.3,8.3-0.5,12.5c-0.2,6.1-0.1,12.2-0.2,18.3c0,2.9-0.1,5.8-0.1,8.7" + ' ' +
+									"c0,0.5,0,0.9,0,1.4c0,0.6-0.4,1-0.6,1.4c-0.2,0.4-0.6,0.6-1.2,0.6c-0.3-0.3-0.6-0.6-0.9-0.9c-0.7,0.1-1.4,0.2-2.1,0.3" + ' ' +
+									"c-0.5-0.4-0.9-0.7-1.4-1.1c-0.7,0.2-1.5,0.1-2.3,0c-0.6-0.1-1.1-0.3-1.6-0.6c-0.9-0.6-1.1-1.1-1-2.2c0.2-1.1,0.3-2.2,0.5-3.3" + ' ' +
+									"c0.1-0.7,0.2-1.4,0.1-2.2c-0.1-0.7,0-1.5,0-2.2c0-0.8,0.2-1.6,0.2-2.4c0-0.7-0.1-1.5,0-2.2c0-0.4,0.2-0.8,0.2-1.2" + ' ' +
+									"c0.1-0.8,0.2-1.7,0-2.5c-0.1-0.4,0-0.9,0-1.4c0.1-2,0-3.9,0.2-5.9c0.1-1.4,0-2.9,0-4.3c0-1.4,0.1-2.8,0.2-4.2" + ' ' +
+									"c0.1-1.1,0.2-2.1,0-3.2c-0.1-0.4,0-0.8,0-1.3c-0.4-0.1-0.9,0.1-1.3,0.2c-0.8,0.2-1.5,0.3-2.1-0.3c-0.4,0.2-0.8,0.3-1.1,0.4" + ' ' +
+									"c-1.1-0.2-2-0.7-2.6-1.7c-0.4,0.1-0.7,0.1-0.9,0.2c-1.4-0.1-2.3-0.9-3.3-1.8c0-0.2-0.1-0.4-0.1-0.6c0-0.5,0.3-0.9,0.9-0.9" + ' ' +
+									"c1.4-0.1,2.7-0.7,4.1-0.9c0.5-0.1,1.1-0.3,1.6-0.4c0.4-0.1,0.7-0.2,1.1-0.3c1.2-0.2,2.2-0.8,3.3-1.2c0.6-0.2,1.1-0.6,1.5-1.1" + ' ' +
+									"c1-1.4,2.4-1.7,4-1.1c1.2-0.4,2.4-0.6,3.6-1.2c0.4-0.2,0.8-0.2,1.2-0.3c0.6-0.2,1.2-0.1,1.6-0.8c0.7-0.2,1.3-0.6,2-0.5" + ' ' +
+									"c0.4,0.1,0.7,0,1.1,0c0.7,0,1.5-0.1,2.2-0.1c0.3,0,0.6,0,0.8,0.2c0.8,0.4,1.6,0.5,2.4,0.4C582.4,14.3,582.8,14.3,583,14.2" + ' ' +
+									"L583,14.2z M566.4,34.3C566.4,34.3,566.3,34.3,566.4,34.3c-0.1,0.4-0.1,0.9-0.1,1.3c0,0,0.1,0,0.1,0" + ' ' +
+									"C566.4,35.2,566.4,34.7,566.4,34.3z M566.4,33.4l0-0.1L566.4,33.4L566.4,33.4z"}), 
+								React.createElement("path", {d: "M718,32.3c0-0.5,0-1,0-1.5c0,0,0.1,0,0.1,0c0,0.5,0,1,0,1.5C718.1,32.3,718.1,32.3,718,32.3z"}), 
+								React.createElement("path", {d: "M717.3,28.9c0.4,0.2,0.4,0.5,0.5,0.9c-0.2-0.1-0.3-0.1-0.5-0.1l0,0C717.4,29.5,717.4,29.2,717.3,28.9" + ' ' +
+									"L717.3,28.9z"}), 
+								React.createElement("path", {d: "M617.5,21.9c-0.1-0.1-0.1-0.2-0.1-0.4c0,0,0.1-0.1,0.2-0.1c0,0,0.1,0.1,0.1,0.1" + ' ' +
+									"C617.5,21.7,617.5,21.8,617.5,21.9L617.5,21.9z"}), 
+								React.createElement("path", {d: "M857.9,67.8c0,0,0-0.1,0-0.1C857.9,67.7,857.8,67.7,857.9,67.8L857.9,67.8z"}), 
+								React.createElement("path", {d: "M713.4,25c0.1-0.2,0.2-0.2,0.3,0l0,0C713.6,24.9,713.5,24.9,713.4,25L713.4,25z"}), 
+								React.createElement("path", {d: "M717.4,34.3c0,0,0-0.1,0-0.1C717.4,34.2,717.4,34.2,717.4,34.3L717.4,34.3z"}), 
+								React.createElement("polygon", {points: "609.9,50.8 609.8,50.8 609.8,50.9   "}), 
+								React.createElement("path", {d: "M715.7,33.9c0.1-0.3,0.3-0.6,0.6-0.8l0,0C716.2,33.5,716.1,33.8,715.7,33.9L715.7,33.9z"}), 
+								React.createElement("path", {d: "M715.6,33.9c0,0.1,0,0.3,0,0.4c-0.1,0-0.1,0-0.1,0C715.6,34.2,715.6,34.1,715.6,33.9L715.6,33.9z"})
+							), 
+							React.createElement("rect", {x: "499.7", y: "0", width: "378", height: "72"})
+						), 
+						React.createElement("g", {id: "wavves", className: "band_lineup_link pink", onClick: self.openBand.bind(this, "Wavves")}, 
+							React.createElement("g", null, 
+								React.createElement("g", null, 
+									React.createElement("path", {d: "M607.7,83.7c0.3,1.2,0.7,2.4,1,3.6l1.9,6.9c0.4,1.3,0.7,2.6,1.1,3.9c0.3,1.2,0.7,2.5,1,3.7" + ' ' +
+										"c0.5,1.7,0.9,3.4,1.4,5.1c0.1,0.4,0.2,0.8,0.4,1.2c0.1,0.4,0.3,0.8,0.4,1.1c0.3,1,0.5,2.1,0.8,3.1c0.5,1.9,0.9,3.9,1.5,5.8" + ' ' +
+										"c0.5,1.8,0.9,3.6,1.3,5.4c0.3,1.2,0.5,2.5,0.8,3.7c0.2,0.9,0.4,1.6,0.2,2.3c-0.1,0.6-0.1,1.1-0.1,1.6l0,0.3c0,1.8,1,3.1,2.9,3.4" + ' ' +
+										"c0.2,0,0.3,0,0.5,0c0.5,0,1.3-0.2,1.9-0.9c0.8-0.9,1.3-2.1,1.7-3.6c0.3-1.4,0.7-2.9,1.2-4.3c0.6-1.9,1.3-4,1.9-6.3" + ' ' +
+										"c0.5-1.8,0.9-3.6,1.3-5.4c0-0.1,0-0.2,0.1-0.3c0.7,2.8,1.5,5.4,2.2,7.7c0.9,2.6,1.6,5,2.1,7.6l0.1,0.3l1.1,1.1" + ' ' +
+										"c0,0.1,0,0.1-0.1,0.1c-0.7,1.1-0.8,2.1-0.5,3.1l0.1,0.2l0.1,0.2c1.1,1.3,1.4,1.5,3,1.6l0.3,0l0.3-0.1c0.9-0.4,1.6-1.2,1.9-2.3" + ' ' +
+										"c0.2-0.7,0.4-1.3,0.6-1.8c0.3-0.7,0.5-1.5,0.8-2.2c0.4-1.2,0.9-2.4,1.3-3.7c0.8-2.5,1.8-5.4,2.7-8.4c0.2-0.6,0.4-1.1,0.5-1.7" + ' ' +
+										"c0.6-1.7,1.1-3.5,1.5-5.3c0-0.1,0.1-0.2,0.1-0.3l0.5-1.6c0.5-1.4,0.9-2.8,1.4-4.2c0.3-0.8,0.6-1.6,0.8-2.4" + ' ' +
+										"c0.5-1.5,1.1-3.1,1.6-4.7c0.8-2.7,1.9-5.5,3.7-8.9l0.1-0.2c0.5-1,1-1.9,1.8-2.5c0.6-0.4,1.4-1.4,1.2-3.2c-0.1-0.9-0.6-1.6-1.3-2" + ' ' +
+										"c-0.4-0.2-0.9-0.4-1.2-0.6l-0.7-0.3l-0.3,0c-1.2,0.1-2.1,0.5-2.7,1.2l-0.1,0.1l-1.1,2.5c-0.7,1.7-1.4,3.4-2.1,5.1" + ' ' +
+										"c-0.8,1.8-1.5,3.8-2.3,5.7c-0.2,0.6-0.4,1.2-0.6,1.9c-0.2,0.6-0.3,1.1-0.5,1.6c-0.6,1.6-1.1,3.2-1.6,4.8" + ' ' +
+										"c-0.4,1.4-0.9,2.9-1.4,4.3c-0.4,1-0.6,2-0.9,3c-0.2,0.6-0.3,1.2-0.5,1.7c-0.9,3.1-1.9,6.2-2.9,9.2l-0.2,0.7" + ' ' +
+										"c-0.2,0.5-0.3,0.9-0.5,1.4c-0.1,0.2-0.1,0.3-0.2,0.5c-0.2-0.6-0.4-1.1-0.5-1.7c-0.2-0.6-0.4-1.1-0.6-1.7" + ' ' +
+										"c-0.4-1.2-0.8-2.4-1.1-3.6c-0.4-1.5-0.8-3.1-1.2-4.7c-0.3-1.3-0.7-2.6-1-3.9c-0.3-1.2-0.6-2.4-0.2-3.8c0.3-1.1,0.1-2.2-0.5-3.1" + ' ' +
+										"c-0.7-0.9-1.7-1.5-3.1-1.6c-1.7-0.2-3,0.8-3.3,2.4c-0.1,0.6-0.1,1.3,0,1.9c0.1,0.4,0.1,0.8,0,1.4l-0.1,0.6" + ' ' +
+										"c-0.1,0.8-0.2,1.5-0.4,2.2l-0.4,1.7c-0.8,3.6-1.6,7.3-2.8,10.9l-0.3,0.8c0,0.1-0.1,0.3-0.1,0.4c-0.5-2-1-4-1.6-5.9" + ' ' +
+										"c-0.3-1.1-0.6-2.2-0.9-3.3c-0.5-2-1.1-3.9-1.7-5.8c-0.4-1.4-0.8-2.8-1.2-4.3c-0.4-1.5-0.8-2.9-1.2-4.4c-0.3-1.2-0.6-2.4-0.9-3.5" + ' ' +
+										"c-0.1-0.5-0.3-1-0.4-1.5c-0.7-2.4-1.3-4.8-1.6-7.2c-0.1-0.4-0.1-0.9,0-1.4c0.1-0.6,0.2-1.1,0.3-1.7c0.1-0.2,0.1-0.5,0.2-0.7" + ' ' +
+										"l0.1-0.3l-0.2-0.5c-0.2-0.6-0.4-1.3-1.1-1.9l-0.2-0.2l-2.1-0.6l-0.3,0.1c-0.1,0-0.2,0.1-0.3,0.1c-0.2,0.1-0.5,0.1-0.7,0.3" + ' ' +
+										"c-1.5,0.7-2.1,1.9-1.8,3.5C607.5,82.9,607.6,83.3,607.7,83.7z"}), 
+									React.createElement("path", {d: "M658.2,107.6l-0.7,2.3c-0.2,0.6-0.4,1.3-0.6,1.9l-0.1,0.3l0,0c-0.4,0.1-0.8,0.3-1.2,0.4" + ' ' +
+										"c-0.6,0.2-1.3,0.5-2,0.9c-1,0.5-1.4,1.5-1,2.6l0.1,0.4l1.9,1l1.1-0.1c-0.4,1.5-0.8,3-1.6,4.3c-0.3,0.5-0.6,1-0.8,1.6" + ' ' +
+										"c-0.5,1.6,0.1,2.6,0.7,3.2c0.5,0.5,1.2,1.1,2.3,1.5l0.3,0.1l0.3-0.1c1.7-0.4,2.7-1.6,3-3.3c0.1-0.9,0.3-1.7,0.4-2.5" + ' ' +
+										"c0.1-0.4,0.2-0.8,0.3-1.3c0.1-0.4,0.2-0.7,0.3-1.1c0.1-0.5,0.2-1,0.3-1.5c0.1-0.6,0.2-1.2,0.4-1.8c0-0.1,0-0.1,0.1-0.2l7-1.4" + ' ' +
+										"c0,0.3,0,0.6,0,1c0,0.4,0,0.7-0.1,1.1c0,0.6-0.1,1.1,0,1.7c0.1,1.2,0.1,2.7-0.3,4.1l-0.1,0.4l0.2,0.4c0.7,1.7,1.3,2.3,2.8,2.9" + ' ' +
+										"l0.4,0.2l0.4-0.1c2.2-0.7,3-1.8,2.7-4.1l0-0.1c0-0.2-0.1-0.5-0.1-0.7c-0.3-1.5-0.4-2.9-0.4-4.2c0-0.6,0-1.1-0.1-1.6" + ' ' +
+										"c0-0.2,0-0.4,0-0.6l0-0.1c0-0.5-0.1-0.9,0-1.3l2-0.6l0.9-2.6l-1.2-2.3l-1.9-0.7c0-0.5,0-0.9-0.1-1.4c0-0.7-0.1-1.5-0.1-2.2" + ' ' +
+										"c-0.1-2-0.2-4.1-0.4-6.2c-0.1-1.1-0.3-2.2-0.5-3.2c-0.1-0.3-0.1-0.6-0.2-0.9c-0.2-1.1-0.8-2.1-1.7-2.7c-0.7-0.5-1.3-0.9-1.9-1.1" + ' ' +
+										"c-2-0.9-4.2-0.2-5.5,1.6c-1,1.5-1.6,3.1-2,4.7c-0.3,1-0.5,2-0.8,3c-0.1,0.5-0.2,1-0.4,1.5l-0.2,0.8c-0.2,0.7-0.4,1.4-0.6,2.1" + ' ' +
+										"C659.1,104.9,658.6,106.2,658.2,107.6z M662.8,110.7c0.2-1.1,0.5-2.1,0.8-3.2c0.9-3.3,1.8-6.2,2.6-9c0.2-0.7,0.5-1.3,0.7-2" + ' ' +
+										"c0.1-0.2,0.2-0.4,0.3-0.7c0.2,0.8,0.4,1.7,0.4,2.8c0,0.3,0,0.7,0,1c0,0.5,0,1,0.1,1.6c0.2,1.5,0.2,3.1,0.3,4.6" + ' ' +
+										"c0,0.9,0.1,1.8,0.1,2.6l0,0.1c0,0.3,0,0.5,0,0.8L662.8,110.7z"}), 
+									React.createElement("path", {d: "M773.1,112.9c2.3,3.1,2.9,6.5,1.7,10.2c-0.2,0.7-0.5,1.2-1,1.7c-1.7,1.8-3.5,2.6-5.5,2.6l-0.2,0" + ' ' +
+										"c-1.1,0-1.7-0.2-2.1-0.8c-0.2-0.3-0.4-0.4-0.6-0.4c0,0-0.1,0-0.1-0.1l-0.3-0.2l-1.9,0.3l-0.3,0.5c-0.6,1.1-0.6,2.2,0.2,3.3" + ' ' +
+										"c0.7,1.1,1.8,1.9,3.3,2.4c1,0.3,2.1,0.4,3.1,0.4c3.5,0,6.8-1.6,8.8-4.3c1.6-2.2,2.5-4.7,2.6-7.6c0.1-1.8-0.3-3.5-0.7-4.9" + ' ' +
+										"c-0.5-1.9-1.2-4.1-2.9-5.9c-0.1-0.1-0.2-0.2-0.3-0.3c-1.2-1.7-2.9-2.8-4.2-3.5c-1.6-0.9-3.2-1.4-5-2c-1.8-0.6-3.3-1.2-4.8-1.9" + ' ' +
+										"c-0.4-0.2-0.7-0.4-0.9-0.6c1.7-2.5,4-4.3,5.8-5.6c0.5-0.4,1.3-0.6,1.8-0.8c0.6-0.2,1.2,0,1.7,0.5c0.8,0.8,1.1,1.8,1.4,3" + ' ' +
+										"c0.1,0.2,0.1,0.4,0.2,0.6c0.1,0.2,0.1,0.5,0.2,0.8c0.1,0.4,0.2,0.9,0.4,1.4l0.1,0.3l0.3,0.2c1.2,0.8,1.4,0.9,2.7,1l0.4,0l0.3-0.3" + ' ' +
+										"c1.4-1.2,1.7-1.6,1.5-3.3c-0.2-1.4-0.7-2.6-1.3-3.8c-0.3-0.6-0.7-1.3-1.2-2.1c-1.2-2.1-2.8-3.3-4.7-3.9c-1.3-0.4-2.6-0.4-3.8,0" + ' ' +
+										"c-1,0.3-1.9,0.8-2.8,1.3l-0.3,0.1c-1.9,1-3.5,2.5-5,4c-0.9,0.9-1.7,1.9-2.5,2.9l-0.5,0.7c-0.4,0.5-0.7,1-1,1.4" + ' ' +
+										"c-0.1,0.2-0.3,0.4-0.4,0.6l-0.2,0.3l0,0.4c0.2,2.3,1.8,3.4,3,4.1c3.4,1.9,7,3.1,10.1,4.1C770.4,110.3,772,111.4,773.1,112.9z"}), 
+									React.createElement("path", {d: "M679,103.5l0.1,0.2c0.3,0.7,0.5,1.4,0.8,2.1c0.2,0.5,0.4,1.1,0.6,1.6c0.3,0.8,0.6,1.7,1,2.5" + ' ' +
+										"c0.5,1.4,1.1,2.8,1.6,4.3c1,2.8,2,5.7,3.2,8.5l0.1,0.3c0.7,1.6,1.3,3.2,1.4,4.8c0,0.3,0.1,0.5,0.2,0.7l0.1,0.2l0.2,0.2" + ' ' +
+										"c1,1.2,2.2,1.7,3.6,1.7c0.2,0,0.4,0,0.6,0l0.3,0l0.2-0.2c1-0.8,1.6-1.9,1.8-3.2c0.1-0.4,0.2-0.8,0.4-1.2c0.5-1.2,1-2.4,1.5-3.7" + ' ' +
+										"l2-5.1c0.8-2,1.6-4.1,2.4-6.1c0.3-0.7,0.6-1.4,0.8-2.1c1-2.5,2-5,3.1-7.5c0.1,0.1,0.2,0.2,0.3,0.3c0,0,0.1,0.2,0.2,0.5" + ' ' +
+										"c0.3,1.1,0.6,2.2,0.9,3.3c0.6,1.9,1.1,3.9,1.5,5.9c0.2,1.2,0.6,2.8,1,4.2c0.6,2.3,1.3,4.7,2,7l0.8,2.9c0,0.1,0,0.1,0.1,0.2l0,0" + ' ' +
+										"c0,0.9,0,1.8-0.1,2.8c0,0.2,0,0.4-0.1,0.7c0,0.2-0.1,0.3-0.1,0.5l-0.1,0.5l1.3,1.7l0.3,0.1c0.5,0.2,1,0.3,1.5,0.3" + ' ' +
+										"c1,0,1.8-0.4,2.5-1.3l0.1-0.1c0,0,0.1-0.1,0.1-0.1c1-0.7,1.6-1.8,1.7-3.3c0-0.5,0.2-0.9,0.5-1.5c0.6-1.3,1.2-2.6,1.8-3.9l1.2-2.7" + ' ' +
+										"c1.6-3.6,3.3-7.3,5.4-10.7c0.5-0.9,1-1.7,1.6-2.6c0.5-0.8,0.9-1.6,1.4-2.3l0.1,0.1l2.1,1.4l0.5-0.1c0.1,0,0.2,0,0.3-0.1" + ' ' +
+										"c0.1,0,0.2,0,0.4-0.1c0,0.1,0,0.1-0.1,0.2c-0.2,0.6-0.3,1.3-0.4,2c-0.1,1-0.1,1.9-0.2,2.9c0,0.4,0,0.7-0.1,1.1" + ' ' +
+										"c-0.6,0.8-1.1,2.1-0.3,3.8c0,0.1,0.1,0.3,0.1,0.6c0,0.4,0,0.8,0.1,1.2c0,0.5,0,1,0.1,1.4c0,0.4,0.1,0.8,0.1,1.2" + ' ' +
+										"c0.1,1,0.1,2,0.4,3c0.1,0.3,0.2,0.7,0.2,1c0.1,0.6,0.3,1.2,0.5,1.8c0.6,1.8,1.5,3.2,2.8,4.2c0.1,0.1,0.2,0.1,0.3,0.2" + ' ' +
+										"c0.3,0.2,0.7,0.5,1.2,0.7c1.5,0.5,2.9,0.6,4.3,0.3l0.5-0.1c0.5-0.1,1-0.2,1.6-0.3c2.3-0.5,4.4-1.4,6.3-2.9" + ' ' +
+										"c1.6-1.2,2.2-2.7,2.5-3.8c0.2-0.6,0.1-1.3-0.2-2c-0.4-0.8-1-1.2-1.8-1.2c-0.5,0-0.9,0.2-1.3,0.5c-0.5,0.4-1,0.9-1.5,1.4" + ' ' +
+										"c-1.7,1.6-3.7,2.3-6.3,3c-0.3,0.1-0.6,0.1-1,0.1c-1,0-1.7-0.4-2.1-1c-0.4-0.6-0.7-1.2-0.8-1.7c-0.4-1.9-0.6-4-0.8-6.3" + ' ' +
+										"c0-0.3,0-0.5,0.1-0.7l0,0c0.3-0.1,0.6-0.3,0.9-0.5c0.6-0.3,1.2-0.6,1.8-1c1.5-0.8,3.1-1.6,4.6-2.5c0.5-0.3,0.9-0.6,1.3-0.8" + ' ' +
+										"c0.7-0.5,1.4-0.9,2.2-1.2l0.2-0.1l0.2-0.2c0.2-0.2,0.4-0.4,0.6-0.6c0.5-0.5,1.1-1,1.5-1.8c0.2-0.4,0.1-0.7,0.1-0.9l0-0.5" + ' ' +
+										"l-0.4-0.3c-0.1-0.1-0.5-0.5-1-0.5l-0.2,0c-0.2,0-0.4,0.1-0.6,0.1c-0.6,0.1-1.4,0.2-2,0.5c-2,0.8-3.6,1.6-5.1,2.4" + ' ' +
+										"c-0.9,0.5-1.8,0.9-2.7,1.3c-0.4,0.1-0.7,0.3-1.1,0.4l-0.2,0.1c0,0,0,0,0,0c0.2-2.6,0.8-5.1,1.8-7.5c0.6-0.6,1.4-1.1,2.5-1.6" + ' ' +
+										"c0.4-0.2,0.7-0.3,1.1-0.5c0.3-0.1,0.7-0.3,1-0.4c0.6-0.2,1.1-0.5,1.7-0.7c1.5-0.6,3-1.3,4.6-1.9c0.5-0.2,1.1-0.4,1.6-0.4" + ' ' +
+										"c0.2,0,0.4,0,0.6,0.2l0.5,0.3l0.5-0.3c1.2-0.6,1.4-0.8,1.9-1.9l0.2-0.4l-0.2-0.5c-0.7-1.7-1.9-2.6-3.5-2.6l-0.2,0" + ' ' +
+										"c-1,0-2,0.2-2.8,0.5c-0.9,0.3-1.8,0.7-2.6,1.1l-0.8,0.4c-0.6,0.3-1.2,0.5-1.8,0.8c-0.9,0.4-1.8,0.8-2.7,1.2" + ' ' +
+										"c-0.3,0.1-0.6,0.2-0.8,0.3c0,0,0,0,0,0c-0.2-0.1-0.3-0.1-0.5-0.2c-0.5-0.2-0.9-0.3-1.3-0.3c-0.5,0-0.9,0.2-1.5,0.4l-0.7,0.3" + ' ' +
+										"l-0.4,0.6c-0.2,0.3-0.3,0.5-0.5,0.8c-0.1,0.2-0.3,0.4-0.5,0.6c-0.1,0.1-0.5,0.3-1,0.4l0.1-0.4l-0.2-0.3c-0.1-0.1-0.1-0.2-0.2-0.3" + ' ' +
+										"c-0.1-0.3-0.3-0.6-0.5-0.9c-0.7-1-1.8-1.6-2.9-1.6c-1.3,0-2.5,0.8-3.1,2c-0.8,1.6-1.7,3.3-2.7,4.8c-0.7,1.2-1.4,2.5-2.1,3.8" + ' ' +
+										"c-0.3,0.6-0.6,1.1-0.9,1.7c-1.2,2.2-2.4,4.6-3.3,7c-0.1,0.3-0.3,0.6-0.4,0.9c-0.1,0.2-0.2,0.3-0.2,0.5c-0.1,0.3-0.3,0.5-0.4,0.8" + ' ' +
+										"c-0.3,0.6-0.6,1.1-0.9,1.7c-0.5,1-0.9,2.1-1.3,3.1c-0.1-0.3-0.2-0.6-0.3-0.9c-0.7-2.6-1.4-5.2-2.1-7.9c-0.9-3.6-1.7-7.4-2.5-10.7" + ' ' +
+										"c-0.1-0.4-0.2-0.9-0.2-1.2c0.2-1.3-0.2-2.4-0.6-3.3c-0.7-1.4-2.1-2.1-3.6-1.8c-0.4,0.1-0.8,0.3-1.1,0.4c-0.1,0.1-0.2,0.1-0.4,0.2" + ' ' +
+										"l-0.4,0.2l-0.6,1.3c-0.3-0.1-0.7-0.2-1-0.2c-0.4,0-0.7,0.1-1,0.1l-0.3,0l-0.2,0.2c-1.3,1.1-1.9,2.5-2.5,3.8" + ' ' +
+										"c-0.5,1.2-1,2.3-1.4,3.5c-0.4,0.9-0.7,1.8-1.1,2.7c-0.3,0.8-0.7,1.6-1,2.4c-0.3,0.7-0.6,1.5-1,2.2c-0.4,1.1-0.9,2.1-1.3,3.2" + ' ' +
+										"l-0.3,0.8c-0.2,0.6-0.4,1.1-0.7,1.7c-0.3,0.8-0.6,1.5-0.9,2.3c-0.1,0.2-0.1,0.4-0.2,0.6c-0.6-1.3-1.1-2.6-1.6-3.9l-0.1-0.3" + ' ' +
+										"c-0.4-0.9-0.7-1.7-1-2.6c-0.7-1.8-1.3-3.7-2-5.5L685,105c-0.8-2.1-1.5-4.1-1.3-6.3l0-0.4l-1.5-2.1l-1-0.2" + ' ' +
+										"c-0.4-0.1-0.8-0.1-1.2-0.2c-0.1,0-0.2,0-0.3,0c-0.6,0-1.5,0.2-2.2,1.2c-0.9,1.2-0.8,2.9,0.1,4.1" + ' ' +
+										"C678.3,101.8,678.6,102.6,679,103.5z"})
+								), 
+								React.createElement("path", {d: "M552.4,103.8c0.1-0.1,0.2-0.3,0.3-0.4c0.7-0.5,1.4-1,2.1-1.5c0.4-0.3,0.9-0.4,1.4-0.8" + ' ' +
+									"c0.3-0.2,0.8-0.2,1.2-0.4c0-0.1,0-0.2,0-0.4c0.6-0.2,1.1-0.5,1.7-0.7c0.9-0.4,1.9-0.7,2.8-1c1.5-0.4,2.9-1,4.5-1" + ' ' +
+									"c0.3,0,0.5-0.2,0.8-0.2c2.2-0.2,4.4-0.5,6.6-0.2c1.7,0.2,3.3,0.5,4.9,0.9c1.5,0.4,3,1.1,4.4,1.8c0.7,0.3,1.4,0.7,1.9,1.3" + ' ' +
+									"c0.2,0.3,0.7,0.3,1,0.6c1.7,1.7,3,3.6,3.6,5.9c0.2,0.9,0.3,1.8,0.3,2.7c0,1-0.3,2-0.5,3c-0.2,1-0.6,2-0.9,3" + ' ' +
+									"c-0.1,0.3-0.3,0.6-0.4,0.8c-0.6,1.3-1.3,2.6-2.1,3.8c-0.3,0.4-0.7,0.8-1,1.2c-0.8,1.2-1.8,2.3-2.7,3.4c-0.7,0.8-1.5,1.6-2.3,2.2" + ' ' +
+									"c-1,0.8-1.9,1.6-3,2.2c-0.6,0.3-1.2,0.5-1.8,1c-0.9,0.8-2.1,1-3.2,1.6c-0.2,0.1-0.4,0.1-0.6,0.1c0-0.2-0.1-0.4-0.3-0.5" + ' ' +
+									"c0-0.1-0.1-0.1,0,0c-0.1-0.1,0,0,0,0c0,0.2,0.1,0.4,0.3,0.5c-0.3,0.1-0.5,0.2-0.8,0.3c0,0-0.1,0-0.1,0c0,0,0,0,0.1,0" + ' ' +
+									"c-0.9,0.5-1.8,0.6-2.8,0.8c-0.1-0.2-0.1-0.4-0.4-0.4c0.1,0.1,0.3,0.3,0.4,0.4c-1.2,0.2-2.4,0.4-3.7,0.5c-0.6,0-1.2,0.1-1.8-0.1" + ' ' +
+									"c-0.3-0.1-0.7,0.1-1,0c-1.1-0.2-2.2-0.1-3.3-0.4c-0.8-0.2-1.6-0.3-2.3-0.4c-0.6-0.1-1.2-0.4-1.8-0.6c0.3-0.6,0-0.9-0.4-1.3" + ' ' +
+									"c0.1,0.4,0.1,0.6,0.2,0.9c-0.2,0-0.4,0.1-0.6,0c-1.2-0.4-2-1.2-2.4-2.4c-0.1-0.2-0.2-0.4-0.3-0.6c-0.2-0.6-0.3-1.1-0.5-1.7" + ' ' +
+									"c0,0,0.1-0.1,0.1-0.1c-0.4-0.2-0.7-0.5-1.1-0.7c-1-0.5-2-1-2.9-1.5c-1.2-0.7-2.1-1.6-2.7-2.8c-0.3-0.6-0.5-1.2-0.6-1.9" + ' ' +
+									"c-0.3-1.5-0.1-3,0.3-4.4c0.4-1.3,0.8-2.6,1.5-3.8c0.6-1,1.3-2.1,2-3c1-1.2,2.1-2.3,3.1-3.4c0.7-0.7,1.4-1.3,2.2-2" + ' ' +
+									"C552.1,103.9,552.3,103.9,552.4,103.8L552.4,103.8z M577.7,128.9L577.7,128.9c-0.1,0-0.1-0.1-0.2-0.1c-0.2-0.3-0.3-0.6-0.2-1.1" + ' ' +
+									"c0.9-0.8,2-1.7,3-2.6c0.1,0.1,0.3,0.1,0.5,0.2c0-0.3-0.1-0.5-0.1-0.5c0.9-1,1.7-1.9,2.4-2.8c0.4-0.5,0.8-1.1,1.1-1.7" + ' ' +
+									"c0.3-0.4,0.7-0.8,0.9-1.3c0.5-1,1-1.9,1.4-2.9c0.6-1.2,1-2.5,1.1-3.8c0-0.4,0-0.9,0.1-1.3c0.2-1,0-2-0.3-3" + ' ' +
+									"c-0.4-1.2-0.9-2.4-1.7-3.4c-1.2-1.4-2.7-2.5-4.4-3.3c-0.6-0.3-1.2-0.5-1.8-0.7c-1.1-0.5-2.2-0.8-3.3-1c-1.1-0.2-2.2-0.4-3.3-0.5" + ' ' +
+									"c-1.2-0.1-2.3-0.2-3.5,0c-1.9,0.3-3.9,0.3-5.8,1c-1,0.4-2.1,0.6-3.2,0.9c-2.6,0.9-4.9,2.3-7.1,3.9c-1.7,1.3-3.3,2.7-4.8,4.3" + ' ' +
+									"c-1,1.1-2.1,2.3-2.9,3.6c-0.5,0.9-1,1.8-1.4,2.7c-0.3,0.9-0.6,1.7-0.7,2.6c-0.1,0.8-0.1,1.5,0.2,2.3c0.6,1.5,1.6,2.7,3.1,3.6" + ' ' +
+									"c0.6,0.3,1.1,0.7,1.7,1c0.1,0.1,0.3,0,0.6,0.1c-0.9-2.4-0.5-4.6,0.2-7c-0.9,0.1-1.4,1-2.2,0.9c0.1-0.2,0.1-0.4,0.1-0.5" + ' ' +
+									"c-0.1-0.5,0.1-0.8,0.4-1.1c0.7-0.8,1.3-1.6,2.2-2.2c0.3-0.2,0.5-0.3,0.8-0.5c0.4-0.4,0.8-0.8,1.2-1.2c0.3-0.3,0.6-0.7,0.9-1.1" + ' ' +
+									"c0.6-0.7,1.2-1.4,1.8-2.1c0.8-0.9,1.5-1.8,2.3-2.6c0.8-0.8,1.6-1.4,2.4-2.2c0.3-0.3,0.6-0.5,0.9-0.7c1.4-1,2.9-1.8,4.5-2.4" + ' ' +
+									"c0.9-0.3,1.8-0.7,2.7-0.9c1-0.2,2.1-0.2,3.1-0.4c1.4-0.2,2.8,0,4.1,0.5c0.7,0.2,1.4,0.5,2,0.9c0.9,0.7,1.7,1.6,2.3,2.7" + ' ' +
+									"c0.5,1.1,0.8,2.2,0.9,3.4c0.1,0.8,0.1,1.6,0.6,2.3c0.3,0.5,0.6,1,0.8,1.6c0.5,1.5,0.7,3.1,0.5,4.7c-0.1,0.9-0.3,1.7-0.6,2.6" + ' ' +
+									"c-0.3,1-0.8,1.9-1.2,2.9c-0.1,0.3-0.3,0.6-0.4,0.9c-0.6,1.3-1.4,2.6-2.5,3.5c-0.4,0.3-0.7,0.8-1.3,0.8l0,0c0,0.2-0.1,0.4-0.1,0.7" + ' ' +
+									"c0.3-0.1,0.5-0.2,0.7-0.3c0.1,0.3,0.2,0.2,0.3,0c0.3,0.1,0.5,0.2,0.8,0.3C577.6,128.8,577.7,128.9,577.7,128.9z M559.9,130" + ' ' +
+									"L559.9,130L559.9,130z M574.5,129.2L574.5,129.2L574.5,129.2z M564.6,126.9L564.6,126.9L564.6,126.9z M567.2,121" + ' ' +
+									"c0,0.1,0,0.1,0,0.2l0,0C567.2,121.1,567.2,121.1,567.2,121L567.2,121z M586.1,103.8L586.1,103.8L586.1,103.8z M587.2,117.9" + ' ' +
+									"L587.2,117.9L587.2,117.9z M574.2,125.8L574.2,125.8L574.2,125.8z M575.1,102.4L575.1,102.4L575.1,102.4z M580.4,117.9" + ' ' +
+									"C580.3,117.9,580.3,118,580.4,117.9C580.3,118,580.3,117.9,580.4,117.9L580.4,117.9z M543.4,117.1L543.4,117.1" + ' ' +
+									"C543.4,117.1,543.4,117.1,543.4,117.1C543.4,117.1,543.4,117.1,543.4,117.1z M558,100.4C558.1,100.4,558.1,100.3,558,100.4" + ' ' +
+									"C558.1,100.3,558.1,100.4,558,100.4L558,100.4z M552.1,104.6C552.2,104.6,552.2,104.5,552.1,104.6" + ' ' +
+									"C552.2,104.5,552.2,104.6,552.1,104.6C552.1,104.6,552.1,104.6,552.1,104.6C552.1,104.6,552.1,104.6,552.1,104.6z M580.4,120.4" + ' ' +
+									"C580.4,120.4,580.5,120.3,580.4,120.4C580.5,120.3,580.4,120.4,580.4,120.4C580.4,120.4,580.3,120.4,580.4,120.4" + ' ' +
+									"C580.3,120.4,580.3,120.4,580.4,120.4z M588.3,106.3c-0.1,0-0.3,0-0.4,0c0,0,0,0.1,0,0.1C588.1,106.4,588.2,106.3,588.3,106.3" + ' ' +
+									"L588.3,106.3z M570.5,97.4C570.4,97.4,570.4,97.4,570.5,97.4C570.4,97.4,570.4,97.4,570.5,97.4c0.1,0.1,0.2,0.1,0.2,0.2" + ' ' +
+									"c0,0,0-0.1,0.1-0.1C570.7,97.5,570.6,97.5,570.5,97.4z M556,132.2L556,132.2c-0.1-0.1-0.1-0.2-0.2-0.3c0,0-0.1,0-0.1,0.1" + ' ' +
+									"C555.9,132,555.9,132.1,556,132.2z M552.1,131.1c-0.1,0.1-0.3,0.2,0,0.4C552.2,131.4,552.1,131.2,552.1,131.1L552.1,131.1z" + ' ' +
+									 "M575.6,124.9L575.6,124.9c-0.1,0-0.2,0-0.3,0c0,0,0,0.1,0,0.1C575.4,125,575.5,124.9,575.6,124.9z M588.2,116.7" + ' ' +
+									"c-0.1,0-0.2,0.1-0.3,0.1c0,0,0,0.1,0.1,0.1C588,116.8,588.1,116.8,588.2,116.7c0.1-0.1,0.1-0.2,0.2-0.3c0,0-0.1,0-0.1,0" + ' ' +
+									"C588.2,116.5,588.2,116.6,588.2,116.7z M582.4,123.7c-0.1,0.3,0.1,0.3,0.4,0.3c0-0.2,0-0.3,0-0.6" + ' ' +
+									"C582.6,123.5,582.5,123.6,582.4,123.7L582.4,123.7z M578.4,127.9c0.2-0.1,0.4-0.2,0.6-0.3c0,0,0,0.1,0,0.1c0,0,0-0.1-0.1-0.1" + ' ' +
+									"c-0.1-0.3-0.2-0.3-0.5-0.2C578.3,127.5,578.3,127.7,578.4,127.9c-0.2,0.1-0.4-0.1-0.4,0.3C578.1,128,578.2,127.9,578.4,127.9z" + ' ' +
+									 "M554.6,131.7c0.2,0.1,0.4,0.2,0.7,0.3C555,131.4,555,131.4,554.6,131.7C554.6,131.8,554.5,131.8,554.6,131.7" + ' ' +
+									"C554.5,131.8,554.6,131.8,554.6,131.7z M583,101.6c0.2-0.1,0.4-0.2,0.7-0.2c0-0.1,0-0.1,0-0.2c-0.3,0-0.5,0-0.9,0" + ' ' +
+									"C582.9,101.4,583,101.5,583,101.6L583,101.6z M565.6,98.8c-0.3,0-0.7,0-0.7,0.5c0.5,0,0.8-0.1,1.4-0.1c-0.2-0.2-0.3-0.4-0.5-0.5" + ' ' +
+									"C565.8,98.7,565.7,98.8,565.6,98.8L565.6,98.8z M572,122.9c-0.3,0-0.6-0.1-0.8-0.1c-0.4,0-0.5,0.2-0.5,0.8" + ' ' +
+									"C571.3,123.5,571.7,123.4,572,122.9L572,122.9z M558.8,133.4c0.4-0.1,0.7-0.1,1.1-0.2c0.1-0.1,0.3-0.2,0.5-0.3" + ' ' +
+									"c-0.2-0.1-0.4-0.2-0.6-0.4c-0.1,0.1-0.1,0.2-0.2,0.3c-0.3,0-0.5-0.3-0.9,0C558.7,133.1,558.8,133.2,558.8,133.4L558.8,133.4z" + ' ' +
+									 "M570.3,114.4c-0.2,0-0.4-0.1-0.6-0.1c0.3,0.8,1,1.2,1.7,1.5c0.1-0.2,0.2-0.4,0.2-0.6C571.2,114.9,570.7,114.6,570.3,114.4" + ' ' +
+									"c0.1,0,0.1-0.1,0.2-0.1c0,0-0.1-0.1-0.1-0.1C570.4,114.2,570.3,114.3,570.3,114.4z M554.2,126.5c0.3,0.1,0.6,0.2,0.9,0.3" + ' ' +
+									"c1,0.3,1.9,0.7,3,1.1c-0.1-0.5-0.4-0.5-0.6-0.7c-0.4-0.2-0.9-0.4-1.3-0.6c-1-0.5-1.6-1.4-1.6-2.5c0-1,0.2-2,0.7-2.8" + ' ' +
+									"c0.7-1.3,1.8-2.5,3-3.4c0.9-0.7,1.6-1.5,2.1-2.5c0.2-0.5,0.5-1,0.7-1.4c-0.2-0.3-0.5-0.3-0.7-0.2c-1.1,0.2-2.3,0.4-3.4,0.7" + ' ' +
+									"c-0.8,0.2-1.6,0.5-2.3,0.8c-0.4,0.2-0.8,0.4-1,0.8c-0.6,1.2-1.3,2.4-1.7,3.6c-0.4,1.1-0.5,2.3-0.6,3.5c-0.1,1,0.3,1.7,1.1,2.2" + ' ' +
+									"c0.2,0.1,0.4,0.2,0.6,0.3C553.3,125.9,553.7,126.2,554.2,126.5c-0.1,0-0.2,0-0.3,0c0,0,0,0.1,0,0.1" + ' ' +
+									"C553.9,126.5,554.1,126.5,554.2,126.5z M559.2,119.5c-0.2,0.1-0.3,0.1-0.4,0.2c-1.1,0.8-2,1.7-2.6,2.9c-0.5,1.1-0.3,2.1,0.7,2.7" + ' ' +
+									"c1.4,0.9,2.9,1.4,4.5,1.7c0.6,0.1,1.2,0.2,1.8-0.1c0.6-0.3,1.2-0.5,1.7-0.8c0.2-0.1,0.3-0.3,0.5-0.5c-0.3-0.2-0.4-0.4-0.6-0.6" + ' ' +
+									"c-0.8-0.5-1.6-1-2.4-1.4c-1.2-0.6-2-1.6-2.7-2.8C559.5,120.4,559.4,120,559.2,119.5z M561.2,106.8c0.2,0.1,0.3,0.2,0.3,0.1" + ' ' +
+									"c0.8-0.2,1.5-0.5,2.3-0.7c0.5-0.2,1.1-0.4,1.6-0.5c0.8-0.1,1.5-0.3,2.3,0c0.2,0.1,0.4,0,0.6,0c1.4,0,2.8,0,4.1,0.2" + ' ' +
+									"c1.6,0.2,3.1,0.5,4.5,1.4c0.2,0.1,0.4,0.1,0.7,0.2c0-0.2-0.1-0.4-0.1-0.5c-1-2.6-3.8-3.6-6-3.5c-0.5,0-0.9,0-1.4,0" + ' ' +
+									"c-0.2,0-0.4,0-0.5,0c-1.1,0.2-2.2,0.3-3.3,0.6c-1.5,0.4-2.9,1.1-4.2,1.9C561.7,106.3,561.5,106.5,561.2,106.8z M551.9,128.2" + ' ' +
+									"c0.1,1,0.6,1.5,1.2,2c0.6,0.5,1.3,0.8,2,1c1.6,0.5,3.1,0.8,4.8,1c1.9,0.2,3.9,0.3,5.8,0.1c0.8-0.1,1.6,0,2.4-0.5" + ' ' +
+									"c0.2,0.3,0.3,0.5,0.5,0.8c0.4-0.4,0.4-0.7-0.1-0.9c-0.2-0.1-0.5-0.1-0.8-0.1c-1.1,0-2.2,0.2-3.3,0c-1.5-0.2-3-0.5-4.6-0.8" + ' ' +
+									"c-0.7-0.1-1.3-0.4-2-0.5c-1.3-0.1-2.5-0.6-3.7-1.1C553.4,129,552.7,128.6,551.9,128.2z M563.4,129.3c2.9,0.6,5.6,0.4,8-1.2" + ' ' +
+									"c1-0.7,3.1-3.1,3.2-4.1c-0.2,0.1-0.5,0.2-0.6,0.3c-1.2,1.1-2.5,2.1-3.9,2.9c-0.9,0.5-1.9,1-2.9,1.3c-0.9,0.3-1.9,0.4-2.8,0.4" + ' ' +
+									"C564.1,128.9,563.8,128.9,563.4,129.3z M568.5,122.3c-0.7-0.3-1.5-0.7-2.2-1c-1-0.4-2-0.8-3-1.2c-0.5-0.2-1-0.5-1.4-0.7" + ' ' +
+									"c-0.1-0.1-0.3-0.1-0.6-0.2c0.1,0.3,0.1,0.6,0.2,0.8c0.3,0.8,0.8,1.3,1.5,1.7c1.2,0.8,2.4,1.5,3.8,1.8" + ' ' +
+									"C567.8,123.8,568.3,123.4,568.5,122.3z M579.9,115.3c-0.2,0.3-0.3,0.4-0.3,0.6c0,0.9-0.3,1.7-0.6,2.6c0,0,0,0.1,0,0.1" + ' ' +
+									"c-0.3,0.7-0.3,1.6-1.1,2c-0.2,0.7-0.3,1.3-0.5,1.9c-0.2,0.6-0.4,1.2-0.6,1.8c-0.2,0.6-0.8,0.9-0.9,1.6" + ' ' +
+									"C578.4,124.2,580.7,117.9,579.9,115.3z M561.4,109.1c-2.2,0.8-4,1.7-5.5,3.3c0.3,0,0.6,0,0.9-0.1c1-0.1,1.9-0.5,3-0.5" + ' ' +
+									"c0.6,0,1.2-0.2,1.6-0.5C561.4,110.6,561.4,110,561.4,109.1z M574.9,118.3c-0.2-0.3-0.5-0.4-0.7-0.1c-0.5,0.6-1.1,0.7-1.7,1" + ' ' +
+									"c-0.8,0.4-0.9,0.8-0.6,1.6c0.5,0.1,1,0,1.5-0.1c0.8-0.2,1.2-0.8,1.3-1.7C574.7,118.8,574.8,118.5,574.9,118.3z M562.9,117.7" + ' ' +
+									"c1.3,0.9,2.5,1.6,4,1.8c-1.2-0.8-2.5-1.7-3.7-2.5C563,117.2,563,117.4,562.9,117.7z M569.6,132.4c0,0.6-0.5,0.1-0.6,0.3" + ' ' +
+									"c0.2,0.4,0.5,0.3,0.9,0.3c0.3-0.4,0.4-0.7,0.3-1c-0.3-0.2-0.5-0.4-0.7-0.5c-0.1-0.1-0.2,0-0.3,0c0.1,0.3,0.1,0.5,0.2,0.8" + ' ' +
+									"C569.4,132.3,569.5,132.3,569.6,132.4z M565.5,108.7c0,0,0-0.1-0.1-0.1c-1.4,0.1-2,0.4-2,1.3C564.2,109.5,564.9,109.1,565.5,108.7" + ' ' +
+									"z M563.2,133.1c0,0,0,0.1,0,0.1c0.5,0.1,1.1,0.2,1.6,0.3c0,0,0,0.1,0,0.1c0.3-0.1,0.6-0.1,0.9-0.2c-0.7-0.2-1.3-0.4-2-0.5" + ' ' +
+									"C563.5,132.9,563.3,133,563.2,133.1z M569.3,120.4c0.1-0.3,0-0.5-0.2-0.5c-0.4-0.1-0.8-0.3-1.4,0" + ' ' +
+									"C568.3,120.3,568.8,120.5,569.3,120.4z M571.2,131.4c0.8,0.3,1-0.4,1.4-0.7c-0.3,0.1-0.6,0.2-0.9,0.3c-0.1-0.2-0.3-0.3-0.4-0.5" + ' ' +
+									"C571.2,130.9,571.2,131.2,571.2,131.4z M576.9,114.1c0.1,0.6,0.2,1.1,0.4,1.7C577.5,115,577.4,114.6,576.9,114.1z M575.4,130.3" + ' ' +
+									"c0.1-0.5,0.1-0.9,0.2-1.4c-0.3,0.3-0.5,0.5-0.8,0.8C575,129.9,575.2,130.1,575.4,130.3z M587.3,104.6c0,0.5,0.1,0.8,0.1,1.3" + ' ' +
+									"C587.9,105.3,587.9,105.3,587.3,104.6z M562.8,132.8c-0.8-0.1-0.8-0.1-1.1,0.6C562.1,133.3,562.5,133.2,562.8,132.8z M548.8,107.8" + ' ' +
+									"c-0.5-0.1-0.6,0.2-0.8,0.5C548.6,108.5,548.6,108,548.8,107.8z M576,130.1c0.3-0.2,0.4-0.3,0.6-0.4c-0.1-0.2-0.2-0.4-0.4-0.8" + ' ' +
+									"C576.1,129.3,576,129.6,576,130.1z M563.7,104.2c-0.2,0.3-0.4,0.5-0.5,0.7c0,0,0.1,0.1,0.1,0.1c0.2-0.1,0.4-0.3,0.7-0.4" + ' ' +
+									"C563.9,104.4,563.8,104.3,563.7,104.2z M584.3,121.3c-0.2,0.7-0.2,0.7,0.3,0.6C584.5,121.7,584.4,121.5,584.3,121.3z M579.5,127.4" + ' ' +
+									"c0.6-0.6,0.6-0.6,0.3-1C579.7,126.7,579.6,126.9,579.5,127.4z M581.9,124.8c-0.2,0.3-0.3,0.5,0.1,0.6c0.1,0,0.2-0.1,0.3-0.1" + ' ' +
+									"C582.1,125.2,582,125,581.9,124.8z M581.3,125.8c-0.3-0.3-0.6-0.2-0.9-0.1C580.7,125.8,580.9,126,581.3,125.8z M584.1,102.2" + ' ' +
+									"c-0.2-0.1-0.4-0.3-0.6-0.5C583.5,102.2,583.8,102.3,584.1,102.2z M573.2,127c0.4,0,0.6,0,0.6-0.5" + ' ' +
+									"C573.5,126.7,573.4,126.8,573.2,127z M578.8,123.5c-0.3,0.1-0.5,0.2-0.6,0.2C578.5,124,578.6,123.9,578.8,123.5z M563.2,123.3" + ' ' +
+									"c0.3,0.2,0.4,0.3,0.7,0.5C563.8,123.4,563.6,123.3,563.2,123.3z M567.2,98.2c0.1-0.1,0.2-0.1,0.2-0.2c0-0.1,0-0.2,0-0.3" + ' ' +
+									"C567.2,97.7,567.1,97.8,567.2,98.2z M579.9,121.8c0.1,0,0.1,0,0.2,0.1c0-0.1,0-0.3,0.1-0.4c-0.1,0-0.1,0-0.2,0" + ' ' +
+									"C579.9,121.6,579.9,121.7,579.9,121.8z M577,113.8c0-0.4,0-0.6-0.5-0.6C576.7,113.4,576.8,113.6,577,113.8z M581.4,100.5" + ' ' +
+									"c0-0.3-0.1-0.4-0.4-0.2C581.2,100.4,581.3,100.4,581.4,100.5z M583.6,123.3c-0.2-0.2-0.2-0.3-0.3-0.3c-0.1,0-0.2,0-0.3,0.1" + ' ' +
+									"c0,0,0,0.1,0,0.1C583.2,123.2,583.3,123.3,583.6,123.3z M573.2,131.7c-0.4,0-0.4,0-0.4,0.3C572.9,131.9,573,131.8,573.2,131.7z" + ' ' +
+									 "M579.4,123.1c0,0,0.1,0.1,0.1,0.1c0.1-0.2,0.2-0.3,0.3-0.5c0,0-0.1,0-0.1-0.1C579.6,122.8,579.5,123,579.4,123.1z M547.3,125.4" + ' ' +
+									"c0-0.1,0-0.1,0-0.2c-0.1,0-0.3,0-0.4,0c0,0,0,0.1,0,0.1C547.1,125.3,547.2,125.4,547.3,125.4z M585,103.2c0.1,0,0.1,0,0.2,0" + ' ' +
+									"c0-0.1,0-0.2-0.1-0.3c0,0-0.1,0-0.1,0C585,103,585,103.1,585,103.2z M561.3,133.5c0,0.3,0,0.3,0.4,0.2" + ' ' +
+									"C561.6,133.6,561.5,133.6,561.3,133.5z M557.5,132.3c0,0.1,0,0.1,0,0.2c0.1,0,0.2,0,0.4,0c0,0,0-0.1,0-0.1" + ' ' +
+									"C557.8,132.4,557.6,132.3,557.5,132.3z M564,98.6c0-0.1,0.1-0.1,0.1-0.2c-0.1,0-0.2-0.1-0.3-0.1c0,0-0.1,0.1,0,0.1" + ' ' +
+									"C563.9,98.5,564,98.6,564,98.6z M565.3,113.9C565.3,113.8,565.3,113.8,565.3,113.9c-0.1-0.1-0.2-0.1-0.3-0.1" + ' ' +
+									"c-0.1,0-0.2,0.1-0.2,0.2c0,0,0,0.1,0.1,0.1C564.9,114,565.1,113.9,565.3,113.9z M575.3,128.5c0,0,0-0.1,0.1-0.1" + ' ' +
+									"c-0.1,0-0.2-0.1-0.3-0.1c0,0,0,0.1-0.1,0.1C575.1,128.4,575.2,128.4,575.3,128.5z M589.2,109.4c0,0.1,0,0.1,0,0.2" + ' ' +
+									"c0.1,0,0.2,0,0.3,0c0,0,0-0.1,0-0.1C589.4,109.5,589.3,109.4,589.2,109.4z M561,120.1c0,0,0-0.1,0.1-0.1c-0.1,0-0.2-0.1-0.2-0.1" + ' ' +
+									"c0,0,0,0.1-0.1,0.1C560.9,120,560.9,120.1,561,120.1z M585.8,119.5c-0.1,0.1-0.1,0.1-0.2,0.2c0,0,0,0.1,0.1,0.1" + ' ' +
+									"c0.1,0,0.2,0,0.2-0.1C585.9,119.7,585.9,119.6,585.8,119.5z M589,113.6c-0.1,0-0.1,0-0.2,0.1c0,0.1,0.1,0.2,0.1,0.4" + ' ' +
+									"c0,0,0.1,0,0.1,0C589,113.8,589,113.7,589,113.6z M568.7,131c0,0,0-0.1,0-0.1c-0.1,0-0.2,0-0.3,0c0,0,0,0.1,0,0.1" + ' ' +
+									"C568.6,131,568.6,131,568.7,131z M563,129.4c0.1-0.1,0.1-0.1,0.2-0.2c0,0-0.1-0.1-0.1-0.1c-0.1,0-0.1,0.1-0.2,0.1" + ' ' +
+									"C562.9,129.2,563,129.3,563,129.4z M575.3,127.3C575.4,127.3,575.4,127.3,575.3,127.3c0-0.2-0.1-0.2-0.2-0.3c0,0,0,0.1-0.1,0.1" + ' ' +
+									"C575.1,127.2,575.2,127.3,575.3,127.3z M564.9,123.1C564.9,123.2,564.8,123.2,564.9,123.1c0,0.1,0,0.2,0.1,0.3" + ' ' +
+									"c0,0,0.1-0.1,0.1-0.1C565,123.2,564.9,123.2,564.9,123.1z M588.4,115.4c0.1,0,0.1,0,0.2,0c0-0.1,0-0.2,0.1-0.3c0,0-0.1,0-0.1,0" + ' ' +
+									"C588.5,115.2,588.4,115.3,588.4,115.4z M581.7,101.2c0,0,0.1,0,0.1,0c0-0.1-0.1-0.2-0.1-0.3c0,0-0.1,0-0.1,0" + ' ' +
+									"C581.7,100.9,581.7,101.1,581.7,101.2z M545.6,124c0.1,0,0.1,0,0.2,0c0-0.1-0.1-0.2-0.1-0.3c0,0-0.1,0-0.1,0.1" + ' ' +
+									"C545.6,123.8,545.6,123.9,545.6,124z M566.3,124.1c-0.1,0-0.1-0.1-0.1-0.1c0,0-0.1,0.1-0.1,0.1c0,0,0.1,0.1,0.1,0.1" + ' ' +
+									"C566.2,124.2,566.3,124.1,566.3,124.1z M566.8,132.6c0-0.1,0-0.1,0-0.2c-0.1,0-0.2,0-0.3,0c0,0,0,0.1,0,0.1" + ' ' +
+									"C566.7,132.6,566.7,132.6,566.8,132.6z M571.3,98.5c0.2-0.1,0.3-0.1,0.3-0.1c0,0,0.1-0.1,0.1-0.2c0,0-0.1,0-0.1-0.1" + ' ' +
+									"C571.5,98.2,571.4,98.3,571.3,98.5z M578.1,98.8c0-0.1,0.1-0.1,0.1-0.2c0,0-0.1-0.1-0.1-0.1c0,0-0.1,0.1-0.1,0.1" + ' ' +
+									"C578,98.7,578.1,98.8,578.1,98.8z M561.9,99c0,0,0,0.1,0.1,0.1c0.1-0.1,0.2-0.1,0.3-0.2c0,0,0-0.1-0.1-0.1" + ' ' +
+									"C562.1,98.8,562,98.9,561.9,99z M573.2,131.1c0,0,0-0.1,0-0.1c-0.1,0-0.2,0.1-0.3,0.1c0,0,0,0.1,0,0.1" + ' ' +
+									"C573.1,131.2,573.1,131.2,573.2,131.1z M574.3,130.4C574.3,130.5,574.3,130.5,574.3,130.4c0.1,0,0.2,0,0.3-0.1" + ' ' +
+									"c0,0-0.1-0.1-0.1-0.1C574.4,130.3,574.3,130.4,574.3,130.4z M577,129.1c0,0,0-0.1-0.1-0.1c0,0-0.1,0-0.1,0c0,0,0,0.1,0.1,0.1" + ' ' +
+									"C576.9,129.2,576.9,129.1,577,129.1z M578.2,128.8c0,0,0.1-0.1,0.1-0.1c0,0-0.1-0.1-0.1-0.1C578.2,128.6,578.1,128.7,578.2,128.8" + ' ' +
+									"C578.1,128.7,578.2,128.8,578.2,128.8z M580.9,118.8c0,0,0.1,0,0.1,0.1c0,0,0.1-0.1,0.1-0.1c0,0-0.1,0-0.1-0.1" + ' ' +
+									"C581,118.7,580.9,118.8,580.9,118.8z M571.3,103.3C571.3,103.3,571.3,103.2,571.3,103.3c0-0.2-0.1-0.2-0.2-0.3c0,0,0,0.1-0.1,0.1" + ' ' +
+									"C571.1,103.2,571.2,103.2,571.3,103.3z M586.7,104.6c-0.1,0.1-0.1,0.1-0.2,0.2c0.1,0,0.2,0.1,0.2,0.1c0,0,0.1-0.1,0.1-0.1" + ' ' +
+									"C586.8,104.7,586.8,104.7,586.7,104.6z M580.4,126.8C580.5,126.9,580.5,126.9,580.4,126.8c0.1,0,0.2,0,0.2-0.1" + ' ' +
+									"c0,0-0.1-0.1-0.1-0.1C580.5,126.7,580.5,126.8,580.4,126.8z M566.1,132.9c0,0,0-0.1,0-0.1c0,0-0.1,0-0.1,0c0,0,0,0.1,0,0.1" + ' ' +
+									"C566,132.9,566.1,132.9,566.1,132.9z M570.5,112.3c0,0-0.1-0.1-0.1-0.1c0,0-0.1,0.1-0.1,0.1c0,0,0,0.1,0,0.1" + ' ' +
+									"C570.5,112.3,570.5,112.3,570.5,112.3z M562.2,129.2c0,0.1-0.1,0.1-0.1,0.1c0,0,0.1,0.1,0.1,0.1c0,0,0.1,0,0.1,0" + ' ' +
+									"C562.2,129.3,562.2,129.3,562.2,129.2z M586.4,118.5c0,0,0.1-0.1,0.1-0.1c-0.1,0-0.1-0.1-0.2-0.1c0,0,0,0-0.1,0.1" + ' ' +
+									"C586.3,118.4,586.3,118.4,586.4,118.5z M576.9,127C576.8,127,576.8,126.9,576.9,127c-0.1-0.1-0.1,0-0.1,0c0,0,0,0.1,0,0.1" + ' ' +
+									"C576.8,127,576.8,127,576.9,127z M589.6,111c0,0-0.1,0-0.1,0c0,0,0,0.1,0,0.1c0,0,0.1,0.1,0.1,0.1C589.6,111,589.6,111,589.6,111z" + ' ' +
+									 "M561.8,121.5c0,0,0-0.1,0-0.1c0,0-0.1,0-0.1,0c0,0,0,0.1,0,0.1C561.7,121.4,561.8,121.4,561.8,121.5z M548.7,125.7" + ' ' +
+									"C548.7,125.7,548.7,125.7,548.7,125.7c-0.1-0.1-0.1-0.1-0.1-0.1c0,0,0,0.1,0,0.1C548.6,125.8,548.7,125.7,548.7,125.7z" + ' ' +
+									 "M549.4,126.2c0,0-0.1-0.1-0.1-0.1c0,0.1-0.1,0.1-0.1,0.2c0,0,0,0,0.1,0.1C549.2,126.3,549.3,126.2,549.4,126.2z M564.6,124.2" + ' ' +
+									"c0,0-0.1-0.1-0.1-0.1c0,0,0,0,0,0.1C564.5,124.2,564.5,124.2,564.6,124.2C564.6,124.2,564.6,124.2,564.6,124.2z M572.6,127.7" + ' ' +
+									"c0,0,0,0.1,0,0.1c0.1,0,0.2,0,0.3,0c0,0,0-0.1,0-0.1C572.7,127.8,572.7,127.7,572.6,127.7z M554.4,103.9c0,0,0-0.1,0-0.1" + ' ' +
+									"c0,0-0.1,0-0.1,0c0,0,0,0.1,0,0.1C554.3,103.9,554.3,103.9,554.4,103.9z M567.7,102.7C567.6,102.7,567.6,102.7,567.7,102.7" + ' ' +
+									"c0,0.1,0.1,0.2,0.1,0.2c0,0,0-0.1,0.1-0.1C567.8,102.8,567.7,102.8,567.7,102.7z M586.1,102.5" + ' ' +
+									"C586.1,102.6,586.1,102.6,586.1,102.5c0.1,0.1,0.1,0.1,0.1,0.1c0,0,0-0.1,0-0.1C586.2,102.5,586.1,102.5,586.1,102.5z" + ' ' +
+									 "M584.5,101.7c0,0-0.1-0.1-0.1-0.1c0,0-0.1,0.1-0.1,0.1c0,0,0,0.1,0,0.1C584.4,101.7,584.5,101.7,584.5,101.7z M581.5,99.6" + ' ' +
+									"c0,0-0.1,0-0.1-0.1c0,0,0,0.1,0,0.1C581.3,99.7,581.4,99.7,581.5,99.6C581.4,99.7,581.4,99.6,581.5,99.6z M572.7,97.7" + ' ' +
+									"C572.7,97.7,572.7,97.6,572.7,97.7c-0.1-0.1-0.1,0-0.1,0C572.6,97.7,572.6,97.7,572.7,97.7C572.7,97.7,572.7,97.7,572.7,97.7z" + ' ' +
+									 "M574.3,106.8c0,0,0-0.1,0-0.1c-0.1,0-0.2,0-0.2,0c0,0,0,0,0,0.1C574.2,106.7,574.2,106.8,574.3,106.8z M550.4,127.2" + ' ' +
+									"C550.4,127.3,550.4,127.3,550.4,127.2C550.5,127.3,550.5,127.2,550.4,127.2C550.5,127.2,550.4,127.2,550.4,127.2" + ' ' +
+									"C550.4,127.2,550.4,127.2,550.4,127.2z M563.9,128.1C563.9,128.1,563.9,128.2,563.9,128.1C563.9,128.2,563.9,128.2,563.9,128.1" + ' ' +
+									"C564,128.2,564,128.2,563.9,128.1C564,128.1,563.9,128.1,563.9,128.1z M578.4,99.8C578.4,99.8,578.4,99.8,578.4,99.8" + ' ' +
+									"C578.3,99.8,578.3,99.8,578.4,99.8C578.4,99.8,578.4,99.8,578.4,99.8z M561.5,128.8C561.5,128.8,561.5,128.7,561.5,128.8" + ' ' +
+									"C561.4,128.8,561.4,128.8,561.5,128.8C561.4,128.8,561.4,128.8,561.5,128.8C561.5,128.8,561.5,128.8,561.5,128.8z M563.6,99" + ' ' +
+									"C563.6,99,563.6,99,563.6,99C563.6,99,563.7,99,563.6,99C563.6,99,563.6,98.9,563.6,99C563.6,99,563.6,99,563.6,99z M573.9,131.3" + ' ' +
+									"C573.9,131.3,573.9,131.3,573.9,131.3c0.1-0.1,0-0.1,0-0.1C573.9,131.2,573.9,131.3,573.9,131.3z M573.5,98.8c0,0,0-0.1,0-0.1" + ' ' +
+									"c0,0-0.1,0-0.1,0c0,0,0,0.1,0,0.1C573.5,98.8,573.5,98.8,573.5,98.8z M570.6,132.2C570.6,132.2,570.6,132.2,570.6,132.2" + ' ' +
+									"C570.6,132.2,570.6,132.2,570.6,132.2C570.6,132.2,570.6,132.2,570.6,132.2C570.6,132.2,570.6,132.2,570.6,132.2z M568.4,98.2" + ' ' +
+									"C568.4,98.2,568.4,98.3,568.4,98.2C568.5,98.2,568.5,98.2,568.4,98.2C568.5,98.2,568.4,98.2,568.4,98.2" + ' ' +
+									"C568.4,98.2,568.4,98.2,568.4,98.2z M575.6,98.1c0,0-0.1-0.1-0.1-0.1c0,0,0,0,0,0C575.5,98.1,575.5,98.1,575.6,98.1" + ' ' +
+									"C575.5,98.1,575.6,98.1,575.6,98.1z M554.3,102.8C554.3,102.7,554.4,102.7,554.3,102.8C554.3,102.7,554.3,102.7,554.3,102.8" + ' ' +
+									"C554.3,102.7,554.3,102.7,554.3,102.8C554.3,102.8,554.3,102.8,554.3,102.8z M543.1,120.3C543.1,120.3,543.2,120.3,543.1,120.3" + ' ' +
+									"C543.2,120.3,543.2,120.2,543.1,120.3C543.1,120.2,543.1,120.2,543.1,120.3C543.1,120.2,543.1,120.3,543.1,120.3z M550.7,120.4" + ' ' +
+									"C550.6,120.4,550.6,120.4,550.7,120.4c-0.1,0.1,0,0.1,0,0.1c0,0,0.1,0,0,0C550.7,120.4,550.7,120.4,550.7,120.4z M586.1,120.3" + ' ' +
+									"c0,0,0,0.1,0,0.1C586.1,120.4,586.1,120.4,586.1,120.3C586.2,120.4,586.2,120.4,586.1,120.3z M579.7,120.9" + ' ' +
+									"C579.6,120.8,579.6,120.8,579.7,120.9C579.6,120.8,579.6,120.9,579.7,120.9C579.6,120.9,579.6,120.9,579.7,120.9" + ' ' +
+									"C579.6,120.9,579.6,120.9,579.7,120.9z M549.7,121.1C549.6,121.1,549.6,121,549.7,121.1c-0.1-0.1-0.1-0.1-0.1,0c0,0,0,0.1,0,0.1" + ' ' +
+									"C549.6,121.1,549.6,121.1,549.7,121.1z M543.6,121.4C543.6,121.3,543.6,121.3,543.6,121.4C543.6,121.3,543.6,121.3,543.6,121.4" + ' ' +
+									"C543.6,121.3,543.6,121.4,543.6,121.4C543.6,121.4,543.6,121.4,543.6,121.4z M556,122.1C556,122.1,556,122.1,556,122.1" + ' ' +
+									"C556,122.1,556,122.1,556,122.1C556,122.1,556.1,122.1,556,122.1C556.1,122.1,556,122.1,556,122.1z M544.1,122.6" + ' ' +
+									"C544.1,122.6,544.1,122.5,544.1,122.6C544.1,122.5,544,122.6,544.1,122.6C544,122.6,544,122.6,544.1,122.6" + ' ' +
+									"C544.1,122.6,544.1,122.6,544.1,122.6z M584,123.2C584,123.2,584,123.2,584,123.2C584,123.2,583.9,123.2,584,123.2" + ' ' +
+									"C583.9,123.2,583.9,123.2,584,123.2C583.9,123.2,584,123.2,584,123.2z M568.4,124C568.5,124,568.5,124,568.4,124" + ' ' +
+									"C568.5,124,568.4,123.9,568.4,124C568.4,124,568.4,124,568.4,124C568.4,124,568.4,124,568.4,124z M585.6,101.8" + ' ' +
+									"C585.6,101.8,585.6,101.8,585.6,101.8c0,0.1,0,0.1,0,0.1c0,0,0.1,0,0,0C585.7,101.9,585.7,101.8,585.6,101.8z M575,126.3" + ' ' +
+									"C575,126.3,575,126.3,575,126.3C575,126.3,574.9,126.3,575,126.3C574.9,126.3,574.9,126.3,575,126.3" + ' ' +
+									"C574.9,126.4,575,126.3,575,126.3z M558.7,127.1C558.7,127.1,558.7,127,558.7,127.1C558.6,127,558.6,127.1,558.7,127.1" + ' ' +
+									"C558.6,127.1,558.7,127.1,558.7,127.1C558.7,127.1,558.7,127.1,558.7,127.1z M588,106.8C588,106.9,588,106.9,588,106.8" + ' ' +
+									"C588,106.9,588,106.9,588,106.8C588,106.9,588,106.9,588,106.8z M588.4,113.1C588.4,113.1,588.4,113.1,588.4,113.1" + ' ' +
+									"C588.4,113.1,588.5,113.1,588.4,113.1C588.5,113.1,588.5,113.1,588.4,113.1C588.5,113.1,588.5,113.1,588.4,113.1z M573.7,114.5" + ' ' +
+									"c0,0-0.1,0-0.1,0c0,0,0,0.1,0,0.1c0,0,0.1,0.1,0.1,0.1C573.7,114.6,573.7,114.6,573.7,114.5z M568.7,133.2" + ' ' +
+									"C568.6,133.2,568.6,133.2,568.7,133.2C568.6,133.2,568.6,133.2,568.7,133.2C568.6,133.2,568.6,133.2,568.7,133.2z M552.9,126.2" + ' ' +
+									"C553,126.2,553,126.2,552.9,126.2C553,126.2,552.9,126.1,552.9,126.2C552.9,126.1,552.9,126.2,552.9,126.2" + ' ' +
+									"C552.9,126.2,552.9,126.2,552.9,126.2z M577.5,126.3C577.5,126.3,577.5,126.3,577.5,126.3C577.4,126.3,577.4,126.3,577.5,126.3" + ' ' +
+									"C577.4,126.3,577.5,126.3,577.5,126.3C577.5,126.3,577.5,126.3,577.5,126.3z M574.1,126.4C574.1,126.5,574.2,126.5,574.1,126.4" + ' ' +
+									"C574.2,126.5,574.2,126.5,574.1,126.4C574.2,126.5,574.2,126.5,574.1,126.4z M584,100.9C584,101,584,101,584,100.9" + ' ' +
+									"C584,101,584,101,584,100.9C584,101,584,101,584,100.9z M557.7,133.1C557.7,133.1,557.7,133.1,557.7,133.1" + ' ' +
+									"C557.7,133.1,557.7,133.1,557.7,133.1C557.7,133.1,557.7,133.1,557.7,133.1z M558.2,126.9C558.1,126.9,558.1,126.9,558.2,126.9" + ' ' +
+									"C558.1,126.9,558.2,126.9,558.2,126.9C558.2,126.9,558.2,126.9,558.2,126.9C558.2,126.9,558.2,126.9,558.2,126.9z M579.3,123.8" + ' ' +
+									"C579.2,123.7,579.2,123.7,579.3,123.8C579.2,123.7,579.2,123.7,579.3,123.8C579.2,123.8,579.2,123.8,579.3,123.8" + ' ' +
+									"C579.2,123.8,579.2,123.8,579.3,123.8z M581,116C581,116.1,581,116.1,581,116C581,116.1,581,116.1,581,116" + ' ' +
+									"C581,116.1,581,116.1,581,116z M564.1,124.1C564.1,124.1,564.1,124.2,564.1,124.1C564.1,124.2,564.1,124.2,564.1,124.1" + ' ' +
+									"C564.1,124.2,564.1,124.1,564.1,124.1z M553.7,104.5C553.7,104.4,553.7,104.4,553.7,104.5C553.7,104.4,553.6,104.4,553.7,104.5" + ' ' +
+									"C553.6,104.4,553.6,104.5,553.7,104.5C553.7,104.5,553.7,104.5,553.7,104.5z M562.9,133.8C562.9,133.8,562.9,133.8,562.9,133.8" + ' ' +
+									"C562.8,133.8,562.9,133.8,562.9,133.8C562.9,133.8,562.9,133.8,562.9,133.8z M557,101.8C557,101.8,556.9,101.8,557,101.8" + ' ' +
+									"C556.9,101.8,556.9,101.8,557,101.8C556.9,101.8,556.9,101.8,557,101.8C556.9,101.8,556.9,101.8,557,101.8z M574.8,125.7" + ' ' +
+									"C574.8,125.7,574.8,125.7,574.8,125.7C574.8,125.7,574.8,125.6,574.8,125.7C574.8,125.6,574.7,125.6,574.8,125.7" + ' ' +
+									"C574.7,125.7,574.7,125.7,574.8,125.7z M560.8,133.7C560.8,133.6,560.8,133.6,560.8,133.7C560.8,133.6,560.8,133.6,560.8,133.7" + ' ' +
+									"C560.8,133.6,560.8,133.7,560.8,133.7z M584.5,101L584.5,101L584.5,101L584.5,101z M562.9,99.1C562.9,99.1,562.9,99.1,562.9,99.1" + ' ' +
+									"C562.9,99.1,562.9,99.1,562.9,99.1C562.9,99.1,562.9,99.1,562.9,99.1z M574.5,129.8C574.5,129.8,574.5,129.8,574.5,129.8" + ' ' +
+									"C574.5,129.7,574.5,129.7,574.5,129.8C574.5,129.7,574.5,129.7,574.5,129.8C574.5,129.8,574.5,129.8,574.5,129.8z M562.8,130.1" + ' ' +
+									"C562.8,130.1,562.8,130,562.8,130.1C562.8,130,562.8,130,562.8,130.1C562.8,130.1,562.8,130.1,562.8,130.1z M561.4,130.8" + ' ' +
+									"C561.4,130.8,561.4,130.7,561.4,130.8C561.4,130.7,561.4,130.7,561.4,130.8C561.4,130.7,561.3,130.7,561.4,130.8" + ' ' +
+									"C561.3,130.7,561.3,130.8,561.4,130.8z M554.1,131.3C554.1,131.3,554.1,131.3,554.1,131.3C554.2,131.3,554.2,131.3,554.1,131.3" + ' ' +
+									"C554.2,131.3,554.1,131.3,554.1,131.3z M571.1,113.9C571.1,113.9,571.1,113.9,571.1,113.9C571.1,113.8,571.1,113.9,571.1,113.9" + ' ' +
+									"C571.1,113.9,571.1,113.9,571.1,113.9z M560.1,100.5C560.1,100.6,560.1,100.6,560.1,100.5C560.1,100.6,560.1,100.6,560.1,100.5" + ' ' +
+									"C560.1,100.6,560.1,100.6,560.1,100.5z M555.9,127.5C555.9,127.5,555.9,127.5,555.9,127.5C555.9,127.5,555.9,127.5,555.9,127.5" + ' ' +
+									"C555.9,127.5,555.9,127.6,555.9,127.5C555.9,127.5,555.9,127.5,555.9,127.5z M556.1,132.7C556.1,132.7,556.1,132.7,556.1,132.7" + ' ' +
+									"C556.1,132.8,556.1,132.8,556.1,132.7C556.1,132.8,556.1,132.8,556.1,132.7z M568.3,127.5C568.3,127.5,568.3,127.5,568.3,127.5" + ' ' +
+									"C568.3,127.5,568.3,127.5,568.3,127.5C568.3,127.5,568.3,127.6,568.3,127.5C568.3,127.5,568.3,127.5,568.3,127.5z M559.1,128.6" + ' ' +
+									"L559.1,128.6L559.1,128.6L559.1,128.6z M564.1,116.8L564.1,116.8L564.1,116.8L564.1,116.8z M558.2,119.4" + ' ' +
+									"C558.2,119.4,558.2,119.4,558.2,119.4C558.3,119.3,558.2,119.3,558.2,119.4C558.2,119.3,558.2,119.3,558.2,119.4" + ' ' +
+									"C558.2,119.3,558.2,119.4,558.2,119.4z M589.7,110.2C589.7,110.2,589.7,110.2,589.7,110.2C589.6,110.2,589.6,110.2,589.7,110.2" + ' ' +
+									"C589.6,110.2,589.7,110.2,589.7,110.2z M588.8,114.6C588.8,114.7,588.8,114.7,588.8,114.6C588.8,114.7,588.8,114.7,588.8,114.6" + ' ' +
+									"C588.8,114.7,588.8,114.7,588.8,114.6C588.8,114.7,588.8,114.7,588.8,114.6z M577.3,105.8C577.3,105.8,577.3,105.8,577.3,105.8" + ' ' +
+									"C577.3,105.8,577.3,105.8,577.3,105.8C577.3,105.8,577.3,105.8,577.3,105.8C577.3,105.8,577.3,105.8,577.3,105.8z M569.6,102.3" + ' ' +
+									"C569.6,102.4,569.6,102.4,569.6,102.3C569.6,102.4,569.7,102.4,569.6,102.3C569.7,102.4,569.7,102.4,569.6,102.3" + ' ' +
+									"C569.7,102.4,569.7,102.3,569.6,102.3z M588.9,111.8C588.9,111.8,588.9,111.9,588.9,111.8C589,111.9,589,111.8,588.9,111.8" + ' ' +
+									"C589,111.8,588.9,111.8,588.9,111.8z M587.8,116.1C587.8,116,587.8,116,587.8,116.1C587.8,116,587.8,116,587.8,116.1" + ' ' +
+									"C587.8,116,587.8,116,587.8,116.1z M562.7,123.3C562.7,123.3,562.7,123.4,562.7,123.3C562.7,123.4,562.8,123.3,562.7,123.3" + ' ' +
+									"C562.7,123.3,562.7,123.3,562.7,123.3C562.7,123.3,562.7,123.3,562.7,123.3z M570.9,102.5C570.9,102.6,570.9,102.6,570.9,102.5" + ' ' +
+									"C571,102.6,571,102.5,570.9,102.5C571,102.5,570.9,102.5,570.9,102.5C570.9,102.5,570.9,102.5,570.9,102.5z M556.6,102.1" + ' ' +
+									"C556.5,102.1,556.5,102.1,556.6,102.1C556.5,102.1,556.5,102.1,556.6,102.1C556.5,102.1,556.5,102.1,556.6,102.1z"})
+							), 
+							React.createElement("rect", {x: "499.7", y: "77.5", width: "379", height: "54"})
+						), 
+						React.createElement("g", {id: "jayhawks", className: "band_lineup_link tan", onClick: self.openBand.bind(this, "The Jayhawks")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M770.9,176.2c0.2,1.4,1,2.3,2.2,2.6c0.1,0,0.2,0.1,0.3,0.1c0,0.1,0,0.2,0,0.5c0,0.5-0.1,1-0.1,1.5" + ' ' +
+									"c-0.1,1.2-0.2,2.5,0.1,3.8l0,0.1c0,0.1,0,0.2,0,0.3l0,0.2c0,0.4,0,0.8,0,1.2c0,0.3,0,0.5,0.1,0.8c0,0.4,0.1,0.7,0.1,1.1" + ' ' +
+									"c0,0.7,0,1.4-0.1,2.2c0,0.5,0,1,0,1.4l0,0.3c0,0.5,0,1,0,1.6c0.2,1.8,1.5,3.2,3.4,3.6c0.9,0.2,1.9-0.2,2.4-0.9" + ' ' +
+									"c0.4-0.6,0.6-1.3,0.4-2.1c-0.3-0.9-0.2-1.9-0.2-2.9l0-0.4c0-0.5,0-1.1,0-1.6c0-1,0.1-2.1,0.1-3.1v-0.1c0-0.9,0-1.8-0.5-2.8" + ' ' +
+									"c-0.2-0.3-0.2-0.6-0.2-1.1c0-1.3,0-2.6,0-4c0-1,0-2.1,0-3.1c0-0.5,0.1-0.9,0.4-1.2c0.5-0.6,1-1.2,1.6-1.7c0.5-0.6,1-1.1,1.5-1.7" + ' ' +
+									"c0,0,0.1-0.1,0.2-0.1c0.9,0.4,1.6,0.9,2,1.7c0.4,0.6,0.8,1.2,1.3,1.8c0.2,0.2,0.4,0.5,0.5,0.7l1,1.4c0.7,1,1.4,1.9,2.1,2.9" + ' ' +
+									"c1.7,2.4,3.1,4.4,4.3,6.5c1.3,2.2,2.7,4.3,4.1,6.5c1,1.6,2.1,3.1,3.1,4.6c0.7,1,1.5,1.5,2.5,1.5c0.5,0,1.1-0.1,1.7-0.4l0.3-0.1" + ' ' +
+									"l0.2-0.3c0.5-0.7,0.5-1.4,0.5-1.9c0.2,0,0.3,0,0.5-0.1l0.2,0c0.7-0.1,1.5-0.3,2.3-0.5c0.8-0.3,1.5-0.7,2.3-1.1" + ' ' +
+									"c2.4-1.4,4.2-2.7,5.7-4.3l0.1-0.1c0.6-0.7,1.3-1.4,1.8-2.3c1.5-3,1.4-6.2-0.5-9.3c-1.3-2.2-3.2-4-5.6-5.3c0.6-0.1,1.1-0.4,1.4-0.7" + ' ' +
+									"c0.4-0.3,1.4-1.1,1.4-2.4c0-0.6,0.3-1.1,0.6-1.8l0.1-0.3c0.1-0.2,0.2-0.5,0.3-0.7c0.2-0.6,0.5-1.1,0.7-1.6" + ' ' +
+									"c0.1-0.2,0.2-0.4,0.3-0.6c0.4-0.8,0.8-1.6,1.5-2.1c0.9-0.6,1.2-1.7,1-2.8l-0.1-0.2L820,159c-0.9-1.2-1.4-1.8-2.8-1.8" + ' ' +
+									"c-0.2,0-0.4,0-0.6,0l-0.2,0l-0.2,0.1c-0.9,0.5-1.4,1.2-1.7,1.8c-0.6,1.2-1.3,2.5-2,3.7c-1-2-2.6-3.6-4.6-4.8l-0.2-0.1l-0.2,0" + ' ' +
+									"c-0.2,0-0.4-0.1-0.6-0.1c-0.4-0.1-0.7-0.1-1-0.2c-1-0.3-2-0.3-3.3-0.1c-2.1,0.4-3.7,1.3-4.8,2.7c-1.7,2.1-2.4,4.4-2,6.9" + ' ' +
+									"c0.1,0.5,0.2,1.2,0.4,1.8c0.5,1,1.3,1.9,2.5,2.4c0.1,0.1,0.3,0.1,0.4,0.2c0.2,0.1,0.3,0.1,0.5,0.2c3.2,1.8,6.6,3.3,10.3,4.8" + ' ' +
+									"c1.9,0.8,3.2,2.1,4.1,3.9c0.2,0.5,0.3,0.9,0.3,1.4c-0.1,1.2-0.4,2.1-1,2.7c-0.5,0.6-1.1,1.2-1.7,1.7c-0.8,0.8-1.7,1.4-2.6,2.1" + ' ' +
+									"c-0.4,0.3-0.8,0.6-1.2,0.9c-0.6,0.4-1.3,0.7-2.2,0.9c-0.2,0-0.4,0.1-0.5,0.1c-0.3,0-0.6,0-1-0.8c0-0.1-0.1-0.1-0.1-0.2" + ' ' +
+									"c-0.1-0.3-0.4-0.9-1.1-1.3l-0.2-0.1l-0.3,0c-0.6,0-0.9,0.2-1.2,0.4c-0.2-0.4-0.4-0.8-0.7-1.2c-0.8-1-1.5-2.2-2.2-3.3" + ' ' +
+									"c-0.4-0.6-0.7-1.2-1.1-1.8c-0.3-0.5-0.6-1-1-1.5c-0.9-1.4-1.8-2.8-2.9-4.2c-1-1.3-2-2.7-2.9-4c-0.6-0.8-1.1-1.6-1.7-2.4" + ' ' +
+									"c-1.1-1.5-1.7-2.7-2-4.1c0.1-0.1,0.2-0.2,0.3-0.4c0.3-0.4,0.6-0.7,0.9-1.1c0.5-0.6,1-1.1,1.4-1.7c1.1-1.4,2.2-2.3,3.3-2.9" + ' ' +
+									"c0.5-0.3,0.9-0.7,1.2-1c1-1,1-2.3,0.1-3.4c-0.2-0.3-0.5-0.5-0.7-0.7l-0.5-0.4l-0.3-0.1c-1.8-0.3-3,0.2-3.9,1.4" + ' ' +
+									"c-1.5,1.1-2.6,2.5-3.5,3.7c-0.7,1-1.5,1.8-2.4,2.7c-0.3,0.3-0.7,0.7-1,1c-1.1,0.7-1.8,1.7-2.5,2.5c-0.1,0.1-0.2,0.3-0.3,0.4" + ' ' +
+									"c0-1,0-2,0-2.9c0-1.4,0.1-2.9,0.2-4.3l0-0.8c0-0.7,0.1-1.5,0.1-2.2c0.1-1,0.1-1.9,0.1-2.9c0-0.5,0.2-1,0.5-1.7" + ' ' +
+									"c0.1-0.2,0.2-0.4,0.3-0.5l0.3-0.6l-0.1-0.5c-0.2-1.2-0.3-1.6-0.9-2.2c-0.4-0.4-1.1-1-2.1-1.2c-0.8-0.1-1.5,0.1-2,0.3" + ' ' +
+									"c-0.8,0.3-1.3,0.9-1.5,1.5l0,0.1l-0.2,3.8c0,0.1,0,0.2,0,0.3c0,0.3-0.1,0.7,0,1.1c0.1,0.8,0.1,1.7,0,2.6l0,0.2" + ' ' +
+									"c-0.1,1.2-0.2,2.6,0,3.9c0,0.2,0,0.4,0,0.5c0,0.3,0,0.7-0.1,1c0,0.6-0.1,1.1-0.1,1.7l0,1.3c0,2.1-0.1,4.3,0.1,6.5" + ' ' +
+									"c0.1,0.6-0.1,1-0.5,1.4c-0.3,0.3-0.5,0.4-0.7,0.6C771.5,173.5,770.6,174.4,770.9,176.2z M810,171.1c-1.9-0.8-3.8-1.6-5.5-2.5" + ' ' +
+									"c-0.5-0.3-1.1-0.6-1.6-0.9l-0.8-0.4c-0.3-0.2-0.6-0.5-0.6-1.2c0-0.9,0.4-1.6,1.2-2.2c0.2-0.1,0.4-0.3,0.6-0.4" + ' ' +
+									"c0.4-0.3,0.8-0.4,1.2-0.4c0.6,0,1.2,0.3,1.9,0.7c1.4,1.5,2.2,2.9,2.4,4.4c0.1,0.5,0.2,0.9,0.2,1.4l0.2,0.9L810,171.1z"}), 
+								React.createElement("path", {d: "M653.9,189.5c0.2-1.8,0.5-3.6,0.8-5.4c0.1-0.9,0.3-1.7,0.4-2.6c0-0.3,0.1-0.6,0.1-1l0-0.9c0-1,0.1-2,0.1-3" + ' ' +
+									"c0-2.4,0-4.8,0-7.1c0-0.9,0-1.8,0-2.8c0-0.6,0-1.2,0-1.8c0-1,0-1.9,0-2.9c0-1.4,0-2.8,0-4.2c0-0.8,0-1.6-0.1-2.3" + ' ' +
+									"c0-1.1-0.1-2.2-0.1-3.3c0-1,0.1-2.1,0.4-3.3c0.1-0.2,0.1-0.3,0.3-0.4c0.2-0.1,0.4-0.1,0.6-0.2l1.1-0.3c1.2-0.4,2.4-0.7,3.6-1" + ' ' +
+									"c1-0.3,2-0.6,3.1-0.6c0.8,0,1.5-0.4,2.1-0.7l0.2-0.1c0.5-0.2,1.5-0.9,1.2-2.6c-0.2-1.2-1.1-1.9-1.7-2.3c-0.3-0.2-0.6-0.3-0.9-0.5" + ' ' +
+									"c-0.1,0-0.2-0.1-0.3-0.1l-0.3-0.1l-0.8,0.1c-0.4,0.1-0.8,0.1-1.2,0.2c-0.3,0.1-0.6,0.2-0.8,0.4c-1.4,0.8-3,1.4-5.1,1.9" + ' ' +
+									"c-0.2,0.1-0.5,0.1-0.7,0.2c-0.1-0.1-0.1-0.1-0.2-0.2c-0.3-0.3-0.9-0.8-1.7-0.9l-0.2,0l-0.2,0c-0.2,0.1-0.5,0.1-0.7,0.1" + ' ' +
+									"c-0.5,0.1-1.1,0.1-1.8,0.4l-0.2,0.1l-0.2,0.2c-0.6,0.7-0.8,1.5-0.9,2.2c0,0,0,0.1,0,0.1c-0.1,0-0.2,0.1-0.2,0.1l-0.8,0.2" + ' ' +
+									"c-1.5,0.4-3.1,0.8-4.6,1.1c-1,0.2-2.1,0.4-3.5,0.5c-0.9,0.1-1.9,0.2-2.8,0.3c-1,0.1-2.1,0.2-3.1,0.3c-1.6,0.2-2.6,1-3,2.3" + ' ' +
+									"l-0.1,0.4l0.9,2l0.2,0.2c1,0.8,2.1,1.7,3.8,1.6l0.4,0l0.3-0.3c0.6-0.7,1.5-1.1,2.8-1.3c0.7-0.1,1.4-0.2,2.1-0.3" + ' ' +
+									"c0.9-0.1,1.9-0.3,2.8-0.4c0.3-0.1,0.6-0.1,0.9-0.2c1.3-0.2,2.6-0.4,3.8-0.9c0,0,0,0.1,0,0.1l0,0.3c0,0.4,0,0.7,0,1.1" + ' ' +
+									"c0,0.8,0,1.6,0.1,2.4c0.1,0.8,0,1.5-0.4,2.1c-0.4,0.5-0.6,1.1-0.8,1.6l-0.1,0.3c-0.1,0.3-0.6,1.3,0.2,2.3l0.2,0.3l1.2,0.4" + ' ' +
+									"c0,0.1,0,0.2,0,0.3c0,0.7,0.1,1.5,0.1,2.2l0,0.2c0,0.4,0,0.7,0,1.1c0,0.7,0,1.5,0,2.3c0.1,1,0.1,2,0,3c0,0.4-0.1,0.9-0.1,1.3" + ' ' +
+									"c0,2.7-0.1,5.6-0.5,9.5c0,0.2,0,0.5-0.1,0.7c-0.1,0.9-0.1,1.7-0.3,2.4c-0.2,1-0.4,2-0.5,2.9c-0.2,1.3-0.4,2.6-0.8,3.8" + ' ' +
+									"c-0.1,0.3-0.1,0.5-0.1,0.7c0,0.1,0,0.2,0,0.2l0,0.1c0,0.2-0.1,0.4-0.1,0.5l-0.1,0.3c-0.2,0.7-0.5,1.4-0.8,2" + ' ' +
+									"c-0.1,0.2-0.2,0.4-0.3,0.7c-0.3,0.7-0.5,1.4-0.9,2c-0.3,0.5-0.7,1-1.1,1.6c-0.2,0.3-0.5,0.6-0.7,0.9c-0.6,0.8-1.5,1.4-2.3,1.8" + ' ' +
+									"c-0.5,0.2-0.9,0.4-1.4,0.4c0.2-0.7,0.1-1.3,0.1-2c0-1-0.7-1.7-1.8-1.8l-0.4,0l-0.3,0.2c0,0-0.1,0.1-0.1,0.1" + ' ' +
+									"c-0.2,0.1-0.6,0.4-0.9,0.7l-0.5,0.6c-0.7,1-1.5,1.9-2.1,3.1l-0.2,0.4l0.1,0.4c0,0.1,0.1,0.2,0.1,0.4c0.1,0.3,0.2,0.7,0.3,1" + ' ' +
+									"c0.3,0.7,0.9,1.3,1.5,1.7c1.3,0.7,2.7,1.1,4.2,1.1c0.5,0,1,0,1.5-0.1c1-0.2,2.2-0.5,3.4-1.1c2.4-1.1,4.3-3,5.7-5.9" + ' ' +
+									"c1.1-2.1,1.7-4.4,2.2-6.5C653.4,192.9,653.7,191.2,653.9,189.5z"}), 
+								React.createElement("path", {d: "M724.3,168.7c-0.4-0.3-1-0.6-1.8-0.8c0-1.1,0-2.3-0.1-3.4c-0.1-2.5-0.1-5.1,0-7.6c0-0.3,0-0.7,0.1-1" + ' ' +
+									"c0-0.5,0-1,0.1-1.5l0-0.1c0.1-0.6,0.1-1.2,0.3-1.6c0.6-1.4,0.4-2.8-0.6-4l-0.2-0.3l-2.1-0.6l-1.5,0.6l-0.2,0.2" + ' ' +
+									"c-1,1.1-1.1,2.4-1.1,3.3c-0.1,1.1-0.1,2.2-0.1,3.2c0,0.5,0,0.9,0,1.4c0,0.3,0,0.6,0,0.9c0,0.6-0.1,1.3,0,2c0.1,3.1,0.2,5.6,0.1,8" + ' ' +
+									"c0,0.7,0,1.3,0,2c0,0.2,0,0.4,0,0.6c-0.2,0.2-0.3,0.3-0.7,0.5c-2.2,1-4.5,2-7,2.5c-0.2,0-0.3,0.1-0.5,0.1c-0.2,0-0.5,0.1-0.7,0.1" + ' ' +
+									"c0-0.5,0-1,0-1.5c0.1-1,0.1-2,0.2-2.9c0-0.6,0.1-1.2,0.1-1.7c0-0.5,0.1-1,0.1-1.6c0-0.7,0.1-1.4,0.1-2l0-0.2" + ' ' +
+									"c0.1-0.7,0.1-1.4,0.2-2.1l0-0.1c0.1-0.8,0.3-1.6,0.7-2.2c0.2-0.3,0.3-0.7,0.4-1c0-0.1,0-0.1,0.1-0.2l0.1-0.4l-0.2-0.4" + ' ' +
+									"c-0.7-1.4-1.3-2.4-3-2.4c-0.4,0-0.8,0-1.4,0.2l-0.2,0l-0.2,0.1c-0.8,0.6-1.2,1.4-1.3,2.6c0,0.3,0,0.5-0.1,0.8c0,0.3,0,0.7-0.1,1" + ' ' +
+									"c0,0.5-0.1,0.9-0.1,1.4c-0.1,0.8-0.2,1.6-0.2,2.4c-0.2,2.6-0.4,5.2-0.5,7.8l0,0.5c0,0.3,0,0.7-0.1,1l-0.1-0.1c0,0.1,0,0.2,0,0.4" + ' ' +
+									"l0.1,0c-0.1,1-0.1,2-0.1,3l-0.3-0.4v0.7l0.3,0.2c0,3-0.1,5.4-0.2,7.6c0,0.3,0,0.5,0,0.8c0,0.2,0,0.3,0,0.5c0,0.3,0,0.7,0,1" + ' ' +
+									"c0,0.8,0,1.6-0.1,2.3c-0.1,0.8-0.2,1.7,0.2,2.6l0.1,0.2c0.9,1.4,2.3,2,3.9,1.8l0.3,0l0.2-0.1c0.9-0.6,1-1.5,1-1.8" + ' ' +
+									"c0.1-1.2,0.3-2.4,0.4-3.6c0.1-1-0.1-1.9-0.5-2.8c-0.1-0.1-0.1-0.3-0.1-0.5c0-1.6,0.1-3.3,0.2-5.3l1.1-0.3c1.3-0.3,2.6-0.6,3.9-0.9" + ' ' +
+									"c1.5-0.3,2.9-0.9,4.3-1.4c0,0.1,0,0.2,0,0.3c0.1,0.8,0.2,1.5,0.1,2.2c0,0.7-0.1,1.5,0.1,2.2c0.2,0.8,0.3,1.6,0.2,2.5" + ' ' +
+									"c0,0.8,0,1.5,0.1,2.2l0.1,0.5c0.1,1,0.2,2,0,3c-0.2,1,0,2.2,0.7,3c0.7,0.9,1.9,1.5,3.1,1.5l0.1,0c1.2,0,2-0.7,2.1-1.9" + ' ' +
+									"c0-0.5,0-1-0.1-1.4l0-0.2c0-0.4-0.1-0.8-0.1-1.2c0-0.4-0.1-0.8-0.1-1.2c0-0.3,0-0.6-0.1-0.9c-0.1-0.9-0.1-2-0.6-3" + ' ' +
+									"c0-0.1,0-0.4,0-0.6c0-0.1,0-0.3,0-0.4c0-0.5-0.1-1-0.1-1.5c0-0.5-0.1-1.1-0.1-1.6c0-0.4-0.1-0.8-0.1-1.2c0-0.5-0.1-1-0.1-1.5" + ' ' +
+									"c0-0.9-0.1-1.8-0.1-2.7l0-0.7c0.1-0.1,0.3-0.2,0.7-0.3l0.2-0.1c0.5-0.2,1.1-0.4,1.6-1.1l0.1-0.2l0.1-0.6" + ' ' +
+									"C725.6,170.2,725.2,169.3,724.3,168.7z"}), 
+								React.createElement("polygon", {points: "722.1,192.2 722.1,192.2 722.1,192.3   "}), 
+								React.createElement("path", {d: "M753.8,188.4c0.8-0.8,1.3-1.6,1.5-2.6c0-0.2,0.1-0.4,0.2-0.6c0.1-0.2,0.1-0.4,0.2-0.5" + ' ' +
+									"c0.3-0.8,0.6-1.6,0.9-2.4c0.2-0.4,0.3-0.8,0.5-1.1c0.2,0.7,0.4,1.4,0.6,2.2c0.3,1.2,0.8,2.3,1.3,3.1c0.8,1.5,2.2,2.3,4.1,2.2" + ' ' +
+									"l0.5,0l0.3-0.4c0.1-0.1,0.1-0.1,0.2-0.2c0.2-0.2,0.4-0.4,0.5-0.6c1.1-1.8,2-4,2.5-6.5c0.5-2.3,1.1-4.8,1.7-7.8" + ' ' +
+									"c0.3-1.3,0.5-2.7,0.8-4c0.2-1.2,0.4-2.5,0.7-3.7c0.1-0.6,0.2-1.3,0.3-1.9c0.3-2,0.7-3.8,1.4-5.6l0.2-0.4l-0.7-2.1l-0.4-0.2" + ' ' +
+									"c-1.2-0.6-2.3-0.6-3.5,0.1l-0.4,0.2l-0.1,0.5c0,0.2-0.1,0.4-0.2,0.5c-0.1,0.4-0.3,0.9-0.4,1.4c0,0.5-0.2,1.1-0.4,1.7" + ' ' +
+									"c-0.2,0.6-0.2,1.2-0.3,1.7c0,0.3,0,0.5-0.1,0.8c-0.2,1.4-0.5,2.8-0.8,4.2l-0.2,1c-0.1,0.4-0.2,0.7-0.3,1.1c-0.2,0.6-0.3,1.3-0.4,2" + ' ' +
+									"c-0.4,3.2-1.1,6.2-2,9.6c-0.2-0.8-0.3-1.7-0.4-2.6c-0.1-1.5-0.1-3,0-4.6l0-0.7c0-1.2,0.1-2.9-0.8-4.4l-0.2-0.3l-0.3-0.1" + ' ' +
+									"c-0.1,0-0.2-0.2-0.4-0.3c-0.4-0.3-0.9-0.7-1.6-0.8l-0.2,0l-0.2,0c-1.9,0.4-2.4,0.9-2.7,2.8c0,0.1,0,0.1,0,0.2" + ' ' +
+									"c-0.1,0.5-0.2,0.9-0.3,1.4c-0.2,1.1-0.4,2.1-0.7,3.1c-0.2,0.8-0.5,1.7-0.8,2.5c-0.3-2.9-0.6-6.1-0.7-10.1c0-0.7-0.1-1.4-0.1-2.1" + ' ' +
+									"c0-0.6,0-1.3-0.1-1.9c0-0.8,0-1.4,0.3-2c0.2-0.4,0.2-0.7,0.3-1c0-0.1,0-0.1,0-0.2l0.1-0.3l-0.1-0.3c-0.5-1.7-0.6-1.9-1.7-2.9" + ' ' +
+									"l-0.2-0.2l-1.9-0.5l-0.6,0.3c-0.1,0-0.1,0.1-0.1,0.1c-0.9,0.3-1.6,0.9-1.9,1.8c-0.4,0.9-0.3,1.9,0.1,2.7c0.3,0.7,0.4,1.5,0.4,2.3" + ' ' +
+									"l0,0.5c0.1,1.7,0.2,3.4,0.3,5.1c0.1,1,0.1,2,0.2,3c0.1,0.8,0.1,1.7,0.2,2.5l0.2,1.7c0,0.3,0.1,0.7,0.1,1c0,0.5,0.1,1,0.1,1.5" + ' ' +
+									"c0.1,0.7,0.1,1.4,0.2,2.1l0,0.3c0.1,1.1,0.2,2,0,3c-0.5,2.2,0.1,4.1,1.9,5.4l0.2,0.2l2.9,0.4L753.8,188.4z"}), 
+								React.createElement("path", {d: "M678.4,174c0.5-0.3,1.4-0.7,1.7-1.7l0.1-0.3l-0.1-0.3c-0.5-2.6-2.1-3.1-3.3-3.1c-0.1,0-0.1,0-0.2,0" + ' ' +
+									"c0-2.8,0-5.7,0.1-8.5c0-0.5,0-1,0.1-1.4c0-0.6,0.1-1.2,0.1-1.8c0-1.3-0.1-2.7-0.6-4.1c-0.4-1-1.2-1.8-2.3-2.3" + ' ' +
+									"c-1.3-0.6-2.8-0.4-3.8,0.7l-0.1,0.1c-0.7,0.7-1.5,1.5-1.9,2.7l-0.5,1.2c-0.5,1.3-1,2.6-1.5,3.9c-0.5,1.3-0.8,2.6-1.2,3.8l-0.1,0.5" + ' ' +
+									"c-0.1,0.5-0.2,1-0.4,1.5c-0.1,0.3-0.1,0.7-0.2,1c-0.1,0.3-0.2,0.6-0.3,0.9c-0.1,0.4-0.2,0.7-0.3,1.1c-0.1,0.5-0.3,1.1-0.4,1.6" + ' ' +
+									"c-0.2,1-0.4,1.9-0.7,2.8c-0.5,1.5-0.8,3.1-1.2,5.1c-0.4,2.1-1,4.4-1.7,6.9c-0.1,0.4-0.2,0.8-0.3,1.1c-0.2,0.7-0.5,1.5-0.6,2.3" + ' ' +
+									"c-0.2,1.1,0,2.1,0.7,2.9c0.7,0.8,1.7,1.3,2.9,1.3c0.2,0,0.3,0,0.5,0c0.9-0.1,1.6-0.7,1.9-1.6c0.1-0.3,0.3-0.8,0.2-1.4" + ' ' +
+									"c0-0.5-0.1-1-0.2-1.4c0-0.2-0.1-0.5-0.1-0.7c0-0.1,0-0.1,0-0.2c0.5-2.6,1-5.3,1.8-8.3c0-0.1,0.1-0.1,0.1-0.2" + ' ' +
+									"c0.7-0.5,1.3-1,2.1-1.1c0.9-0.2,1.7-0.3,2.6-0.5l0.3,0c0.1,1,0.2,2,0.1,3.1l0,0.2c0,0.5-0.1,1.1,0,1.7c0,1.1,0,2-0.2,2.9" + ' ' +
+									"c-0.3,1.5,0,2.8,1,3.8c0.6,0.6,1.2,0.9,2.1,1c1,0.2,1.9-0.2,2.5-0.9l0.1-0.2c0.3-0.6,0.4-1.3,0.3-2c-0.2-0.9-0.2-1.8-0.3-2.8" + ' ' +
+									"c0-0.5-0.1-1-0.1-1.5l0-0.2c-0.2-1.9-0.3-3.9-0.3-5.9c0-0.1,0-0.3,0-0.4c0-0.1,0-0.1,0-0.2c0,0,0-0.1,0-0.1" + ' ' +
+									"c0.5-0.2,0.9-0.4,1.4-0.7C678.1,174.2,678.3,174.1,678.4,174z M671.4,168.8c0,0.4,0,0.8,0,1.2c0,0.3,0,0.7-0.1,1.1" + ' ' +
+									"c-0.4,0.1-0.7,0.2-1.2,0.3c-0.4,0.1-0.7,0.1-1,0.2c-0.5,0.1-0.9,0.2-1.4,0.3c0.1-0.2,0.1-0.5,0.2-0.8c0.1-0.2,0.1-0.5,0.2-0.7" + ' ' +
+									"c0.4-1.7,0.9-3.4,1.4-5.1l0.1-0.2c0.5-1.6,0.9-2.9,1.3-4.2c0.2-0.7,0.5-1.3,0.7-1.9c0,1.2,0,2.3,0,3.4c0,0.8,0,1.5-0.1,2.3" + ' ' +
+									"c0,0.8,0,1.7-0.1,2.5C671.4,167.8,671.4,168.3,671.4,168.8z"}), 
+								React.createElement("path", {d: "M741.8,168.3c0-0.1,0-0.1,0-0.2c0-0.2,0-0.3,0-0.5c-0.1-1.8-0.1-3.7-0.1-6.1c0-0.4,0-0.7,0-1.1" + ' ' +
+									"c0-0.5,0-1.1,0-1.6c-0.1-1.1-0.2-2.2-0.2-3.3l-0.1-1c0-0.2-0.1-0.4-0.2-0.6c-0.5-1.5-1.5-2.6-3.1-3.6c-0.9-0.5-2-0.7-2.9-0.5" + ' ' +
+									"c-1.7,0.4-3,1.3-3.7,2.6l-0.2,0.3c-0.5,0.9-1.1,1.9-1.5,3c-0.1,0.3-0.2,0.5-0.3,0.8c-0.3,0.8-0.6,1.7-0.8,2.6" + ' ' +
+									"c-0.2,0.9-0.4,1.9-0.7,2.8c-0.1,0.4-0.2,0.8-0.3,1.2c0,0.2-0.1,0.4-0.2,0.6c-0.1,0.4-0.2,0.8-0.3,1.2c-0.2,0.9-0.3,1.9-0.5,2.8" + ' ' +
+									"c-0.1,0.6-0.2,1.2-0.3,1.9c-0.1,0.4-0.1,0.7-0.2,1.1c-0.1,0.7-0.3,1.5-0.4,2.3c0,0.4-0.1,0.8-0.1,1.3c0,0.7-0.1,1.4-0.2,2.1" + ' ' +
+									"c-0.2,0.8-0.4,1.7-0.4,2.5c0,0.7-0.1,1.5-0.2,2.2c-0.1,1-0.2,2.1-0.2,3.2l0,0.3c0,1.3,0.1,1.6,1,2.9c0.1,0.1,0.2,0.2,0.3,0.3" + ' ' +
+									"l0.3,0.3l1.7,0.5l0.5-0.1c0.5-0.1,1.2-0.2,1.7-0.7l0.3-0.2l0.1-0.3c0.3-1.3,0.1-2.5-0.1-3.6c0-0.2-0.1-0.4-0.1-0.6" + ' ' +
+									"c-0.1-0.5-0.2-0.9-0.2-1.3c0-0.4,0-0.7,0-1.1c0-1,0-1.9,0.1-2.8c0-0.3,0.1-0.6,0.1-0.8l0.6,0.3l0.6-0.4c0.5-0.4,1.2-0.5,2-0.6" + ' ' +
+									"c0.2,0,0.4-0.1,0.6-0.1c0.3,0,0.6-0.1,0.9-0.2c0.5-0.1,1-0.2,1.4-0.2c0.1,1.4,0.1,2.8,0.2,4.2c0,0.4,0,0.8,0,1.2" + ' ' +
+									"c0,0.8,0,1.6,0.1,2.5c0.3,1.7,0.3,3.2-0.1,4.5l-0.1,0.3l0.1,0.3c0.6,1.8,1,2.3,2.7,3.1l0.3,0.1l0.3,0c0.1,0,0.1,0,0.2,0" + ' ' +
+									"c0.2,0,0.5,0,0.8-0.1c1.2-0.2,1.9-1.3,1.8-2.5c0-0.2-0.1-0.3-0.1-0.5l0-0.1c-0.2-0.9-0.4-2-0.4-3.3c0-0.4,0-0.8-0.1-1.2" + ' ' +
+									"c0-0.2,0-0.4-0.1-0.5l0-0.4c0-0.4-0.1-0.7-0.1-1.1c0-0.7,0-1.5,0-2.2c0-1.7-0.1-3.5-0.2-5.2c0-0.3,0-0.6,0-0.9l1.9-1.3l0.1-0.3" + ' ' +
+									"c0.4-0.8,0.4-1.5,0-2.3C743.4,169,742.5,168.6,741.8,168.3z M731.6,169.4c0-0.1,0-0.1,0-0.2c0-0.2,0.1-0.3,0.1-0.5" + ' ' +
+									"c0-0.2,0.1-0.4,0.1-0.5c0-0.2,0.1-0.3,0.1-0.5c0-0.2,0-0.3,0.1-0.5c0-0.2,0.1-0.5,0.1-0.7c0-0.2,0.1-0.3,0.1-0.5" + ' ' +
+									"c0.1-0.2,0.1-0.3,0.1-0.5c0.1-0.2,0.1-0.5,0.2-0.7c0-0.2,0.1-0.3,0.1-0.5c0-0.2,0.1-0.4,0.2-0.6l0.2-0.9c0.1-0.3,0.1-0.5,0.2-0.8" + ' ' +
+									"c0.1-0.3,0.2-0.7,0.3-1c0.4-1.5,0.9-2.9,1.6-4.2c0.4-0.7,0.7-1.2,1.1-1.5c0.1,0.8,0.3,1.5,0.3,2.2c0,0.5,0,1,0,1.5" + ' ' +
+									"c0,0.3,0,0.6,0,0.8c0,0.2,0,0.4,0,0.7l0,0.2c0,0.3,0,0.5,0.1,0.8c0,0.5,0.1,1,0,1.4c-0.1,1.2,0,2.4,0,3.5c0,0.5,0,1,0.1,1.6" + ' ' +
+									"c0,0.2,0,0.3,0,0.5c0,0.5,0,1,0,1.5c-0.6,0.4-1.4,0.5-2.3,0.6c-0.3,0-0.5,0.1-0.8,0.1c-0.5-0.3-0.9-0.5-1.3-0.5" + ' ' +
+									"c-0.2,0-0.4,0-0.5,0.1C731.8,170.1,731.7,169.7,731.6,169.4z"}), 
+								React.createElement("path", {d: "M553.9,156.5l0.2,0.1l0.2,0c1,0,1.8-0.2,2.5-0.5c2.1-0.8,4.2-1.3,6.8-1.9c0.8-0.2,1.6-0.3,2.5-0.5" + ' ' +
+									"c0.4-0.1,0.7-0.1,1.1-0.2l0.1,0c-0.1,0.1-0.1,0.3-0.2,0.5c-0.4,1.2-0.9,2.6-0.1,4.1c0,0,0,0,0,0l-0.1,0.7" + ' ' +
+									"c-0.1,0.7-0.2,1.5-0.4,2.3c-0.1,0.4-0.1,0.8-0.1,1.1l0,0.1c-0.1,0.5-0.1,1-0.1,1.5c-0.1,1.1-0.2,2.2-0.4,3.2" + ' ' +
+									"c-0.3,1.3-0.3,2.6-0.4,3.9c-0.1,0.9-0.1,1.8-0.2,2.7c-0.2,1.3-0.3,2.7-0.4,4c-0.1,0.8-0.1,1.6-0.2,2.4c0,0.4-0.1,0.7-0.2,1.1" + ' ' +
+									"c-0.1,0.5-0.2,1-0.2,1.6c-0.1,1.1-0.3,2.3-0.6,3.6c-0.3,1-0.2,2,0.3,2.9c0.5,0.9,1.3,1.4,2.4,1.6l0.2,0l0.2-0.1" + ' ' +
+									"c0.5-0.1,1.4-0.3,2-1.2l0.1-0.2l0.1-1.5c0.1-1,0.1-1.9,0.2-2.9c0-0.4,0.1-0.8,0.1-1.2c0.1-0.4,0.1-0.8,0.1-1.1" + ' ' +
+									"c0.2-1.7,0.3-3.4,0.5-5c0.2-2,0.4-3.9,0.6-5.9l0.1-1.3c0.2-1.7,0.3-3.4,0.6-5l0.2-1.7c0.3-2.3,0.7-4.7,1.1-7" + ' ' +
+									"c0.3-1.4,0.6-2.8,0.9-4.1c0,0,0-0.1,0-0.1c0.1,0,0.2,0,0.2,0c0.6-0.1,1.1-0.2,1.6-0.3c1.4-0.2,2.8-0.4,4.2-0.6" + ' ' +
+									"c0.9-0.1,1.7-0.2,2.6-0.4c0.8-0.1,1.6-0.2,2.4-0.3c1-0.1,2.1-0.3,3.1-0.4c0.2,0,0.5-0.1,0.7-0.1c0.9-0.1,1.8-0.3,2.6-0.2" + ' ' +
+									"c0.4,0.1,0.8-0.1,1-0.1c0.1,0,0.1,0,0.2,0l0.4-0.1l1.3-2l-0.5-2.5l-1.8-0.8c-0.9-0.4-1.8-0.4-2.6,0c-1.1,0.5-2.2,0.7-3.5,0.9" + ' ' +
+									"c-0.3,0.1-0.6,0.1-0.9,0.2c-2.3,0.4-4.6,0.7-6.9,1c-0.8,0.1-1.7,0.2-2.5,0.4c-0.2,0-0.4,0-0.7,0.1c-0.4-0.6-0.9-1.2-1.8-1.6" + ' ' +
+									"l-0.2-0.1l-0.2,0c-1.1-0.1-2.1,0.2-2.8,0.9l-0.2,0.2l-0.5,1.3c-0.1,0.1-0.3,0.1-0.4,0.1c-0.3,0.1-0.7,0.1-1,0.2l-0.2,0" + ' ' +
+									"c-0.5,0.1-1.1,0.2-1.6,0.2c-1.2,0.2-2.3,0.4-3.5,0.6c-0.7,0.1-1.4,0.3-2.1,0.5c-0.5,0.1-0.9,0.3-1.4,0.4c-1.1,0.3-2.2,0.5-3.3,0.7" + ' ' +
+									"l-1.7,0.4l-0.2,0.1c-0.9,0.6-1.4,1.5-1.3,2.5C552.2,155.1,552.8,156,553.9,156.5z"}), 
+								React.createElement("path", {d: "M689.2,181.5c-0.2,1.3-0.3,2.6-0.6,3.9c-0.2,1.1-0.3,2.2-0.4,3.4c0,2.1-0.3,3.8-0.9,5.4" + ' ' +
+									"c-0.4,1.1-0.5,2.7,1.2,4.1c0.2,0.2,0.5,0.3,0.7,0.5l0.5,0.3l0.4,0c0.7,0,1.7-0.1,2.4-1l0.2-0.3l0.1-1c0-0.5,0.1-0.9,0.1-1.4" + ' ' +
+									"c0.1-1.1,0.2-2.3,0.4-3.4c0.1-0.8,0.2-1.6,0.3-2.3c0.1-0.8,0.2-1.6,0.3-2.3c0.2-1.6,0.4-3.1,0.5-4.7c0.1-0.5,0.1-1,0.1-1.5" + ' ' +
+									"c0.1-0.8,0.1-1.6,0.2-2.3c0.2-1.5,0.4-3.1,0.7-4.6l0.4-2.3c0-0.3,0.1-0.6,0.1-0.8c0.1-0.6,0.2-1.2,0.3-1.7" + ' ' +
+									"c0.3-1.5,0.6-2.9,0.8-4.3c0.3-1.3,0.5-2.6,0.8-4c0.2-1,0.4-2.1,0.6-3.1c0.2-1.1,0.4-2.1,0.6-3.2c0.1-0.7,0.4-1.3,0.7-1.8" + ' ' +
+									"c0.6-0.9,0.7-1.9,0.4-2.9c-0.4-1-1.3-1.7-2.3-1.9c-0.3-0.1-0.6-0.1-0.8-0.1c-0.8,0-1.9,0.3-2.6,1.6l-0.1,0.3l0,0.3" + ' ' +
+									"c0,1.1-0.2,2.2-0.4,3.3c-0.1,0.4-0.2,0.9-0.3,1.3c-0.1,0.8-0.3,1.6-0.5,2.4c-0.1,0.6-0.3,1.2-0.4,1.9c-0.1,0.4-0.1,0.7-0.1,1" + ' ' +
+									"c0,0.2,0,0.4,0,0.6c-0.1,0.7-0.2,1.3-0.4,2c-0.1,0.5-0.2,1-0.3,1.6c-0.1,0.5-0.1,1-0.2,1.4c-0.2,1.2-0.3,2.3-0.7,3.3l-0.1,0.3" + ' ' +
+									"l0,0.3c0.1,0.5,0,1-0.2,1.5c-0.1,0.6-0.3,1.2-0.2,1.9c0,0.1,0,0.2,0,0.3c0,0,0,0-0.1,0c0-0.1-0.1-0.2-0.1-0.3" + ' ' +
+									"c-0.3-0.6-0.5-1.2-0.7-1.8c-0.2-0.7-0.4-1.3-0.6-2c-0.2-0.7-0.5-1.4-0.6-2.1c-0.4-1.5-0.8-2.9-1.3-4.3c-0.3-1-0.6-1.9-0.9-2.9" + ' ' +
+									"c-0.1-0.4-0.2-1-0.2-1.4c0-0.7-0.1-1.3-0.3-2.1l-0.1-0.4l-0.6-0.4c-0.3-0.2-0.5-0.3-0.8-0.5c-0.3-0.2-0.8-0.4-1.2-0.4" + ' ' +
+									"c-1.2-0.2-2.2,0.2-2.8,0.9c-0.5,0.7-0.7,1.6-0.5,2.6c0.1,0.4,0.3,0.7,0.4,1c0,0.1,0.1,0.2,0.1,0.2c0.1,0.2,0.2,0.3,0.3,0.5" + ' ' +
+									"c0.1,0.3,0.3,0.5,0.4,0.8c0.3,0.7,0.5,1.5,0.7,2.2l0.1,0.4c0.2,0.6,0.4,1.2,0.6,1.9c0.2,0.7,0.4,1.3,0.6,2" + ' ' +
+									"c0.1,0.4,0.3,0.9,0.4,1.3c0.3,0.8,0.6,1.6,0.8,2.4c0.4,1.6,1,3.1,1.5,4.6l0.4,1c0.1,0.4,0.3,0.8,0.4,1.3l0.3,1l0.2,0.2" + ' ' +
+									"c0.1,0.1,0.1,0.1,0.2,0.2c0.3,0.3,0.6,0.7,1.1,1.1c0.4,0.3,0.8,0.4,1.2,0.5c0,0.1,0,0.1,0,0.2L689.2,181.5z"}), 
+								React.createElement("path", {d: "M619.5,154c-0.2-1.6-0.7-2.4-2.1-2.9c-0.4-0.2-1.2-0.3-1.9-0.2L615,151c-0.5,0.1-1,0.2-1.5,0.4" + ' ' +
+									"c-1.1,0.4-2.4,0.8-3.8,0.9c-1,0.1-2.1,0.4-3.3,1c-1,0.5-1.5,1.4-1.5,2.5c0,0.4,0,1.1,0.6,1.7c0.2,0.2,0.3,0.4,0.2,1.1" + ' ' +
+									"c-0.1,0.7-0.1,1.4-0.2,2.1l-0.3,2.7c0,0.1,0,0.2,0,0.2l-0.1,0c0,0.1,0,0.2,0,0.3l0.1,0c-0.1,1.3-0.3,2.7-0.4,4" + ' ' +
+									"c0,0.1-0.1,0.2-0.1,0.4c-0.6,0.4-1.3,0.8-1.7,1.4c0-0.1,0.1-0.1,0.1-0.2c0.3-0.9,0.2-1.8-0.4-2.6l-0.2-0.2l-0.2-0.1l0,0" + ' ' +
+									"c-0.1,0-0.1,0.1-0.2,0.1c-0.5,0.2-1-0.1-1-0.6c0-1.4,0.4-2.7,0.5-4.1l0,0c0.1-0.5,0.1-1,0.1-1.5c0.1-1.8,0.3-4.1,0.8-6.5" + ' ' +
+									"c0.1-0.4,0.1-0.9,0.1-1.2l0-0.1c0-0.7-0.3-1.7-1.7-2.4c-1-0.5-2.1-0.3-3,0.6l-0.2,0.2l-0.2,0.6c-0.1,0.3-0.2,0.7-0.3,1" + ' ' +
+									"c-0.1,0.3-0.1,0.6-0.2,1c0.2,1-0.1,2.3-0.2,3.2c-0.1,0.5-0.1,1-0.2,1.6c0,0.4,0,0.9-0.1,1.3l-0.1,0c0,0.4-0.1,0.7-0.1,1.1l0.1,0.1" + ' ' +
+									"c0,0.5-0.1,1.1-0.1,1.6l-0.1,0.1c-0.1,0.8-0.1,1.6-0.1,2.4c0,0,0,0,0,0.1c0,0,0,0,0,0c0,0,0,0.1,0,0.2c0,0.6,0,1.2-0.1,1.8" + ' ' +
+									"c0,0.2-0.1,0.4-0.1,0.5c-1.3,0.8-3,1.6-4.4,2c0-0.1,0-0.3,0-0.4c0.1-2.8,0.4-5.7,0.7-8.5c0.1-0.7,0.2-1.3,0.2-2" + ' ' +
+									"c0.1-0.7,0.2-1.2,0.4-1.6c0.2-1.2,0.5-2.7,1-3.8l0,0l-0.5-1.2l-2.1-1.2l-2.1,0.6l-0.2,0.2c-0.8,0.9-1,1.9-1.3,2.6" + ' ' +
+									"c-0.6,2-0.8,4.1-0.9,6.1c-0.1,0.9-0.1,1.7-0.3,2.6c-0.1,0.9-0.2,1.9-0.2,2.8l0,0.8c-0.1,1.3-0.1,2.6,0,3.9l0,0.2" + ' ' +
+									"c0.1,0.6,0.1,1.1-0.1,1.5c-0.5,0.9-0.4,1.8-0.2,2.5c0.1,0.4,0.2,0.9,0.2,1.3c0,0.5,0,1-0.1,1.5c0,1.2-0.1,2.3-0.3,3.3" + ' ' +
+									"c-0.2,1.1,0,2.1,0.6,2.9l0.1,0.2l0.2,0.1c1.6,1,3.1,0.7,4.3-0.5l0.3-0.3l0-0.4c0.1-0.8,0-1.6-0.1-2.3c-0.1-0.6-0.1-1.2-0.1-1.8" + ' ' +
+									"c0-1,0.1-1.9,0.1-2.9l0-0.6l4.1-1.5c0,0.6,0,1.1,0,1.7c-0.1,1.5-0.2,3-0.3,4.7c0,0.3-0.1,0.7-0.2,0.9c-0.7,1.2-0.7,2.5,0,3.8" + ' ' +
+									"l0.1,0.2l0.2,0.1c0.7,0.6,1.4,0.9,2.3,0.9l0.2,0c1.3,0,2.1-0.7,2.3-1.9c0.1-0.6,0.2-1.1,0.2-1.6l0-0.2c0-0.3,0-0.6,0-0.8" + ' ' +
+									"c0-0.2,0-0.3,0-0.5c0-0.5,0.1-1,0.1-1.6c0.1-1,0.1-2,0.1-3c0-1.1,0.1-2.2,0.1-3.3l0-1.6c0,0,0-0.1,0-0.1c0.3-0.1,0.7-0.3,1-0.4" + ' ' +
+									"c0.4-0.2,0.8-0.5,1-0.8l0,0.2c-0.2,1.7,0.7,2.7,1.5,3.3c-0.1,1.1-0.2,2.1-0.8,2.9c-0.4,0.5-0.6,1.1-0.7,1.5" + ' ' +
+									"c-0.1,0.5-0.2,1.1-0.3,1.5l-0.1,0.6l0,0.2c0.2,1.4,1,2.1,1.7,2.6l0.5,0.4l0.3,0c0.1,0,0.3,0,0.5,0.1c0.4,0.1,0.8,0.1,1.3,0.1" + ' ' +
+									"c0.1,0,0.1,0,0.2,0c2.2-0.1,4.4-0.6,6.8-1.3c0.5-0.2,0.9-0.3,1.3-0.6c1.2-0.6,1.8-1.7,1.7-3.1c-0.1-1.3-1.1-2.3-2.5-2.2" + ' ' +
+									"c-0.4,0-0.8,0.2-1.1,0.3l-0.2,0.1c-0.3,0.1-0.5,0.2-0.8,0.3c-1,0.3-1.9,0.7-2.9,0.8c0-0.3,0-0.6,0.1-1l0.1-0.5" + ' ' +
+									"c0.2-1.4,0.4-2.8,0.6-4.2c0-0.3,0.1-0.4,0.3-0.5c0.5-0.3,1-0.6,1.5-0.9c0.7-0.5,1.4-0.9,2.1-1.3c1-0.5,1.8-1.3,2.7-2.4l0.1-0.2" + ' ' +
+									"l0.1-0.2c0.3-1.5-0.5-2.1-1-2.3l-0.2-0.1l-0.2,0c-0.8-0.1-1.7,0.1-2.4,0.4c-0.5,0.2-1,0.5-1.5,0.7l-0.6,0.3" + ' ' +
+									"c-0.1,0-0.1,0.1-0.2,0.1c0.2-2,0.5-4,0.7-5.8l0.1-0.8c0.1-0.1,0.2-0.2,0.3-0.3c0.3-0.4,0.5-0.7,0.8-1c0.1-0.1,0.3-0.4,0.4-0.4" + ' ' +
+									"c0.3-0.1,0.6-0.3,0.9-0.4c1.3-0.6,2.5-1.1,3.8-0.9l0.5,0.1l0.5-0.5c0.2-0.1,0.3-0.2,0.4-0.4c0.2-0.2,0.3-0.4,0.3-0.5l0.2-0.3" + ' ' +
+									"L619.5,154z"}), 
+								React.createElement("path", {d: "M607.6,193.6c0.2,0,0.4,0,0.6,0c0.7,0,1.2,0.1,1.6,0.2c1.3,0.4,2.6,0.1,3.7-0.7l0.2-0.2l0.1-0.3" + ' ' +
+									"c0.4-0.9,0.6-2.3-0.7-3.8c-0.5-0.7-1.3-1-2.2-1c-0.3,0-0.7,0-1.1,0.1c-1.5,0.3-3.1,0.5-4.5,0.6c-2.8,0.2-5,0.4-7.1,0.8" + ' ' +
+									"c-0.6,0.1-1.1,0.2-1.7,0.3c-1.1,0.2-2.2,0.3-3.3,0.6c-1.8,0.4-3.6,0.9-5.4,1.3c-1,0.2-1.9,0.5-2.9,0.7c-2.6,0.6-5.2,1.3-7.8,1.9" + ' ' +
+									"c-1.7,0.4-3.3,0.7-5,1.1c-0.3,0.1-0.8,0.2-1.2,0.2c-0.4,0-0.8,0-1.2,0c-0.2,0-0.4,0-0.6,0c-0.1,0-0.2,0-0.4,0c-0.2,0-0.4,0-0.6,0" + ' ' +
+									"c-0.3,0-1.2,0-1.9,0.7l-0.1,0.1l-0.1,0.2c-0.9,1.7-0.5,3.2,1.4,4.5l0.3,0.2l0.9-0.1c1.5-0.1,3-0.2,4.5-0.5l0.7-0.2" + ' ' +
+									"c0.5-0.1,1.1-0.3,1.6-0.4c0.8-0.2,1.5-0.3,2.3-0.5c1.5-0.3,3.1-0.7,4.6-1.1c1.3-0.3,2.6-0.7,3.9-1c1.7-0.4,3.4-0.9,5.1-1.3" + ' ' +
+									"c3.4-0.8,6.7-1.4,9.8-1.7c1.6-0.2,3.4-0.3,5-0.3L607.6,193.6z"})
+							), 
+							React.createElement("rect", {x: "499.7", y: "138.5", width: "378.5", height: "69.5"})
+						), 
+						React.createElement("g", {id: "ex_hex", className: "band_lineup_link pink", onClick: self.openBand.bind(this, "Ex Hex")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M632.7,269.8c-0.3-0.5-0.7-1.2-1.5-1.5c-0.4-0.2-0.9-0.3-1.2-0.4c-0.1,0-0.3-0.1-0.4-0.1l-0.4-0.1" + ' ' +
+									"l-0.5,0.3c-0.1,0.1-0.2,0.1-0.3,0.2c-0.3,0.2-0.6,0.3-0.8,0.5c-0.6,0.4-1.2,0.8-1.9,1c-0.7,0.2-1.5,0.4-2.2,0.6" + ' ' +
+									"c-1.1,0.3-2.3,0.6-3.4,0.8c-1.9,0.4-3.9,0.8-5.8,1c-0.5,0-0.9,0.2-1.3,0.3c-0.1,0-0.2,0-0.2,0.1l-2-11.9c0.2-0.1,0.4-0.1,0.6-0.2" + ' ' +
+									"c0.6-0.2,1.3-0.5,1.9-0.7c0.7-0.3,1.5-0.6,2.2-0.9c1.7-0.6,3.2-1.2,4.8-1.7c0.9-0.3,2-0.5,3-0.5l0.2,0c1,0,1.9-0.3,2.4-1" + ' ' +
+									"c0.8-1,0.8-2.9,0.2-4c-0.5-0.9-1.2-1.2-1.7-1.5c-0.1-0.1-0.3-0.1-0.4-0.2l-0.3-0.2l-0.9,0.1c-0.5,0.1-0.9,0.1-1.4,0.2" + ' ' +
+									"c-0.3,0.1-0.6,0.2-0.8,0.3c-0.1,0.1-0.3,0.1-0.4,0.2c-0.2,0.1-0.3,0.2-0.5,0.2c-1,0.3-2.2,0.6-3.3,1.1l-0.1,0" + ' ' +
+									"c-0.2,0.1-0.5,0.2-0.8,0.3l-2.2,0.9c-0.9,0.3-1.7,0.7-2.6,1c-0.2,0.1-0.4,0.2-0.6,0.2c0-0.2,0-0.3,0-0.5c-0.1-0.7-0.1-1.5-0.2-2.2" + ' ' +
+									"c-0.2-1.5-0.3-3.1-0.4-4.6c0-0.4-0.1-0.8-0.1-1.2c-0.1-1-0.2-2-0.2-3c0-0.4,0-0.7,0-1.1c0-0.4,0-0.8,0-1.1c0-1.1,0-2.2,0-3.3" + ' ' +
+									"c0-0.3,0-0.7,0-1c0-0.6-0.1-1,0.1-1.2c0.2-0.2,0.4-0.3,0.5-0.5l0.2-0.2c0.1-0.1,0.1-0.1,0.2-0.2c0.1-0.1,0.2-0.2,0.2-0.2" + ' ' +
+									"c0.7-0.3,1.5-0.4,2.4-0.5c1.5-0.2,2.8-0.3,4-0.3l0.2,0c0.4,0,0.8,0,1.2-0.1c0,0,0,0,0,0c0.5,0.5,1.2,0.8,1.9,0.8l0.5,0" + ' ' +
+									"c0.8-0.1,1.8-0.1,2.8-0.5c0.2-0.1,0.6-0.2,0.9-0.2c0.2,0,0.4-0.1,0.7-0.1c0.3,0,0.7-0.1,1.1-0.1c1-0.2,1.8-0.8,2.2-1.7" + ' ' +
+									"c0.4-0.9,0.4-1.9-0.1-2.8c-0.1-0.1-0.1-0.2-0.2-0.3c-0.3-0.5-0.6-1.3-1.5-1.7l-0.4-0.6l-1.1,0.1c-0.3,0-0.6,0-0.9,0.1l-0.1,0" + ' ' +
+									"c-0.2,0-0.6,0-0.9,0.2c-0.9,0.4-1.7,0.7-2.6,0.7c-0.7,0-1.4,0.1-2.1,0.2c-0.4,0-0.9,0.1-1.3,0.1c-0.8,0.1-1.5,0.1-2.3,0.1l-0.7,0" + ' ' +
+									"c-0.2,0-0.4,0-0.7,0c-0.4,0-0.8,0-1.2,0.1c-0.5,0-1,0.1-1.5,0.1c-0.3,0-0.5,0.1-0.8,0.1c-0.1-1-0.5-1.9-1.4-2.6" + ' ' +
+									"c-0.6-0.5-1.4-0.9-2.1-1c-0.1,0-0.2,0-0.3,0c-1.2,0-2.7,1.5-2.8,2.7c0,0.4,0,0.9,0,1.3c0,0.2,0,0.4,0,0.5c0,0.6,0.1,1.2,0.1,1.9" + ' ' +
+									"c0,0.1,0,0.3,0,0.4c0,0.2,0,0.5,0,0.7c0,0.4,0.1,0.7,0.1,1.1c0,0.4,0.1,0.9,0.1,1.3c0,0.6,0,1.2,0,1.8c0,0.8-0.1,1.5,0,2.4" + ' ' +
+									"c0.1,1,0.1,2,0,3.1c0,0.5,0,1,0,1.4c0,0.3,0,0.6,0,0.9c0.1,0.7,0.1,1.5,0.2,2.2l0.3,3c0.1,1.1,0.2,2.2,0.3,3.3" + ' ' +
+									"c0.1,0.9,0.2,1.8,0.3,2.6c0.1,0.6,0.1,1.2,0.2,1.8c0,0,0,0,0,0c-0.7,0.4-1.3,1-1.5,1.7c-0.2,0.9,0,1.8,0.6,2.6" + ' ' +
+									"c0.3,0.4,0.8,1,1.5,1.3c0,0.2,0.1,0.4,0.1,0.6s0,0.4,0.1,0.6c0,0.4,0.1,0.7,0.1,1.1c0.1,0.6,0.2,1.2,0.3,1.8" + ' ' +
+									"c0.1,0.7,0.2,1.4,0.3,2c0,0.3,0.1,0.5,0.1,0.8c0,0.5,0.1,1,0.2,1.5c0.2,0.8,0.2,1.6,0,2.5c-0.1,0-0.1,0.1-0.1,0.1" + ' ' +
+									"c-0.6,0-1.1,0.1-1.6,0.2c-0.9,0.1-1.7,0.2-2.4,0.1c-0.2-0.1-0.5,0-0.8,0c-1.8,0.2-2.4,1.6-2.8,2.4l-0.2,0.4l0.3,1.1" + ' ' +
+									"c0.2,0.9,0.6,2.3,2.3,2.6l0.5,0.3l1-0.1c0.4,0,0.7-0.1,1.1-0.1c0.4,0,0.7-0.1,1-0.2c0.5-0.1,0.9-0.2,1.3-0.1l0.2,0" + ' ' +
+									"c0.2,0,0.4-0.1,0.6-0.1c0.8-0.1,1.7-0.2,2.5-0.3c0.2,0.1,0.5,0.1,0.8,0.1c0.5,0,1-0.2,1.3-0.3l0.1,0c1.1-0.4,2.2-0.6,3.4-0.7" + ' ' +
+									"c0.3,0,0.6-0.1,0.9-0.1l0.3,0c0.3,0,0.5-0.1,0.8-0.1l0.9-0.2c1.1-0.2,2.1-0.4,3.2-0.6c1.4-0.3,2.8-0.6,4.3-0.9" + ' ' +
+									"c0.4-0.1,0.7-0.2,1.1-0.3c0.8-0.2,1.6-0.4,2.5-0.5l0.2,0c0.3,0,0.6,0,0.9-0.2c0,0,0,0,0,0c1,0.1,1.9-0.2,2.6-0.9" + ' ' +
+									"c0.6-0.6,0.9-1.4,0.9-2.3c0-0.9-0.4-1.5-0.7-2.1L632.7,269.8z"}), 
+								React.createElement("path", {d: "M756.3,259.8l-0.3-0.3c-0.1-0.1-0.2-0.1-0.2-0.2c-0.1-0.1-0.2-0.2-0.2-0.2c-0.6-0.9-1.5-1.3-2.3-1.7" + ' ' +
+									"c-1-0.5-2-0.5-3.1,0c-0.7,0.3-1.4,0.6-2.1,0.8c-0.8,0.2-1.6,0.4-2.4,0.6c-1.3,0.3-2.5,0.6-3.8,0.8c-0.3,0-0.5,0.1-0.5,0.2" + ' ' +
+									"c-0.9,0.3-1.6,0.5-2.3,0.5c0,0,0,0,0,0c-0.3-1.9-0.5-3.8-0.5-5.8c0-0.9-0.1-1.7-0.2-2.6c0-0.4-0.1-0.8-0.1-1.2c0,0,0-0.1,0-0.1" + ' ' +
+									"c0-0.1,0-0.1,0-0.2c0-0.1,0-0.2,0-0.2c0-0.2,0.1-0.5,0-0.8c0-0.4,0-0.4,0.3-0.6c0.7-0.3,1.3-0.6,2-0.9c0.8-0.4,1.6-0.7,2.3-1" + ' ' +
+									"c0.4-0.2,0.8-0.4,1.2-0.5c2-0.8,3.8-1.6,5.8-2.1c1-0.2,1.7-0.9,2.1-1.9l0.2-0.5l-0.4-0.7c-0.1-0.2-0.2-0.4-0.3-0.6" + ' ' +
+									"c-0.7-1.2-1.9-1.8-3.4-1.7c-1.7,0.1-3.2,0.6-4.8,1.2c-0.2,0.1-0.5,0.2-0.7,0.3c-0.6,0.2-1.3,0.4-1.9,0.8c-0.3,0.1-0.6,0.2-0.9,0.4" + ' ' +
+									"c-0.3,0.1-0.7,0.2-1,0.4l0.1-0.6c0.2-1.3,0.4-2.7,0.6-4c0-0.1,0-0.3,0.1-0.4c0.1-0.8,0.2-1.1,0.6-1.3c0.3-0.2,0.4-0.4,0.5-0.6" + ' ' +
+									"l0.2-0.2c0.5-0.5,0.9-0.9,1.5-1.1c0.9-0.3,1.8-0.6,2.7-1c0.8-0.3,1.6-0.6,2.4-0.9c0.1,0,0.2-0.1,0.3-0.1l0.3,0.9l0.9-0.1" + ' ' +
+									"c0.2,0,0.3,0,0.4,0c0.4,0,0.8,0,1.2-0.1c0.6-0.1,2-0.4,2.3-2c0,0,0-0.1,0.1-0.1c0-0.1,0.1-0.1,0.1-0.2l0.1-0.3l-0.1-0.3" + ' ' +
+									"c0-0.1,0-0.3-0.1-0.4c-0.1-0.3-0.1-0.7-0.2-1c-0.4-1.6-1.7-2.2-2.7-2.6c-1.2-0.5-2.5-0.6-4.1-0.1c-0.3,0.1-0.5,0.1-0.8,0.2" + ' ' +
+									"c-0.5,0.2-1.1,0.3-1.6,0.4c-1.2,0.2-2.3,0.6-3.3,1.2c-0.9,0.5-1.5,0.7-2.2,0.6c-0.8-0.1-1.6,0-2.3,0.4c-0.4,0.2-1,0.6-1.6,1" + ' ' +
+									"c-0.7,0.6-1.6,1-2.8,1.4c-1.1,0.4-1.9,1.4-2.2,2.6c-0.3,1.1,0,2.1,0.7,2.8l0.2,0.2c0.7,0.7,1.5,1.6,2.7,1.8c0,0,0,0,0,0.1" + ' ' +
+									"c-0.1,0.5-0.2,0.9-0.2,1.5c-0.1,1-0.1,2-0.2,3c0,0.5-0.1,1-0.1,1.6c0,0,0,0,0,0c-0.4,0.1-0.8,0.2-1.2,0.3" + ' ' +
+									"c-0.9,0.3-1.6,0.9-2.1,1.7c-1-1-2.1-1.3-3.1-1.5c0-0.1,0-0.3,0-0.4c0-0.3,0-0.5-0.1-0.8c-0.1-0.9-0.2-1.7-0.4-2.6" + ' ' +
+									"c-0.1-0.7-0.2-1.5-0.3-2.2c0-0.3-0.1-0.6-0.1-1L725,236c-0.1-1.1-0.2-2.1-0.3-3.2c-0.1-1.2-0.3-2.3-0.4-3.5l-0.2-2" + ' ' +
+									"c0-0.3-0.1-0.6-0.1-0.9c0-0.2,0-0.4,0-0.6c0-0.5,0-1.1-0.2-1.7c-0.3-0.9-0.3-1.8,0-3c0.5-2.1-0.4-4.1-2.4-5.3" + ' ' +
+									"c-0.4-0.3-1-0.4-1.7-0.4c-0.8,0-1.5,0.2-2,0.6c-0.3,0.2-0.5,0.5-0.8,0.7l-0.7,0.6l0,0.5c-0.1,1.1,0.1,2.1,0.4,3.2" + ' ' +
+									"c0.3,0.9,0.4,1.9,0.6,3c0,0.4,0.1,0.7,0.2,1.1c0,0.3,0.1,0.5,0.1,0.8c0,0.2,0,0.5,0,0.7c0,0.5,0.1,1,0.2,1.5" + ' ' +
+									"c0,0.4,0.1,0.8,0.1,1.2c0.1,1,0.2,2,0.3,3l0.1,1l-0.8,1l0.6,0.7c0.4,0.4,0.6,0.9,0.6,1.6c0.1,1,0.2,2,0.3,3l0.1,0.6" + ' ' +
+									"c0.1,0.7,0.2,1.4,0.3,2.1c0.1,0.9,0.2,1.9,0.3,2.8c-0.1,0-0.2,0.1-0.3,0.1c-0.7,0.2-1.4,0.4-2.1,0.4c-0.7,0.1-1.5,0.2-2.2,0.3" + ' ' +
+									"c-0.5,0.1-1.1,0.2-1.6,0.2c-0.5,0.1-0.9,0.1-1.4,0.2c-0.8,0.1-1.5,0.2-2.2,0.2c-1.2,0.1-2.1,0.2-2.9,0.4l-0.4,0.1" + ' ' +
+									"c-0.3,0.1-0.7,0.2-1,0.2c-0.5,0-1,0.1-1.5,0.2c-0.3,0-0.6,0.1-0.9,0.1c-0.1-0.7-0.2-1.3-0.2-2c0-0.4-0.1-0.9-0.1-1.3" + ' ' +
+									"c-0.1-0.7-0.1-1.4-0.2-2.1c-0.1-0.8-0.2-1.7-0.4-2.5c-0.2-1.1-0.3-2.3-0.5-3.4c-0.2-1.5-0.3-3-0.4-4.5l0-0.1c0-0.5-0.1-1,0.1-1.4" + ' ' +
+									"c0.6-1.4-0.1-2.5-0.6-3.2c-0.1-0.2-0.3-0.4-0.4-0.6c-0.2-0.5-0.6-0.6-0.8-0.7c-0.1-0.1-0.3-0.1-0.4-0.2c-0.2-0.1-0.3-0.1-0.5-0.2" + ' ' +
+									"c-0.5-0.3-1.1-0.4-1.6-0.4c-1.5,0-2.7,1-3.2,2.5c-0.1,0.4-0.1,0.8-0.2,1.1c0,0.1,0,0.2,0,0.3l-0.1,0.4l0.2,0.3" + ' ' +
+									"c0.6,0.9,1,1.6,0.9,2.4c0,0.3,0,0.5,0.1,0.6c0.1,0.5,0.2,1,0.1,1.5c0,0.4,0,0.8,0.1,1.1l0,0.1c0,0.2,0.1,0.4,0.1,0.6" + ' ' +
+									"c0.1,0.2,0.1,0.5,0.2,0.7c0.2,1.4,0.4,2.9,0.5,4.3l0.5,4c0.2,1.2,0.3,2.5,0.5,3.7c-0.1,0-0.3,0.1-0.4,0.1c-0.9,0.2-2,0.4-2.8,1.5" + ' ' +
+									"l-0.1,0.2l-0.1,0.2c-0.4,1.7,0.8,2.8,1.5,3.4l0.3,0.3l0.3,0c0.1,0,0.2,0,0.3,0l0,0c0.6,0.3,1.2,0.4,1.8,0.4" + ' ' +
+									"c0.1,0.9,0.3,1.8,0.4,2.6c0.2,1.1,0.4,2.1,0.4,3.1c0,0.3,0.1,0.5,0.2,0.6l0.1,0.2c0.1,0.2,0.1,0.4,0.1,0.6l0,0.3" + ' ' +
+									"c0.2,1,0.3,2,0.4,3c0.1,0.7,0.2,1.3,0.1,1.8c-0.1,0.9,0.1,1.7,0.4,2.3c0.1,0.3,0.3,0.6,0.4,0.9c0.1,0.1,0.1,0.2,0.2,0.3l0.2,0.4" + ' ' +
+									"l0.4,0.2c0.1,0,0.1,0.1,0.2,0.1c0.9,1,2,1,2.8,1h0c0.9,0,1.8-0.4,2.3-1.1c0.6-0.7,0.7-1.7,0.5-2.6l-0.1-0.2" + ' ' +
+									"c-0.1-0.2-0.1-0.5-0.2-0.7c-0.1-0.6-0.2-1.2-0.2-1.8c-0.1-0.5-0.1-0.9-0.2-1.4c0-0.3-0.1-1.1-0.9-1.7c-0.2-1.1-0.5-2.4-0.7-3.6" + ' ' +
+									"c-0.1-0.9-0.3-1.8-0.4-2.7l-0.1-0.8c-0.1-0.6-0.2-1.3-0.3-1.9c0.9-0.1,1.7-0.3,2.4-0.4c0.4,0,0.8-0.1,1.2-0.1" + ' ' +
+									"c0.4,0,0.8-0.1,1.3-0.1c0.4-0.1,0.9-0.1,1.3-0.2c0.7-0.1,1.4-0.2,2-0.2c2.1-0.1,4.2-0.4,6.4-0.8c0.1,0,0.3,0,0.5,0l0.2,0" + ' ' +
+									"c0.2,0,0.3,0,0.5,0l0.3,0l0,0.1c0.1,0.6,0.1,1.2,0.2,1.8c0,0.3,0.1,0.6,0.1,1c0,0.6,0.1,1.3,0.2,2c0,0.2,0.1,0.4,0.1,0.6" + ' ' +
+									"c0.1,0.4,0.2,0.8,0.2,1.2c0,0.1,0,0.3-0.1,0.6c0,0.1,0,0.2-0.1,0.4c0,0.1,0,0.2-0.1,0.3c-0.1,0.3-0.1,0.6-0.1,0.9" + ' ' +
+									"c0,1.2,0.6,2,1.1,2.6l0.2,0.3c0.5,0.7,1,1.2,1.6,1.4c0.6,0.3,1.4,0.6,2.3,0.6c0.6,0,1.1-0.1,1.6-0.4l0.1-0.1" + ' ' +
+									"c0.3-0.1,0.6-0.3,0.9-0.8c0.9-1.3,0.6-2.6,0.3-3.5c-0.1-0.3-0.2-0.6-0.3-0.9c-0.2-0.6-0.4-1.1-0.5-1.6c-0.5-2.1-1-4.6-1.2-7" + ' ' +
+									"c0,0,0.1,0,0.1,0l0.3,0c0.3,0,1.1,0,1.7-0.5l0.2-0.2c0.2-0.3,0.4-0.5,0.5-0.8c0.1,0.2,0.3,0.4,0.5,0.6c0.2,0.1,0.3,0.2,0.5,0.4" + ' ' +
+									"c0.4,0.3,1,0.8,1.7,1c0,0.5,0.1,1,0.1,1.5c0,0.3,0,0.5,0,0.8c0,0.2,0,0.5,0,0.7c0,0.5,0,0.9,0,1.4l0,0.4c0,0.3,0,0.6,0.1,0.9" + ' ' +
+									"c0,0.4,0.1,0.8,0.2,1.2c0.1,0.8,0.2,1.6,0.3,2.3l0,0.1c0,0.4,0,0.6-0.1,0.7c-0.3,0.3-0.3,0.6-0.3,0.8c-0.2,1.5,0.1,2.8,0.8,4" + ' ' +
+									"c0.4,0.6,0.8,1.1,1.2,1.4c0.5,0.3,0.9,0.6,1.4,0.9c0.2,0.1,0.4,0.2,0.6,0.3l0.4,0.3l0.5-0.2c1.1-0.4,2.3-0.9,3.4-1.8l0.1,0" + ' ' +
+									"c0.3-0.1,0.5-0.1,0.7-0.2c0.7-0.1,1.3-0.4,1.8-0.6c0.7-0.3,1.4-0.5,2.1-0.6c0.3,0,0.4-0.1,0.6-0.2c1.6-0.5,3.3-0.8,4.7-1.1" + ' ' +
+									"c0.3,0,0.6,0,1,0c0.4,0.1,1,0.1,1.5,0.1c0.2,0,0.5,0,0.8,0c0.2,0,0.4,0,0.6,0h0.6l0.3-0.5c0,0,0.1-0.1,0.1-0.1" + ' ' +
+									"c0.2-0.2,0.4-0.4,0.5-0.8c0.5-1,0.4-2,0.3-2.8L756.3,259.8z M704.2,270.9L704.2,270.9L704.2,270.9L704.2,270.9z"}), 
+								React.createElement("path", {d: "M787.6,260.5c-0.1-0.4-0.3-0.8-0.4-1.1c-0.3-0.6-0.6-1.3-1.2-1.9l-0.2-0.2c-0.5-0.5-1-0.9-1.2-1.5" + ' ' +
+									"c-0.3-0.8-0.7-1.5-1-2.3c-0.2-0.3-0.3-0.7-0.5-1c-0.8-1.8-1.6-3.5-2.4-5.3l-0.4-0.8c-0.5-1.1-1-2.2-1.5-3.3" + ' ' +
+									"c-0.1-0.2-0.1-0.4-0.2-0.6c0.1-0.1,0.1-0.2,0.2-0.3c0.3-0.5,0.6-0.9,0.8-1.3c0.8-1.1,1.7-2.2,2.8-3.5c0.2-0.2,0.4-0.4,0.6-0.7" + ' ' +
+									"c0.3-0.3,0.5-0.5,0.8-0.8c0.5-0.6,1.2-1,2.1-1.4c0.9-0.3,1.6-0.9,2-1.7c0.4-0.8,0.4-1.7,0-2.6c-0.1-0.3-0.2-0.6-0.4-0.8l-0.2-0.4" + ' ' +
+									"l-0.5-0.5c-0.3-0.2-0.5-0.4-0.7-0.6c-0.2-0.2-0.5-0.3-0.7-0.4c-1.6-0.6-3.1-0.4-4.3,0.7c-0.3,0.3-0.6,0.6-0.9,0.9" + ' ' +
+									"c-0.1,0.2-0.3,0.3-0.5,0.5c-0.2,0.2-0.5,0.4-0.7,0.7c-0.4,0.4-0.9,0.9-1.3,1.4c-0.6,0.7-1.2,1.5-1.8,2.2c-0.3,0.4-0.6,0.7-0.9,1.1" + ' ' +
+									"c0,0.1-0.1,0.1-0.1,0.2c0-0.1-0.1-0.1-0.1-0.2c-0.1-0.3-0.2-0.5-0.4-0.8c-0.2-0.4-0.4-0.8-0.6-1.2c-0.2-0.4-0.4-0.8-0.7-1.2" + ' ' +
+									"l-0.2-0.4c-0.4-0.8-0.8-1.5-1.1-2.2c-0.3-0.7-0.6-1.4-0.9-2.1c-0.2-0.5-0.4-1-0.6-1.5c-0.1-0.2-0.2-0.5-0.2-0.7" + ' ' +
+									"c-0.1-0.5-0.3-1-0.6-1.6c-0.3-0.5-0.7-0.9-1.1-1.3c-0.7-0.5-1.4-0.7-2-0.9c-0.2-0.1-0.4-0.1-0.7-0.2l-0.6-0.2l-0.7,0.6" + ' ' +
+									"c-0.7,0.5-1.6,1.2-1.8,2.6c-0.2,1.1,0.1,2.1,0.9,3.1l0.1,0.1c0.7,0.9,1.4,1.7,1.9,2.6c0.1,0.2,0.2,0.4,0.3,0.6" + ' ' +
+									"c0.1,0.2,0.2,0.5,0.3,0.7c0.1,0.3,0.3,0.6,0.5,0.8c0.1,0.2,0.3,0.4,0.4,0.7c0.6,1.1,1.1,2.2,1.7,3.3c0.6,1.2,1.2,2.4,1.8,3.6" + ' ' +
+									"l0.6,1.1c0,0,0,0.1-0.1,0.1c-0.4,0.7-0.8,1.4-1.2,2.1c-0.8,1.3-1.6,2.6-2.2,4c-0.2,0.5-0.5,1-0.8,1.5c-0.2,0.3-0.4,0.6-0.5,0.9" + ' ' +
+									"c-0.2,0.5-0.5,0.9-0.7,1.4c-0.2,0.3-0.3,0.6-0.5,0.9c-0.1,0.2-0.2,0.3-0.3,0.5c-0.1,0.2-0.2,0.4-0.3,0.6c-0.1,0.2-0.2,0.4-0.3,0.6" + ' ' +
+									"c-0.4,0.8-0.7,1.5-1.4,2c-1.1,0.9-1.4,2.4-0.8,3.8c0.1,0.1,0.1,0.3,0.2,0.4c0.4,1.1,1.1,1.9,2,2.3c0.1,0.1,0.3,0.1,0.4,0.2" + ' ' +
+									"c0.1,0.1,0.2,0.1,0.3,0.2c0.5,0.3,1,0.4,1.5,0.4c0.5,0,1.4-0.2,2.2-1.3c0.2-0.4,0.4-0.7,0.6-1.1c0.2-0.4,0.4-0.7,0.6-1.1" + ' ' +
+									"c0.9-1.3,1.3-2.7,1.6-3.8c0.2-0.7,0.5-1.4,0.8-2.2c0.4-0.9,0.9-1.8,1.5-2.8c0.3-0.6,0.7-1.1,1-1.7c0.1,0.3,0.3,0.6,0.4,0.9" + ' ' +
+									"c0.4,0.6,0.6,1.3,0.9,2.1c0.2,0.6,0.5,1.3,0.8,2c0.4,0.8,0.8,1.6,1.1,2.4c0.2,0.4,0.4,0.9,0.6,1.3c0.2,0.4,0.4,0.8,0.6,1.1" + ' ' +
+									"c0.4,0.7,0.7,1.4,1,2.1c0.2,0.5,0.4,1,0.6,1.5c0.4,0.9,0.7,1.7,1,2.5c0.4,1.3,1.3,2.1,2.3,2.8c0.6,0.4,1.3,0.6,2.1,0.6" + ' ' +
+									"c0.3,0,0.6,0,0.9-0.1c0.6-0.1,1.3-0.5,1.6-1.1c0.4-0.9,1.1-2.4-0.1-3.9C788.2,262,787.9,261.3,787.6,260.5z"}), 
+								React.createElement("path", {d: "M660.5,234.8l-0.4-0.1l-1.3,0.7l-0.6,0.7c-0.3,0.4-0.7,0.8-1,1.2c-0.2,0.2-0.3,0.4-0.4,0.6" + ' ' +
+									"c-0.1,0.1-0.1,0.3-0.1,0.3c-0.7,0.5-1.1,1.1-1.5,1.6c-0.1,0.1-0.2,0.3-0.3,0.4l-0.4,0.6c-0.8,1.1-1.5,2.2-2.5,3.1l-0.4,0.4" + ' ' +
+									"l0.1,0.5c0,0.1,0,0.1-0.2,0.3c-0.1,0-0.1,0.1-0.2,0.1c-0.1-0.5-0.3-0.9-0.4-1.4c-0.4-1.1-0.7-2.3-1.1-3.4c-0.4-1-0.7-2.1-1.1-3.1" + ' ' +
+									"c-0.2-0.6-0.5-1.2-0.7-1.8l-0.1-0.3c-0.3-0.8-0.5-1.4-0.5-2.1c0-1.1-0.1-2.4-1.3-3.4c-0.2-0.1-0.4-0.3-0.5-0.4l-0.5-0.4l-1.4-0.1" + ' ' +
+									"c-1.4-0.1-2.4,0.5-2.9,1.8c-0.5,1.2-0.4,2.3,0.3,3.5c0.1,0.2,0.3,0.5,0.4,0.7c0.4,0.6,0.7,1.2,0.9,1.8c0,0.2,0.1,0.3,0.2,0.5" + ' ' +
+									"c0.5,0.7,0.8,1.5,1.1,2.4c0.1,0.3,0.2,0.5,0.3,0.8c0.3,0.9,0.6,1.8,0.9,2.8c0.3,1,0.6,2,1,3.1c0.5,1.3,0.9,2.7,1.3,4" + ' ' +
+									"c0.2,0.5,0.3,1,0.5,1.6c-0.1,0.3-0.2,0.6-0.3,0.9c-0.2,0.8-0.3,1.4-0.8,1.9c-0.4,0.4-0.5,0.8-0.6,1.1c0,0.1-0.1,0.1-0.1,0.2" + ' ' +
+									"c-0.1,0.2-0.2,0.4-0.2,0.6c-0.1,0.2-0.2,0.4-0.3,0.6c-0.1,0.1-0.2,0.3-0.3,0.4c-0.1,0.1-0.2,0.3-0.2,0.4c-0.8,1.4-1.4,3-2,4.5" + ' ' +
+									"c-0.3,0.8-0.6,1.6-1,2.3c-0.6,1.2-1,2.3-2,3.1c-0.6,0.5-1,1.2-1,2.1c-0.1,0.9,0.2,1.8,0.7,2.4c0.4,0.5,0.9,0.9,1.4,1.3l0.3,0.3" + ' ' +
+									"c0.4,0.3,1,0.5,1.6,0.5c0.8,0,1.6-0.3,1.9-0.9c0.5-0.8,1-1.5,1.3-2.3c0.4-0.8,0.7-1.7,1-2.5c0.3-0.7,0.5-1.4,0.8-2.1" + ' ' +
+									"c0.4-0.9,0.8-1.7,1.1-2.5c0.2-0.5,0.4-0.9,0.6-1.4c0.2-0.4,0.4-0.8,0.6-1.3c0.1-0.3,0.2-0.5,0.3-0.8c0.7,1.8,1.4,3.7,2.1,5.5" + ' ' +
+									"l0.3,0.7c0.4,0.9,0.7,1.9,1.1,2.8c0.6,1.3,1.1,2.8,1.2,4.4l0,0.4l0.3,0.3c1,1.1,1.1,1.3,2.2,1.7c0.3,0.1,0.7,0.2,1.1,0.2" + ' ' +
+									"c1.4,0,3-1,3.2-2.6c0.1-0.6-0.1-1.1-0.2-1.6l-0.1-0.2c-0.2-0.9-0.5-1.7-0.8-2.6l0-0.1c0-0.1-0.1-0.2-0.1-0.4" + ' ' +
+									"c-0.1-0.4-0.2-1-0.6-1.4c-0.2-0.3-0.4-0.6-0.6-1.2c-0.1-0.2-0.1-0.3-0.2-0.4l-0.2-0.3l-0.7-0.3l-0.6-1.5c-0.6-1.5-1.2-3-1.7-4.5" + ' ' +
+									"c-0.4-1-0.8-2.1-1.1-3.2c-0.2-0.7-0.5-1.3-0.7-2c-0.3-0.9-0.2-1.1,0-1.3c0.3-0.3,0.4-0.6,0.5-0.9l0.1-0.2c0.1-0.1,0.1-0.3,0.2-0.4" + ' ' +
+									"c0-0.1,0.1-0.3,0.1-0.3l0.1-0.2c1.1-1.7,2.3-3.5,3.4-5.3c0.6-0.9,1.2-1.7,1.9-2.5l0.5-0.6c0.4-0.5,1-0.9,1.6-1.3l0.3-0.2" + ' ' +
+									"c0.7-0.5,1.2-1.2,1.4-2.1c0.1-0.8,0-1.6-0.5-2.3C663.1,235.7,662,235,660.5,234.8z"})
+							), 
+							React.createElement("rect", {x: "499.7", y: "214", width: "378", height: "66"})
+						), 
+						React.createElement("g", {id: "freakabout", className: "band_lineup_link tan", onClick: self.openBand.bind(this, "FREAKABOUT")}, 
+							React.createElement("g", null, 
+								React.createElement("path", {d: "M724.3,310.5c0.3,0.8,0.6,1.7,1,2.5c0.2,0.6,0.5,1.2,0.8,1.9c0.3,0.8,0.6,1.5,1.1,2.1" + ' ' +
+									"c0.7,0.8,0.6,1.7,0.1,2.5c-0.4,0.7-1.2,1.1-2,1.1c-0.4,0-0.9-0.2-1.2-0.5c-0.5-0.4-0.9-0.8-1.2-1.4c-0.9-1.8-1.7-3.6-2.3-5.4" + ' ' +
+									"c-0.3-0.9-0.7-1.7-1.4-2.4c-0.7-0.6-0.9-1.5-0.8-2.3c0.1-1.3,0-2.5-0.6-3.6c-0.1-1.1-0.6-2.1-0.9-3.1c-0.2-0.7-0.4-1.4-0.7-2" + ' ' +
+									"c-0.1-0.2-0.2-0.4-0.4-0.5c-0.7-0.1-1.2,0.3-1.5,0.7c-0.7,0.8-1.6,0.9-2.5,1.1c-0.2,0-0.6-0.1-0.8-0.2c-0.6-0.5-1.1-1-1.4-1.8" + ' ' +
+									"c-0.2-0.6-0.2-1.2,0.4-1.7c1.4-0.5,2.9-1.1,4.4-1.7c0-0.3,0-0.6-0.1-0.9c0-0.3-0.2-0.5-0.3-0.8c-0.3-0.9-0.3-0.9,0.4-1.9" + ' ' +
+									"c0.4,0,0.9-0.1,1.3,0c0.8,0.3,1.7,0.2,2.5,0.2c0.7,0.5,0.6,1.4,1.1,2.1c0.4,0.2,0.8,0,1.2,0c0.9-0.2,1.8-0.4,2.7-0.6" + ' ' +
+									"c2.1-0.6,4.2-0.8,6.4-0.8c1.1,0,2.1,0.1,3.1,0.5c0.7,0.3,1.6,0.3,2.3,0.7c0.6,0.3,1.2,0.7,1.7,1.1c1,0.8,1.1,1.9,0.6,2.9" + ' ' +
+									"c-0.3,0.6-0.6,1.2-1.1,1.7c-0.7,0.8-1.4,1.5-2.2,2.1c-1,0.9-2.1,1.7-3.1,2.5c-0.2,0.1-0.3,0.3-0.5,0.5c0.2,0,0.4,0.1,0.5,0.1" + ' ' +
+									"c1.7-0.3,3.4-0.2,5.1-0.2c1.2,0,2.4,0.2,3.6,0.5c1.3,0.4,2.6,0.7,3.8,1.5c0.2-0.7,0.3-1.4,0.3-2c0.1-3.2,1.1-6.1,3.2-8.6" + ' ' +
+									"c0.3-0.3,0.6-0.7,0.8-1.1c0.1-0.4-0.2-0.6-0.3-1c-0.2-0.7,0.3-1.4,1.1-1.3c0.9,0.2,1.7,0.1,2.5-0.1c0.3-0.1,0.5,0,0.8,0" + ' ' +
+									"c0.8,0.2,1.7,0.4,2.4,0.5c0.8,0.6,0.6,1.3,0.4,2.1c0.2,0.2,0.4,0.5,0.6,0.7c0.5,0.4,1,0.8,1.5,1.2c2,1.5,3.5,3.3,4.7,5.4" + ' ' +
+									"c1,1.7,1.6,3.5,1.8,5.4c0.3,2.3-0.1,4.6-0.8,6.8c-0.4,1.3-1,2.3-1.9,3.3c-0.5,0.6-1.2,1-2,1.2c-2.1,0.6-4,0-6-0.7" + ' ' +
+									"c-1.6-0.6-3-1.5-4.4-2.5c-0.6-0.4-1.2-0.9-1.8-1.4c-0.1-0.1-0.3-0.2-0.5-0.4c-0.8,1.2-1.9,2.2-3.1,2.9c-0.8,0.5-1.5,1-2.3,1.4" + ' ' +
+									"c-1.7,1-3.4,1.9-5.2,2.7c-0.7,0.3-1.5,0.6-2.3,0.8c-1.7,0.6-3.4,1-5.2,1.4c-1.2,0.2-2.3,0.1-3.4-0.2c-0.3-0.1-0.5-0.3-0.8-0.4" + ' ' +
+									"c0-0.4,0-0.8-0.1-1.2c0.1-0.1,0.2-0.2,0.3-0.2c0.6-0.3,1.3-0.3,1.9-0.3c1.1,0,2-0.3,3-0.7c1.1-0.3,2.1-0.8,3.1-1.2" + ' ' +
+									"c1.7-0.6,3.3-1.5,4.8-2.4c1.1-0.7,2.3-1.2,3.3-2.1c0.4-0.4,0.8-0.7,1.2-1.1c1.3-1.1,1.6-3.2,0.1-4.8c-0.6-0.6-1.2-1.1-2-1.3" + ' ' +
+									"c-1.4-0.4-2.8-0.6-4.2-0.4c-1.5,0.2-3,0.4-4.5,0.6c-1.3,0.2-2.6,0.5-3.9,0.8C725.8,309.3,724.8,309.5,724.3,310.5z M751.5,297.9" + ' ' +
+									"c-0.5,0.1-0.9,0.3-1.2,0.6c-0.7,0.7-1.1,1.5-1.5,2.3c-0.8,1.6-1,3.4-1.1,5.2c-0.1,1.8,0.3,3.5,0.8,5.1c0.6,2,1.8,3.6,3.7,4.5" + ' ' +
+									"c0.6,0.3,1.2,0.7,1.9,1c0.6,0.3,1.1,0.5,1.7,0.4c1.1-0.5,1.8-1.4,2.2-2.5c0.6-1.7,1-3.5,0.9-5.4c-0.1-2.4-0.9-4.5-2.4-6.4" + ' ' +
+									"c-1-1.2-2-2.4-3.2-3.4c-0.2-0.1-0.4-0.3-0.5-0.5C752.6,298.5,752.1,298.2,751.5,297.9z M723.1,306.2c0.6-0.4,1.1-0.8,1.5-1.2" + ' ' +
+									"c0.2-0.2,0.4-0.4,0.6-0.5c1.1-0.8,2.2-1.7,3.4-2.4c1.4-1,2.5-2.2,3.7-3.3c0.5-0.4,0.8-1,0.9-1.6c-0.6-0.8-1.7-0.6-2.4-1.1" + ' ' +
+									"c-1.2,0-2.3-0.1-3.5,0.1c-2.1,0.5-4.2,0.9-6.3,1.4c-0.2,0.1-0.5,0.2-0.7,0.3C720.6,299.3,722.4,305,723.1,306.2z"}), 
+								React.createElement("path", {d: "M770.3,306.4c0.5,0.4,1.1,0.8,1.2,1.6c0,0.2,0.1,0.4,0.1,0.5c-0.2,0.6,0.1,1.1,0.3,1.7" + ' ' +
+									"c0.4,0.9,0.7,1.8,1.2,2.6c0.9,1.5,1.7,2.9,2.8,4.3c0.3,0.4,0.7,0.8,1.1,1.2c0.2-0.3,0.4-0.4,0.4-0.6c0.2-0.7,0.4-1.5,0.5-2.2" + ' ' +
+									"c0.1-1.3,0-2.6-0.3-3.9c-0.4-1.9-0.8-3.8-1.4-5.7c-0.3-1.2-0.9-2.3-1.3-3.5c-0.5-1.3-1.1-2.6-1.6-3.9c-0.1-0.2-0.2-0.3-0.2-0.5" + ' ' +
+									"c-0.1-0.4-0.1-0.8-0.1-1.1c0.3-0.5,0.8-0.7,1.3-0.6c1,0.3,1.9,0.3,2.8,0.3c0.6,0.6,0.5,1.5,1.2,1.9c1.1-0.1,2.3-0.3,3.4-0.3" + ' ' +
+									"c1,0,2,0.1,3.1,0.1c2.4,0,4.8,0,7.2-0.2c1.8-0.1,3.6-0.5,5.5-0.6c0.2,0,0.4,0,0.5-0.1c1.7-0.4,3.3-0.8,5-1c1.1-0.2,2.1-0.5,3-1" + ' ' +
+									"c0.6-0.3,1.2-0.3,1.8-0.2c0.5,0.1,1,0.2,1.4,0.3c0.7,0.1,1.1,0.5,1.2,1.1c0.1,0.7-0.4,1.4-1,1.6c-0.3,0.1-0.6,0.1-0.9,0.2" + ' ' +
+									"c-0.4,0-0.7,0-1.1,0.1c-3.1,0.7-6.3,1-9.5,1.7c-0.8,0.2-1.7,0.2-2.5,0.3c-0.3,0-0.5,0.1-0.8,0.1c0,0.5,0,0.9,0,1.3" + ' ' +
+									"c0,0.4,0,0.8,0.1,1.2c0.4,2.2,0.5,4.5,0.7,6.8c0.2,2.4,0.3,4.7,0.3,7.1c0,1,0.1,2,0.1,2.9c0,0.8-0.1,1.5-0.5,2.3" + ' ' +
+									"c-0.3,0.1-0.7,0.3-1,0.5c-0.5,0.2-0.9,0.2-1.4-0.1c-0.5-0.4-1-0.8-1.4-1.1c-0.4-0.9-0.5-1.6-0.3-2.4c0-0.2,0-0.4,0-0.7" + ' ' +
+									"c0-2.3,0-4.5-0.3-6.8c-0.2-1.6-0.3-3.2-0.4-4.8c-0.1-1-0.4-2-0.8-2.9c-0.5-0.9-0.8-1.8-0.9-2.8c-0.3,0-0.6-0.1-0.8-0.1" + ' ' +
+									"c-1.4,0.1-2.9,0.1-4.3,0.3c-1.3,0.1-2.6,0.4-3.8,1.1c-0.1,0.1-0.2,0.2-0.3,0.3c0.3,0.8,0.5,1.6,0.8,2.4c0.4,1,0.6,1.9,0.8,3" + ' ' +
+									"c0.1,0.5,0.3,0.9,0.4,1.4c0.4,1.6,0.6,3.2,0.7,4.8c0.2,1.9-0.3,3.6-0.9,5.4c-0.1,0.3-0.3,0.6-0.5,0.8c-0.4,0.6-0.7,1.1-1.2,1.8" + ' ' +
+									"c-0.5,0.1-1.1,0.3-1.6,0.4c-0.2,0-0.2,0-0.3,0c-2.2-0.4-3.7-1.8-5.1-3.5c-2.2-2.6-3.9-5.6-5.4-8.8c-0.6-1.2-1.2-2.4-1.7-3.7" + ' ' +
+									"c-0.5-1.2-0.8-2.4-1.3-3.7c-0.3-0.8-0.6-1.7-1-2.5c-0.4-0.8-0.5-1.5-0.4-2.3c0.5-0.7,1.1-0.8,1.9-0.6c0.8,0.2,1.6,0.4,2.3,0.5" + ' ' +
+									"c0.6,0.5,0.8,1.1,0.8,1.6c0.1,1.6,0.7,3,1.2,4.5C769.7,304.9,770,305.6,770.3,306.4z"}), 
+								React.createElement("path", {d: "M615.5,312.5c-0.1,0.8,0.2,1.6,0.5,2.3c0.8,1.7,1.5,3.3,2.3,5c1.1,2.2,2.1,4.4,3.3,6.6" + ' ' +
+									"c0.6,1.1,1.2,2.2,1.8,3.3c0.3,0.5,0.7,0.9,1,1.4c0.4,0.6,0.9,1.1,1.3,1.7c-0.1,0.5-0.1,1-0.2,1.5c-0.6,0.8-1.5,0.5-2.3,0.7" + ' ' +
+									"c-0.5-0.2-1-0.5-1.5-0.7c-0.6-1-1.2-2.1-1.8-3.2c-0.2-0.4-0.4-0.9-0.7-1.3c-1.2-1.7-2-3.6-3-5.4c-0.5-1-1-2-1.5-3" + ' ' +
+									"c-0.5-1-0.9-1.9-1.4-2.9c-0.4-0.7-0.8-1.4-1.2-2.1c-0.2,0.2-0.4,0.3-0.6,0.5c-1.6,1.8-3.1,3.6-4.8,5.2c-0.2,0.2-0.4,0.4-0.5,0.6" + ' ' +
+									"c-0.4,0.4-0.4,0.8-0.4,1.4c0.1,1.7,0.5,3.3,0.9,4.9c0.2,0.6,0.3,1.3,0.5,1.9c0.3,1,0.6,2,1,2.9c0.1,0.3,0.3,0.5,0.5,0.8" + ' ' +
+									"c0.1,0.7,0.2,1.5,0.3,2.3c0.1,1-0.2,1.6-1.2,2c-0.1,0-0.2,0.1-0.3,0.1c-0.3,0-0.7,0-1.1-0.1c-0.5-0.3-1-0.7-1.5-1" + ' ' +
+									"c-0.4-0.5-0.5-1-0.6-1.6c-0.2-1.6-0.6-3.1-1.1-4.7c-0.4-1.5-0.7-3-1-4.4c-0.1-0.4-0.2-0.9-0.3-1.3c-1.2-0.6-2.4-1.2-2.5-2.8" + ' ' +
+									"c0.1-0.9,1.3-1,1.7-1.9c0-0.1,0-0.4,0-0.7c-0.5-2.8-0.6-5.6-1.1-8.4c-0.4,0.1-0.7,0.2-1.1,0.2c-0.4,0-0.7,0-1.1-0.1" + ' ' +
+									"c-0.3-0.1-0.5-0.3-0.8-0.5c-0.3-0.2-0.5-0.5-0.7-0.9c-0.1-0.5-0.1-1-0.2-1.6c0-0.2,0-0.4,0-0.7c0.8-0.8,1.5-1.6,2.4-2.3" + ' ' +
+									"c0.5-0.4,0.9-0.8,1.3-1.3c0.3-0.3,0.5-0.5,0.9-0.5c1-0.1,1.8-0.7,2.7-1.1c1.1-0.5,2.1-1,3.1-1.5c0.8-0.4,1.5-0.7,2.4-0.9" + ' ' +
+									"c1.7-0.3,3.4-0.6,5.2-0.3c1.5,0.2,3,0.6,4.3,1.3c0.4,0.2,0.8,0.5,1.2,0.8c0.8,0.6,1,1.5,0.8,2.5c-0.2,0.9-0.6,1.7-1.2,2.4" + ' ' +
+									"C618.1,309.3,616.9,310.8,615.5,312.5z M610.2,312.8c0.1-0.3,0.2-0.9,0.3-1.4c0.1-0.3,0.2-0.6,0.6-0.7c0.8-0.1,1.2-0.7,1.6-1.3" + ' ' +
+									"c0.7-0.9,1.5-1.9,2.2-2.9c0.2-0.3,0.4-0.6,0.5-0.9c0.1-0.3,0.1-0.6,0.1-0.9c-0.2,0-0.3,0-0.4,0c-0.2-0.8-0.3-0.9-0.7-1" + ' ' +
+									"c-0.3-0.1-0.6-0.1-0.9-0.1c-1.5,0.1-2.9,0.4-4.3,1c-1,0.4-1.9,0.9-2.9,1.4c-0.4,0.2-0.8,0.5-1.1,0.7c-0.7,0.5-1.1,1.2-1.2,2" + ' ' +
+									"c0,0.5,0,1.1,0,1.6c0,2.4,0.4,4.8,0.7,7.2c0,0.2,0.2,0.4,0.2,0.6c0.6-0.3,1-0.7,1.3-1.2c0.2-0.3,0.5-0.6,0.8-0.9" + ' ' +
+									"c0.5-0.6,1-1.1,1.6-1.7C609.1,314,609.6,313.5,610.2,312.8z"}), 
+								React.createElement("path", {d: "M680.4,306.9c0.3,0.4,0.5,0.7,0.7,0.9c1.4,1.4,2.7,2.8,4.1,4.2c3,3,5.7,6.2,8.2,9.7" + ' ' +
+									"c0.1,0.2,0.3,0.4,0.4,0.6c0.4,1.2,1.5,2,2.3,2.9c0.7,0.3,1,0.9,1.3,1.5c0,0.4,0.1,0.8,0.1,1.3c-0.5,0.9-1.2,1.1-2.1,1" + ' ' +
+									"c-0.5-0.1-1-0.2-1.6-0.3c-0.8-1.1-1.7-2.3-2.5-3.4c-1.2-1.8-2.5-3.5-4-5.2c-1-1.2-2-2.4-3-3.6c-0.1-0.1-0.3-0.2-0.5-0.4" + ' ' +
+									"c-0.2,0.1-0.5,0.2-0.7,0.3c-0.3-0.3,0.1-0.6,0-0.9c-1.5-2-3.5-3.6-5.2-5.4c-1.1,0.8-1.7,1.9-2.4,2.8c-0.7,0.9-1.5,1.8-2.3,2.7" + ' ' +
+									"c0.1,0.3,0.1,0.7,0.2,1c0.8,2.5,1.7,5.1,2.5,7.6c0.2,0.6,0.4,1.2,0.7,1.7c0.3,0.6,0.3,1.3,0.2,2c-0.3,0.5-0.9,0.6-1.3,0.8" + ' ' +
+									"c-0.7,0-1.3-0.2-1.9-0.4c-0.7-0.2-1-0.6-1.3-1.2c-0.2-0.5-0.4-1.1-0.4-1.7c-0.1-0.6-0.2-1.2-0.4-1.8c-0.7-2.4-1.5-4.7-2.3-7.1" + ' ' +
+									"c-0.7-2.2-1.2-4.5-1.6-6.8c-0.2-1-0.4-2-0.6-3c-0.5-2.3-1-4.5-1.4-6.8c-0.2-1.1-0.3-2.2-0.4-3.3c-0.1-0.6-0.1-1.2-0.2-1.7" + ' ' +
+									"c-0.1-0.7,0.2-1,0.9-1.3c0.7-0.3,1.3-0.2,2,0c0.9,0.2,1.1,0.3,1.9,1.1c0,0.4,0,0.9-0.1,1.3c-0.2,1-0.2,2,0,3.1" + ' ' +
+									"c0.6,3.2,1.2,6.4,1.8,9.6c0.1,0.5,0.1,1.2,0.5,1.6c0.4,0.1,0.6-0.2,0.8-0.4c0.6-0.7,1.2-1.4,1.8-2.1c0.5-0.5,0.6-1.2,0.8-1.8" + ' ' +
+									"c0.1-0.1,0.2-0.2,0.3-0.2c0.9-0.3,1.6-0.9,2.2-1.7c1.7-2.1,3.2-4.4,4.3-6.9c0.3-0.8,0.8-1.5,1.3-2.2c0.2-0.3,0.6-0.4,0.9-0.4" + ' ' +
+									"c0.7,0.2,1.5,0.4,2.2,0.6c0.6,0.2,1,0.6,1,1.4c-0.7,1.1-1.5,2.3-2.2,3.5c-0.8,1.2-1.6,2.4-2.4,3.5" + ' ' +
+									"C682.3,304.6,681.4,305.7,680.4,306.9z"}), 
+								React.createElement("path", {d: "M625.5,311c-0.4,0.2-0.8,0.2-1.1,0.5c-0.6,0.4-1.2,0.5-1.9,0.2c-0.7-0.2-1.2-0.7-1.4-1.5" + ' ' +
+									"c0-0.1-0.1-0.2-0.1-0.3c0-0.2,0.1-0.4,0.1-0.6c0.1-0.6,0.5-0.9,1-1.2c0.6-0.3,1.1-0.6,1.6-0.9c0.5-0.3,1-0.6,1.5-0.9" + ' ' +
+									"c0.1-0.4,0.1-0.7,0.2-1.1c-0.6-1-0.5-2-0.4-3.1c0.4-0.3,0.7-0.6,1.1-1c1.7-0.1,3.2,0.6,4.5,1.7c0.4-0.3,0.9-0.5,1.3-0.8" + ' ' +
+									"c1.6-1.2,3.2-2.4,4.6-3.8c0.6-0.6,1.3-1.1,1.9-1.7c0.5-0.5,1.1-0.6,1.7-0.3c0.5,0.2,1,0.3,1.5,0.6c0.5,0.3,0.9,0.6,1,1.2" + ' ' +
+									"c0,0.5-0.3,0.9-0.6,1.1c-0.6,0.6-1.2,1.2-2,1.6c-0.7,0.4-1.3,0.9-1.9,1.4c-1.1,0.9-2.2,1.7-3.3,2.5c-1.4,1-2.8,2-4.1,3" + ' ' +
+									"c-0.3,0.2-0.5,0.6-0.8,0.9c0.1,1.3-0.1,2.7,0.2,3.9c0.3,0.2,0.5,0,0.7-0.1c2.3-1.2,4.4-2.5,6.4-4.1c0.7-0.5,1.5-0.8,2.4-0.7" + ' ' +
+									"c0.3,0,0.6,0,0.9,0.2c0.5,0.3,1,0.5,1.6,0.7c0.1,0.3,0.1,0.6,0.1,0.8c-0.1,0.2-0.2,0.3-0.3,0.4c-0.6,0.4-1.1,0.9-1.7,1.3" + ' ' +
+									"c-2.7,1.7-5.3,3.4-8,5.2c-0.6,0.4-1.1,0.8-1.8,1.3c0.1,2.4,0.2,4.8,0.8,7.2c0.7,0.2,1.3,0,1.9-0.2c2-0.7,4-1.1,6-1" + ' ' +
+									"c0.1,0,0.3,0,0.5,0c0.6,0.2,1.2,0.5,1.9,0.8c0.7,0.3,1,0.9,1,1.6c-0.5,0.6-1.1,0.7-1.8,0.7c-0.9,0.1-1.8,0.1-2.7,0.2" + ' ' +
+									"c-1.3,0.2-2.5,0.5-3.7,1.1c-0.9,0.4-1.8,0.8-2.7,1.1c-1.7,0.5-3.6-0.2-4.2-2.2c-0.3-1.1-0.5-2.2-0.6-3.3c-0.2-1.5-0.3-3.1-0.4-4.7" + ' ' +
+									"c-0.1-0.8-0.2-1.5-0.6-2.2c-0.4-0.7-0.6-1.5,0-2.2c0.1-0.1,0.2-0.3,0.2-0.5c0-0.8,0-1.6-0.1-2.4" + ' ' +
+									"C625.7,311.3,625.6,311.2,625.5,311z"}), 
+								React.createElement("path", {d: "M658.7,315c-0.6,0.2-1,0.4-1.5,0.6c-1.4,0.7-2.8,1.1-4.3,1.4c-0.7,0.1-1.4,0-2.2,0c-0.2,1.6,0,3.1,0.1,4.6" + ' ' +
+									"c0.1,1.5,0.7,2.9,1.1,4.2c-0.2,0.7-0.7,1.2-1.2,1.5c-0.5,0.3-1,0.1-1.6,0.2c-0.7-0.7-1.4-1.4-2.1-2.1c-0.1-1.4-0.3-2.8-0.3-4.1" + ' ' +
+									"c-0.1-2.2-0.1-4.4,0-6.6c0-1.3,0.1-2.6,0.4-3.9c0.4-2.1,0.9-4.2,1.6-6.2c0.5-1.4,0.7-3,0.9-4.5c0.1-1,0.3-2,0.2-3.1" + ' ' +
+									"c-0.1-0.8,0.2-1.5,0.7-2.2c0.3-0.1,0.6-0.2,0.9-0.2c0.6-0.1,1.1-0.1,1.7,0.2c0.5,0.3,1,0.5,1.5,0.7c0.5,0.2,0.8,0.6,1,1" + ' ' +
+									"c0.3,0.8,0.5,1.7,0.9,2.5c0.5,0.9,0.9,1.7,1.4,2.6c0.4,0.9,1,1.7,1.3,2.6c0.9,2.5,1.9,5,2.6,7.6c0.5,2.1,1.4,4,2.1,6.1" + ' ' +
+									"c0.5,1.3,0.9,2.6,1.4,3.9c0.3,0.7,0.6,1.4,0.9,2.1c0.5,0.8,0.5,1.6-0.2,2.5c-0.5,0.1-1.1,0.3-1.7,0.4c-0.6-0.2-1.1-0.4-1.8-0.6" + ' ' +
+									"c-0.2-0.3-0.4-0.6-0.5-1c-0.4-1.4-1-2.7-1.2-4.1c0-0.5-0.2-1-0.4-1.4c-0.4-1.3-0.9-2.5-1.3-3.8C659.1,315.6,658.9,315.4,658.7,315" + ' ' +
+									"z M650.8,314.2c0.4-0.1,0.7-0.1,1-0.2c1.7-0.7,3.4-1.5,5.1-2.3c0.2-0.1,0.4-0.2,0.5-0.3c-0.7-2.9-3-8.5-4-9.6" + ' ' +
+									"c-0.1,0.3-0.2,0.5-0.3,0.8c-0.3,1.3-0.6,2.6-0.9,3.9c-0.4,1.4-0.8,2.8-1.1,4.3C650.9,311.8,650.6,312.8,650.8,314.2z"}), 
+								React.createElement("path", {d: "M701.8,293.2c1.8-0.5,2.9,0.2,3.8,1.5c0.1,0.1,0.1,0.1,0.2,0.2c0.4,0.6,0.8,1.3,1.2,1.9" + ' ' +
+									"c1.8,2.9,3.4,5.9,4.9,8.9c0.3,0.5,0.5,1,0.8,1.5c0.6,0.2,1.2,0.3,1.8,0.5c0.4,0.9,0.1,1.7-0.3,2.5c0.1,0.3,0.3,0.7,0.5,1.1" + ' ' +
+									"c0.3-0.3,0.5-0.5,0.7-0.7c0.3,0,0.7,0.1,1.1,0.1c0.3,0.4,0.6,0.7,0.9,1c-0.7,1.2-0.7,1.3-1.9,1.2c0,0.2,0.1,0.3,0.1,0.5" + ' ' +
+									"c0.7,1.6,1.2,3.2,2.1,4.6c0.3,0.5,0.4,1.2,0.3,1.8c-0.4,0.6-1,1-1.7,1.1c-0.8,0.2-1.5-0.1-2.2-0.4c-0.6-0.3-1-0.9-1.2-1.5" + ' ' +
+									"c-0.3-0.8-0.4-1.7-0.6-2.6c0-0.1,0-0.3,0-0.4c-0.5-1.4-1.1-2.7-1.6-4.1c0-0.1-0.2-0.2-0.3-0.3c-1.2,0.2-2.2,0.8-3.4,1.2" + ' ' +
+									"c-1.1,0.3-2.2,0.8-3.4,1.2c-0.1,0.2-0.2,0.4-0.2,0.7c-0.1,2.1-0.5,4.3-0.7,6.4c0,0.3-0.1,0.5,0,0.8c0.1,1.6-0.4,2.2-1.9,2.6" + ' ' +
+									"c-0.1,0-0.2,0-0.3,0c-1.2-0.4-1.6-0.7-2.4-1.8c-0.1-0.9-0.1-1.8,0.1-2.6c0.4-2,0.7-3.9,0.9-5.9c0-0.1,0-0.3,0-0.4" + ' ' +
+									"c-0.1-1.8,0.4-3.6,0.6-5.4c0-0.2,0.1-0.4,0.1-0.5c0.2-2.9,0.4-5.8,0.3-8.7c0-0.4-0.1-0.8-0.2-1.2c-0.1-0.4-0.1-0.9-0.1-1.3" + ' ' +
+									"c-0.1-0.9,0.2-1.6,1-2c0.2-0.1,0.4-0.4,0.6-0.7C701.5,293.7,701.6,293.5,701.8,293.2z M708.6,308.2c-0.1-0.4-0.2-0.6-0.3-0.9" + ' ' +
+									"c-1-1.9-2-3.8-3-5.7c-0.1-0.3-0.3-0.5-0.4-0.8c-0.1-0.1-0.2-0.2-0.4-0.3c-0.2,0.9-0.1,1.7-0.2,2.5c-0.1,0.8-0.1,1.7-0.2,2.5" + ' ' +
+									"c-0.1,0.8-0.2,1.6-0.2,2.4c-0.1,0.8-0.3,1.6-0.1,2.6C705.5,309.9,707.1,309.2,708.6,308.2z"}), 
+								React.createElement("path", {d: "M582.5,308c0.3,3.9,1.1,7.6,1.9,11.3c0.2,1,0.3,2.1,0.8,3.1c0.2-0.1,0.4-0.1,0.6-0.2" + ' ' +
+									"c1.1-0.6,2.3-1.3,3.3-2c0.5-0.3,0.8-0.8,1.2-1.2c0.9-1,2.1-1.3,3.4-1c0.3,0.1,0.7,0.3,1,0.4c0.2,0.1,0.2,0.3,0.5,1" + ' ' +
+									"c-0.1,0.2-0.2,0.4-0.4,0.6c-1.2,1.6-2.8,2.8-4.5,3.8c-0.9,0.5-1.8,1.1-2.7,1.7c-0.5,0.3-1.1,0.6-1.7,0.9c0.4,2.3,0.8,4.6,1.3,6.9" + ' ' +
+									"c0.5,2.3,0.8,4.7,1.1,7c-0.8,1.2-1,1.2-2.8,1.1c-0.2-0.1-0.5-0.4-0.7-0.5c-0.8-0.4-1.1-1.1-1.1-2c0-1.1,0-2.1-0.1-3.2" + ' ' +
+									"c-0.2-2-0.4-4-0.9-5.9c-0.1-0.3-0.1-0.5-0.2-0.8c-0.1-1.2-0.4-2.2-1.3-3c-0.1-0.1-0.2-0.3-0.3-0.5c0.1-0.6,0.3-1.2,0.4-2.1" + ' ' +
+									"c-0.4-1.9-0.9-4.1-1.3-6.2c-0.4-2.1-0.8-4.3-1.2-6.4c-0.6-0.3-1.1-0.5-1.6-0.8c-0.4-0.3-0.7-0.8-1-1.1c-0.1-0.2-0.1-0.2-0.1-0.3" + ' ' +
+									"c-0.3-1.4,0.2-2.3,1.5-2.9c0.2-0.1,0.3-0.2,0.5-0.3c0-0.6,0.1-1.2,0.1-1.9c0.2-0.2,0.5-0.5,0.7-0.8c1.3-0.3,2.5,0.1,3.7,0.7" + ' ' +
+									"c0.5-0.3,1-0.6,1.5-0.9c0.9-0.7,1.9-1.3,2.8-2.1c0.7-0.6,1.5-1.1,2.3-1.6c0.4-0.3,0.8-0.6,1.2-0.9c0.6-0.5,1.2-0.8,2.1-0.5" + ' ' +
+									"c0.6,0.6,1.9,0.6,2.3,1.7c-0.1,0.5-0.4,0.9-0.7,1.2c-1,0.8-2,1.6-3.1,2.3c-1,0.6-2,1.3-3,2c-1.5,1.1-3,2.2-4.7,3.1" + ' ' +
+									"C582.8,307.6,582.7,307.8,582.5,308z"}), 
+								React.createElement("path", {d: "M579,324.6c-0.4-0.3-0.6-0.6-0.4-1C578.9,323.9,579.1,324.2,579,324.6z"})
+							), 
+							React.createElement("rect", {x: "499.7", y: "286", width: "377.5", height: "57"})
+						), 
+						React.createElement("g", {id: "both", className: "band_lineup_link pink", onClick: self.openBand.bind(this, "BOTH!")}, 
+							React.createElement("g", null, 
+								React.createElement("g", null, 
+									React.createElement("path", {d: "M646,410.5c0.1-1.6,0.2-3,0.3-4.5c0.2-2.6,0.2-5.2,0.2-7.8c0-1.2,0-2.4,0-3.5c0-1.1-0.1-2.2-0.1-3" + ' ' +
+										"c-0.2-0.3-0.2-0.4-0.2-0.4c-1.8-1.6-1.8-3.7-1.5-5.9c0.1-0.9,0.7-1.7,1.9-2.6c0.1-0.1,0.2-0.2,0.1-0.3c-0.1-2.7,0.5-5.3,0.2-8" + ' ' +
+										"c0-0.4,0.1-0.9,0.1-1.3c0.2-2,0.4-4.1,0.6-6.1c0-0.1-0.1-0.2-0.3-0.4c-0.8-0.1-1.2,0.7-1.9,0.8c-0.4,0.7-0.8,1.3-1.1,1.8" + ' ' +
+										"c-1.2,0.7-2.2,1.4-3.3,1.3c-1.6-0.3-2.9-0.8-3.8-2.5c-0.1-0.4-0.2-1.1-0.3-1.9c-0.3-2.2,0.1-2.8,2.2-3.7c2.9,0.4,6.2-0.5,9.2-2.3" + ' ' +
+										"c0.3-1,0.6-1.9,0.9-2.8c0.1-0.3,0.4-0.4,0.6-0.6c2.8,0.4,2.8,0.4,4.7,1.6c0.8-0.3,1.7-0.6,2.6-0.9c2.3-0.8,4.7-1.5,7.2-2" + ' ' +
+										"c1.4-0.3,2.8-0.3,4.3-0.2c1.1,0.1,2.2,0.1,3.3,0.1c0.7,0,1.2,0.1,1.8,0.4c1.4,0.7,2.5,1.6,3.6,2.9c0.5,1.7,0.2,3.4-0.3,5.1" + ' ' +
+										"c-0.6,2-1.6,3.8-2.9,5.4c-1,1.3-2,2.5-3,3.8c-0.2,0.2-0.3,0.5-0.5,0.8c0.6,0.2,1.1,0.4,1.5,0.4c1.9,0.2,3.5,1.2,5.2,1.9" + ' ' +
+										"c1.4,0.6,2.6,1.3,3.6,2.4c1.1,1.1,1.5,2.3,1.5,3.9c0,2.9-0.8,5.4-2.8,7.5c-1.1,1.2-2.1,2.6-3.2,3.9c-2.7,3.3-6,5.9-9.4,8.5" + ' ' +
+										"c-3.2,2.4-6.5,4.6-10.2,6.2c-1.6,0.7-3.3,1.2-4.8,2C650.3,411.5,648.3,411.1,646,410.5z M652.1,389.4c-0.1,2.1,0,14.2,0.3,15.6" + ' ' +
+										"c1.1-0.3,2.1-0.8,3.1-1.3c3.2-1.7,6.4-3.6,9.3-5.9c3.3-2.7,6.2-5.7,8.7-9.1c0.3-0.3,0.4-0.7,0.6-1.1c0.7-1.4,1.1-2.9,1.3-4.4" + ' ' +
+										"c0.2-1.7-0.5-2.9-2.1-3.6c-0.6-0.2-1.1-0.5-1.7-0.7c-2.9-0.9-5.5-0.4-7.9,1.4c-0.8,0.6-1.6,1.4-2.4,2.1c-1.4,1.3-2.9,2.5-4.5,3.6" + ' ' +
+										"C655.2,387,653.7,388.2,652.1,389.4z M670,360.6c-2.1-0.5-4-0.8-5.9-0.3c-3.5,1-7,2.2-10.5,3.8c-0.9,5-1.2,10.1-1.3,15.2" + ' ' +
+										"c0,0.1,0.1,0.2,0.3,0.4c0.5-0.2,1.1-0.5,1.6-0.8c2.2-1.1,4.3-2.2,6.5-3.3c0.6-0.3,1.3-0.8,1.8-1.3c0.9-0.9,1.7-1.9,2.7-2.9" + ' ' +
+										"c2-2,3.2-4.6,4.3-7.1c0.3-0.7,0.4-1.6,0.6-2.4C670.2,361.5,670.1,361.1,670,360.6z"}), 
+									React.createElement("path", {d: "M767.1,354.6c0.6,0.8,0.6,1.5,0.5,2.4c-0.6,2.7-0.9,5.5-0.8,8.4c0,0.5,0,1-0.1,1.5" + ' ' +
+										"c-0.4,4.7-0.4,9.3-0.5,14c0,0.5-0.1,1.1,0.4,1.7c2.1-0.4,4.1-1,6.1-1.6c0.9-0.3,1.7-0.7,2.6-1c0.4-0.2,0.8-0.4,1.2-0.4" + ' ' +
+										"c1.1-0.2,2.1-0.6,3.1-1.2c0.5-0.3,1-0.4,1.6-0.6c0.3-0.1,0.5-0.3,0.8-0.5c0.1-4.5,0.1-8.9,0-13.3c-0.1-4.3,0.2-8.7-0.2-13.2" + ' ' +
+										"c0.3-0.2,0.6-0.5,1-0.9c0.1-0.3,0.1-0.8,0.2-1.2c0.5-1.3,1.4-1.7,2.7-1.3c0.7,0.2,1.3,0.5,1.9,0.7c1,0.4,1.9,1,2.4,2.2" + ' ' +
+										"c0,0.4,0,1-0.2,1.5c-0.6,1.8-0.6,3.7-0.7,5.5c0,2.6-0.1,5.2-0.1,7.8c0,2.4,0.1,4.9,0.1,7.3c0,0.4,0.1,0.7,0.1,1.1" + ' ' +
+										"c0.2,0.2,0.4,0.4,0.7,0.4c1,0.1,1.8,0.5,2.6,0.9c0.4,0.2,1,0.3,1.2,0.8c0.2,0.3,0.4,0.7,0.4,1c0,0.5-0.1,1-0.1,1.4" + ' ' +
+										"c-0.5,0.5-1,0.9-1.5,1.3c-0.6,0.1-1.1,0.1-1.7,0.2c-0.5,0.1-1,0.4-1.5,0.6c-0.5,0.7-0.3,1.5-0.3,2.1c0.1,4.9,0.2,9.8,0.4,14.7" + ' ' +
+										"c0,1.2,0.3,2.3,0.4,3.7c-0.2,0.7-0.7,1.3-1.4,1.9c-1.1-0.2-2.2-0.1-3.2,0.4c-0.9-0.4-1.8-0.7-2.5-1.1c-0.5-0.8-0.9-1.5-1.2-2.1" + ' ' +
+										"c0-1.3,0-2.4,0-3.6c0-0.8,0-1.6,0-2.4c-0.1-0.7,0-1.3,0.2-2c0.4-1.1,0.5-2.3-0.1-3.3c0.6-2.1,0.6-2.1,0.2-4.9" + ' ' +
+										"c-0.9-0.1-1.8,0.3-2.7,0.6c-2.7,1-5.4,1.9-8.2,2.5c-1.6,0.4-3,1.1-4.6,1.8c0,0.4-0.1,0.7-0.1,1.1c0.1,2.3,0.2,4.6,0.4,6.9" + ' ' +
+										"c0,0.5,0.2,1.1,0.4,1.6c0.4,0.7,0.4,1.4,0.3,2.2c-0.1,1.2,0,2.4-0.1,3.5c0,0.4-0.1,0.9-0.3,1.3c-0.2,0.6-0.7,0.9-1.3,0.9" + ' ' +
+										"c-0.7-0.1-1.5,0.2-2.2,0c-0.3-0.1-0.7,0-1.2,0c-0.9-0.7-2-1.3-2.7-2.4c0.5-4.5,0.1-9-0.2-13.3c-0.5-0.4-0.8-0.7-1.2-1.1" + ' ' +
+										"c-0.1-1.5,0-3.1,1.2-4.4c0-2.4,0-4.9,0-7.4c0-0.4-0.1-0.7,0-1.1c0.1-2.4,0.3-4.8,0.4-7.3c0.1-2.5,0.2-5,0.3-7.5" + ' ' +
+										"c0-0.9,0-1.7,0.2-2.6c0.2-0.8,0.4-1.7,1.3-2.1c0.1-0.6,0.2-1.2,0.3-1.7c0.1-0.5,0.3-1.1,0.5-1.5" + ' ' +
+										"C763.8,353.1,764.6,353.3,767.1,354.6z"}), 
+									React.createElement("path", {d: "M702.5,360.2c0.9,1.2,2.3,1.5,3.6,2.1c1.6,0.7,2.8,1.8,3.8,3.2c1.5,2.1,2.5,4.4,3.4,6.8" + ' ' +
+										"c0.8,2,1.2,4,1.5,6.1c0.1,0.8,0.2,1.6,0.2,2.4c0.1,3.6-0.1,7.2-1.2,10.7c-1.3,3.9-3.3,7.4-6.7,9.9c-1.6,1.2-3.4,2.1-5.4,2.6" + ' ' +
+										"c-3.4,0.8-6.4-0.2-8.9-2.5c-1.7-1.6-2.9-3.5-3.6-5.8c-0.9-3-1.4-6.1-1.5-9.2c-0.1-1.5,0.1-3.1,0.2-4.7c0.1-1.6,0.4-3.2,0.6-4.8" + ' ' +
+										"c0.1-0.7,0.3-1.4,0.6-2.2c0.5-1.4,0.9-2.8,1.5-4.2c1.2-2.7,2.7-5.2,4.8-7.3c1-1,2-2,3-3.1c0.5-0.6,1.1-0.8,1.8-0.6" + ' ' +
+										"C701,359.9,701.7,360.1,702.5,360.2z M700,366.1c-0.7,0.3-1.2,0.9-1.7,1.5c-1.3,1.7-2.4,3.4-3.1,5.5c-0.6,1.8-1.2,3.6-1.5,5.4" + ' ' +
+										"c-0.8,4.6-1.1,9.1-0.4,13.7c0.3,1.9,0.8,3.7,1.5,5.4c0.4,1.1,1,2.2,2.1,2.6c0.9,0.1,1.7,0,2.5-0.3c3.2-1,5.5-3,7-6" + ' ' +
+										"c0.9-1.8,1.5-3.7,1.8-5.7c0.4-2.5,0.3-4.9,0-7.4c-0.4-2.9-1-5.6-2.2-8.3c-0.7-1.5-1.6-3-2.4-4.4" + ' ' +
+										"C702.9,366.9,701.8,366.1,700,366.1z"}), 
+									React.createElement("path", {d: "M729.1,378.7c-0.1-1-0.3-2-0.3-2.9c0.1-1.6-0.2-3.1,0-4.7c0.1-0.5-0.1-1.1-0.1-1.6" + ' ' +
+										"c-1.5-0.1-1.4-0.1-2.4,0.3c-1.6,0.5-3.2,1-4.8,1.5c-0.6,0.2-1.2,0.3-1.7,0.5c-0.8-0.1-1.6-0.2-2.5-0.3c-0.4-0.4-0.9-0.8-1.4-1.2" + ' ' +
+										"c0.2-0.4,0.5-0.8,0.6-1.2c0.1-0.5,0.1-1,0.1-1.5c0.1-0.1,0.1-0.3,0.3-0.4c0.1-0.1,0.3-0.3,0.4-0.4c2.8-0.4,5.6-0.9,8.3-2.1" + ' ' +
+										"c1.4-0.6,2.8-1.1,4.2-1.6c0.8-0.6,0.2-1.9,1.2-2.8c0.2-0.1,0.7-0.2,1-0.3c1.2,0.3,2.3,0.7,3.3,0.7c1-0.1,2-0.6,3-1" + ' ' +
+										"c2.3-0.9,4.5-1.7,6.7-2.7c1.6-0.7,3.3-1.4,4.7-2.8c2.1,0,3.7,1,5.2,2.3c0.1,0.4,0.2,0.7,0.2,1.1c-0.1,0.2-0.1,0.4-0.2,0.5" + ' ' +
+										"c-0.6,1-1.6,1.5-2.7,1.9c-2.3,1-4.7,1.6-7,2.5c-2.3,0.8-4.6,1.8-6.9,2.8c-0.7,0.3-1.4,0.8-2,1.1c-0.5,0.7-0.5,1.3-0.5,2" + ' ' +
+										"c0,3-0.1,6,0.1,9c0.3,5.5,0.8,10.9,1.3,16.4c0.3,2.9,0.6,5.8,1.1,8.7c0.2,1.3,0.4,2.7,0.6,4.3c-0.2,0.9-0.9,1.4-2.1,1.4" + ' ' +
+										"c-1,0-2,0.2-3.1,0.2c-1.1-0.3-2-1.2-3.1-2.1c0-0.5,0-1,0.1-1.6c0.3-1.2,0.2-2.5,0-3.7c-0.3-2.3-0.5-4.6-0.8-6.8" + ' ' +
+										"c0-0.1,0-0.2-0.1-0.4c-0.1-0.8,0.3-1.6-0.1-2.5c-0.3-0.8-0.2-1.7-0.2-2.6c0-0.1,0-0.2,0-0.4l0.1-0.1l-0.1,0.1" + ' ' +
+										"c-0.5-0.5,0.1-1,0-1.5c-0.2-0.2-0.4-0.4-0.4-0.5c-0.1-0.9-0.3-1.7-0.2-2.6c0.1-0.8-0.1-1.6-0.1-2.3" + ' ' +
+										"C729.2,380.4,729.1,379.5,729.1,378.7c0-0.1,0.1,0,0.1-0.1c0,0,0-0.1,0-0.1C729.2,378.6,729.2,378.7,729.1,378.7z"}), 
+									React.createElement("path", {d: "M616.6,375.8c0-0.1,0-0.3,0-0.4c0,0,0.1,0,0.1,0c0,0.1,0,0.3,0,0.4C616.7,375.8,616.6,375.8,616.6,375.8z"
+										})
+								), 
+								React.createElement("path", {d: "M605,376c0.3-0.2,0.6-0.4,0.9-0.5c1.5-0.6,2.9-1.1,4.4-1.7c1.9-0.7,3.8-1.5,5.8-1.9" + ' ' +
+									"c2.4-0.5,4.4,0.3,5.8,2.3c0.7,1,0.5,2.1,0.1,3c-1,2.1-2.2,4-3.7,5.8c-1.3,1.5-2.6,3.1-3.9,4.6c-0.6,0.7-1.2,1.2-1.8,1.9" + ' ' +
+									"c-0.1,0.1-0.3,0.3-0.4,0.4c-0.7,0.9-1.5,1.7-2.2,2.6c-0.8,0.9-1.8,1.8-2.6,2.7c-1.8,2.1-3.6,4.3-5.4,6.5" + ' ' +
+									"c-2.7,3.5-5.4,7.2-7.9,12.7c-0.7,1.6-1.6,3.1-2.4,4.6c-0.3,0.6-0.4,1.1-0.2,1.7c0.3,1,0.5,2,0.8,3c0.1,0.3,0.2,0.6,0.2,0.9" + ' ' +
+									"c0.3,2-0.4,3-2.5,3.1c-0.2-0.2-0.5-0.4-0.7-0.6c-0.2-0.2-0.4-0.5-0.6-0.8c-1.6,1.1-2.7,0.3-3.8-1c0-0.7,0-1.6,0.1-2.4" + ' ' +
+									"c0-0.4,0.3-0.7,0.5-1c0.5-0.8,1-1.5,1.4-2.3c0.2-0.5,0.2-1.3,0.1-1.8c-0.7-2.7-1.5-5.3-2.2-8c-0.9-3.1-1.7-6.2-2.6-9.3" + ' ' +
+									"c-0.6-1.9-1.3-3.8-1.8-5.7c-0.3-0.9-0.4-1.8-0.6-2.8c0.2,0.3,0.5,0.6,0.8,1.1c0.1-0.6,0.1-1.1,0.2-1.6c0.2-0.2,0.7-0.3,0.7-1.2" + ' ' +
+									"c-0.6,0.8-1.2,0.6-1.8,0.4c0,0.5,0.1,0.9,0.1,1.4c-0.1-0.1-0.3-0.3-0.4-0.4c-0.4-1.6-0.9-3.2-1.3-4.9l0,0" + ' ' +
+									"c-0.6-0.6-0.7-1.5-0.9-2.3c-0.6-2.2-1.3-4.4-1.9-6.6c-0.8-2.9-1.3-5.9-1.2-9c0.1-2.3,0.7-4.4,1.8-6.4c0.4-0.7,0.8-1.3,1.3-2" + ' ' +
+									"c0.4-0.6,1-0.7,1.7-0.7c1.4,0,2.6,0.5,3.7,1.3c0.7,0.5,1.2,1.1,1.9,1.5c1.1,0.7,1.8,1.8,2.6,2.7c1,1.2,2,2.3,2.9,3.4" + ' ' +
+									"c1.1,1.3,2.1,2.6,2.9,4.1c0.9,1.7,2,3.4,2.9,5.1c0.2,0.4,0.5,0.7,0.8,1.1c0.5-0.1,0.9-0.2,1.3-0.3c0.9-0.4,1.8-0.9,2.7-1.2" + ' ' +
+									"C601.9,377,603.4,376.2,605,376c0,0.2,0,0.5,0.1,0.7c0.1,0,0.1,0,0.2,0C605.1,376.5,605.1,376.2,605,376z M587.9,370.4" + ' ' +
+									"L587.9,370.4L587.9,370.4z M579.1,389.3L579.1,389.3L579.1,389.3z M610.6,374.8L610.6,374.8c-0.1,0-0.1,0-0.2,0" + ' ' +
+									"C610.5,374.8,610.5,374.8,610.6,374.8z M604.3,378.1c0,0.1,0.1,0.1,0.1,0.1C604.3,378.2,604.3,378.1,604.3,378.1" + ' ' +
+									"c-0.1,0-0.1-0.1-0.1-0.1C604.2,378,604.2,378,604.3,378.1z M578.6,382.5c0.1-0.2,0.1-0.3,0.2-0.5c0.1,0,0.2,0,0.1,0" + ' ' +
+									"c0.2-0.1,0.1,0,0,0C578.8,382.3,578.7,382.4,578.6,382.5c0.1,0,0.1,0.1,0.1,0.1C578.7,382.6,578.7,382.6,578.6,382.5z M603,395.9" + ' ' +
+									"C603.1,396,603.2,396,603,395.9C603.2,396,603.1,395.9,603,395.9c0-0.1,0-0.1,0-0.1S603,395.8,603,395.9z M609.3,392.1" + ' ' +
+									"C609.4,392.1,609.5,392,609.3,392.1C609.5,392,609.4,392,609.3,392.1C609.3,392.2,609.2,392.3,609.3,392.1" + ' ' +
+									"C609.3,392.3,609.3,392.2,609.3,392.1z M585.6,405.1L585.6,405.1c-0.1,0-0.2,0-0.3,0c0,0.1,0,0.1,0.1,0.2" + ' ' +
+									"C585.4,405.3,585.5,405.2,585.6,405.1z M582,391.8c0-0.2,0-0.3,0-0.5c-0.1,0-0.1,0-0.2,0c0,0.1,0,0.3,0,0.4c-0.1,0-0.2,0-0.1,0" + ' ' +
+									"c-0.2,0.1-0.1,0,0.1,0C581.9,391.8,582,391.8,582,391.8c0.1,0.1,0.1,0.2,0.1,0.3c-0.3,0.7-0.6,1.3-0.9,2.1c0.7,0,1.1-0.6,1.5-0.6" + ' ' +
+									"c-0.2-0.6-0.4-1.1-0.6-1.5C582.1,392,582.1,391.9,582,391.8z M585.1,402.5L585.1,402.5c-0.6,0-1.2,0-1.8,0.1" + ' ' +
+									"C583.9,403.1,584.5,402.9,585.1,402.5z M588.5,411.8c-0.3-0.2-0.7-0.6-1.2-0.1C587.7,412.1,588.1,412.2,588.5,411.8" + ' ' +
+									"c0.2,0.5,0.4,1,0.5,1.5c0.1,0.3,0,0.7,0.5,0.9c0.1-0.2,0.3-0.3,0.4-0.5c0.8-1.5,1.7-3,2.5-4.6c0.6-1.2,1.3-2.2,2.4-3" + ' ' +
+									"c0.3,0,0.6,0,0.9-0.1c-0.1-0.2-0.1-0.3-0.1-0.3c-0.2-0.1-0.3-0.2-0.6-0.3c1.6-2.2,3.2-4.4,4.7-6.6c0.3,0.1,0.5,0.1,0.6,0.2" + ' ' +
+									"c0.1-0.4,0.1-0.9,0.3-1.2c0.9-1.1,1.8-2.2,2.7-3.3c1.5-1.7,3-3.4,4.6-5.1c1.1-1.3,2.3-2.5,3.4-3.8c0.3-0.4,0.7-0.8,1-1.2" + ' ' +
+									"c1-1.2,1.9-2.5,2.9-3.7c1.1-1.5,2.3-3,2.9-4.8c-1.1-0.4-2.2-0.3-3.3,0.1c-1.4,0.6-2.8,1.1-4.2,1.6c-1.9,0.7-3.7,1.5-5.6,2.3" + ' ' +
+									"c-0.9,0.4-1.9,0.9-2.8,1.3c-0.8,0.4-1.6,0.7-2.3,1.2c-0.8,0.6-1.6,1.2-2,2.3c-0.8,1.9-0.9,1.9-2.5,2.8c-0.7,0.4-2.3,0.2-2.6-0.4" + ' ' +
+									"c-0.4-0.7-0.8-1.4-0.8-2.3c0-0.9-0.1-1.9-0.1-2.8c0-0.8-0.5-1.5,0-2.3c0.1-0.1,0-0.3,0-0.5c-0.4-1-0.6-2.1-1.1-3" + ' ' +
+									"c-1.7-3-3.7-5.8-6.1-8.3c-1.4-1.4-2.6-3.1-4.5-3.8c-0.6,0-0.8,0.3-1.1,0.7c-0.8,1.3-1.2,2.8-1.4,4.3c-0.1,1.4-0.1,2.8,0,4.1" + ' ' +
+									"c0.2,1.6,0.5,3.1,0.9,4.6c0.5,1.9,1.1,3.8,1.6,5.7c0.8,3.3,1.8,6.5,3,9.7c0.5,1.5,1,3,1.3,4.5c0.2,1.2,0.7,2.3,1.1,3.5" + ' ' +
+									"c0.1,0.2,0.2,0.4,0.2,0.7c0.9,2.9,1.7,5.8,2.6,8.7C588.5,411.1,588.5,411.5,588.5,411.8z M610.2,387.8c0.7,0.2,1,0,1.1-0.6" + ' ' +
+									"C610.8,387.2,610.4,387.2,610.2,387.8z M582.3,399.7c0.1,0,0.2,0,0.3,0c0.3-0.4,0.3-0.7-0.5-1" + ' ' +
+									"C582.2,399.1,582.3,399.4,582.3,399.7z M605.2,393.9c0.4,0.2,0.7,0.1,0.8-0.2c0-0.1-0.1-0.4-0.3-0.7" + ' ' +
+									"C605.5,393.4,605.4,393.6,605.2,393.9z M610,375.6c-0.2-0.5-0.4-0.8-1-0.6C609.2,375.5,609.5,375.6,610,375.6z M579.5,386.1" + ' ' +
+									"c0,0.1,0.1,0.2,0.1,0.3c0.2-0.1,0.5-0.3,0.7-0.4c0,0,0-0.2,0-0.4C580,385.8,579.7,385.9,579.5,386.1z M607,376.7" + ' ' +
+									"c0.4-0.6,0.4-0.6-0.1-1C606.9,376.1,607,376.4,607,376.7z M607.2,393.6c-0.2-0.6-0.2-0.6-0.7-0.4" + ' ' +
+									"C606.8,393.4,607,393.5,607.2,393.6z M598,402.1c0.7-0.2,0.7-0.2,0.8-0.5c0,0-0.1-0.1-0.2-0.2C598.5,401.6,598.3,401.8,598,402.1z" + ' ' +
+									 "M582.6,398.2c-0.3-0.6-0.3-0.6-0.9-0.4C582,397.9,582.3,398,582.6,398.2z M577.3,382.9c0.1,0.1,0.1,0.1,0.2,0.2" + ' ' +
+									"c0.1-0.1,0.3-0.2,0.3-0.4c0-0.1-0.1-0.3-0.1-0.6C577.5,382.5,577.4,382.7,577.3,382.9z M583.7,401c0.7-0.2,0.7-0.6,0.4-1" + ' ' +
+									"C584,400.3,583.9,400.6,583.7,401z M603.6,395c0.4,0.3,0.7,0.3,0.8-0.3C604,394.9,603.8,395,603.6,395z M590.8,413.9" + ' ' +
+									"c-0.1,0-0.2,0-0.3,0c-0.1,0.2-0.3,0.4,0.3,0.6C590.8,414.3,590.8,414.1,590.8,413.9z M580.8,387.5c-0.1,0-0.1-0.1-0.2-0.1" + ' ' +
+									"c-0.1,0.2-0.1,0.3-0.2,0.5c0.1,0,0.1,0.1,0.2,0.1C580.6,387.9,580.7,387.7,580.8,387.5z M585.1,408.2c-0.1,0-0.1,0-0.2,0" + ' ' +
+									"c0.1,0.2,0.1,0.4,0.2,0.7c0.1,0,0.1,0,0.2,0C585.2,408.6,585.2,408.4,585.1,408.2z M591.5,414.6c0,0.1,0,0.1,0,0.2" + ' ' +
+									"c0.2,0,0.3,0.1,0.5,0.1c0-0.1,0-0.1,0-0.2C591.9,414.7,591.7,414.7,591.5,414.6z M606.3,378.3c0,0,0.1-0.1,0.1-0.1" + ' ' +
+									"c-0.1-0.1-0.3-0.2-0.4-0.4c0,0.1-0.1,0.1-0.1,0.2C606,378.1,606.2,378.2,606.3,378.3z M584.7,401.4c0.1,0.1,0.1,0.3,0.1,0.3" + ' ' +
+									"c0,0,0.2,0,0.2,0c0-0.1,0-0.2,0-0.3C584.9,401.4,584.8,401.4,584.7,401.4z M577.8,384.4c0.1,0.1,0.1,0.1,0.2,0.2" + ' ' +
+									"c0.1-0.1,0.1-0.2,0.2-0.3c0,0-0.1-0.1-0.1-0.1C578,384.2,577.9,384.3,577.8,384.4z M584.3,405.9c0.1,0,0.2-0.1,0.3-0.1" + ' ' +
+									"c0,0,0-0.1,0-0.2c-0.1,0-0.2,0-0.3,0.1C584.2,405.7,584.3,405.8,584.3,405.9z M591.6,373.6c0,0.1,0,0.2,0,0.2c0.1,0,0.2,0,0.3,0" + ' ' +
+									"c0,0,0-0.1,0-0.2C591.8,373.6,591.7,373.6,591.6,373.6z M595.4,407.4c0,0.1-0.1,0.2-0.1,0.2c0.1,0,0.3,0.1,0.4,0.1" + ' ' +
+									"c0-0.1,0-0.1,0.1-0.2C595.6,407.5,595.5,407.5,595.4,407.4z M611.7,386.5c0-0.1,0-0.1-0.1-0.2c-0.1,0-0.2,0-0.2,0.1" + ' ' +
+									"c0,0,0,0.1,0,0.2C611.5,386.6,611.6,386.5,611.7,386.5z M584.3,364c0.1,0,0.2,0,0.2,0c0-0.1-0.1-0.2-0.1-0.4c-0.1,0-0.1,0-0.2,0" + ' ' +
+									"C584.2,363.8,584.3,363.9,584.3,364z M586.5,407.1c0-0.1,0-0.2,0-0.2c0,0-0.1,0-0.2,0c0,0.1,0,0.2,0,0.3" + ' ' +
+									"C586.4,407.1,586.4,407.1,586.5,407.1z M601.1,381.2c0.1,0,0.1-0.1,0.2-0.1c0,0-0.1-0.1-0.1-0.1c0,0-0.1,0-0.1,0" + ' ' +
+									"C601.1,381.1,601.1,381.2,601.1,381.2z M592.6,410.1c0.1,0,0.1,0,0.2,0c0,0,0.1-0.1,0-0.1c0,0-0.1-0.1-0.2-0.1" + ' ' +
+									"C592.7,409.9,592.7,410,592.6,410.1z M594.3,407.3c0,0-0.1,0.1-0.1,0.1c0.1,0,0.1,0.1,0.2,0.1c0,0,0.1-0.1,0.1-0.1" + ' ' +
+									"C594.4,407.4,594.4,407.3,594.3,407.3z M612.6,385.3c0.1,0,0.1-0.1,0.2-0.1c0,0-0.1-0.1-0.1-0.1c0,0-0.1,0-0.1,0.1" + ' ' +
+									"C612.6,385.2,612.6,385.3,612.6,385.3z M619.4,376.5c0-0.1-0.1-0.1-0.1-0.2c0,0-0.1,0.1-0.1,0.1c0,0.1,0.1,0.1,0.1,0.2" + ' ' +
+									"C619.3,376.6,619.4,376.5,619.4,376.5z M604,396.6c0.1,0,0.1-0.1,0.2-0.1c0,0,0-0.1,0-0.1c-0.1,0-0.1,0-0.2,0" + ' ' +
+									"C604,396.5,604,396.6,604,396.6z M614.2,384.3c0.1,0,0.1,0,0.2,0c0-0.1-0.1-0.1-0.1-0.1c0,0-0.1,0-0.1,0" + ' ' +
+									"C614.2,384.2,614.2,384.2,614.2,384.3z M610.4,389.6c0.1,0,0.1,0,0.2,0c0,0,0-0.1,0-0.1C610.5,389.4,610.4,389.4,610.4,389.6" + ' ' +
+									"C610.4,389.5,610.4,389.5,610.4,389.6z M576.1,365.4C576.1,365.4,576,365.5,576.1,365.4c-0.1,0.1,0,0.1,0,0.1" + ' ' +
+									"C576.1,365.5,576.1,365.5,576.1,365.4C576.2,365.5,576.1,365.4,576.1,365.4z M575.8,369.8C575.8,369.8,575.8,369.8,575.8,369.8" + ' ' +
+									"c-0.1,0.1,0,0.1,0,0.1C575.8,369.9,575.9,369.9,575.8,369.8C575.9,369.8,575.9,369.8,575.8,369.8z M576.8,378.5" + ' ' +
+									"C576.8,378.5,576.9,378.6,576.8,378.5c0.1,0.1,0.1,0,0.1,0C576.9,378.5,576.9,378.5,576.8,378.5" + ' ' +
+									"C576.9,378.5,576.8,378.5,576.8,378.5z M584.8,365c0.1,0,0.1,0,0.2,0c0-0.1-0.1-0.1-0.1-0.1c0,0-0.1,0-0.1,0" + ' ' +
+									"C584.8,364.9,584.8,365,584.8,365z M578.6,380.5c0,0,0.1-0.1,0.1-0.1c0,0-0.1,0-0.1,0C578.6,380.4,578.6,380.4,578.6,380.5z" + ' ' +
+									 "M585.8,366.1C585.9,366,585.9,366,585.8,366.1c0.1-0.1,0-0.1,0-0.1C585.8,365.9,585.8,366,585.8,366.1" + ' ' +
+									"C585.8,366,585.8,366,585.8,366.1z M588.7,415.8C588.7,415.8,588.7,415.8,588.7,415.8c-0.1-0.1-0.1,0-0.1,0" + ' ' +
+									"C588.6,415.9,588.6,415.9,588.7,415.8C588.7,415.9,588.7,415.9,588.7,415.8z M593.6,408.8c0-0.1-0.1-0.1-0.1-0.2" + ' ' +
+									"c0,0-0.1,0.1-0.1,0.1C593.5,408.7,593.5,408.8,593.6,408.8C593.6,408.8,593.6,408.8,593.6,408.8z M597.6,402.5" + ' ' +
+									"C597.6,402.5,597.6,402.5,597.6,402.5c-0.1,0.1-0.1,0.2-0.1,0.2c0,0,0.1,0,0.1,0C597.6,402.7,597.6,402.6,597.6,402.5z" + ' ' +
+									 "M596.4,405.8c0-0.1,0-0.1-0.1-0.2c0,0-0.1,0-0.1,0c0,0.1,0,0.1,0,0.2C596.4,405.8,596.4,405.8,596.4,405.8z M613.3,375.4" + ' ' +
+									"c-0.1,0-0.1-0.1-0.2-0.1c0,0,0,0.1,0,0.1c0,0,0.1,0.1,0.2,0.1C613.3,375.5,613.3,375.4,613.3,375.4z M601.3,400.8c0,0,0,0.1,0,0.1" + ' ' +
+									"c0,0,0.1,0,0.1,0C601.4,400.9,601.5,400.9,601.3,400.8C601.4,400.8,601.4,400.9,601.3,400.8z M587.3,367.9" + ' ' +
+									"C587.4,367.8,587.4,367.8,587.3,367.9c0.1-0.1,0-0.1,0-0.1C587.3,367.7,587.3,367.8,587.3,367.9" + ' ' +
+									"C587.3,367.8,587.3,367.8,587.3,367.9z M587.7,369.2C587.7,369.2,587.6,369.3,587.7,369.2c0,0.1,0.1,0.1,0.1,0.1" + ' ' +
+									"C587.7,369.3,587.8,369.2,587.7,369.2C587.7,369.2,587.7,369.2,587.7,369.2z M591.9,372.8C591.8,372.8,591.8,372.8,591.9,372.8" + ' ' +
+									"c-0.1-0.1-0.1,0-0.1,0C591.7,372.8,591.7,372.9,591.9,372.8C591.8,372.9,591.8,372.8,591.9,372.8z M581.1,395.4" + ' ' +
+									"c0,0,0.1-0.1,0.1-0.1c0,0-0.1,0-0.1,0C581.1,395.3,581.1,395.4,581.1,395.4z M591.8,376.9c0,0,0.1,0.1,0.1,0.1c0,0,0.1-0.1,0-0.1" + ' ' +
+									"C591.9,376.9,591.9,376.9,591.8,376.9C591.8,376.9,591.8,376.9,591.8,376.9z M582.9,401.5c0,0,0,0.1,0,0.1c0.1,0,0.1,0,0.2,0" + ' ' +
+									"c0,0,0-0.1,0-0.1C583.1,401.5,583,401.5,582.9,401.5z M606,395.7C606,395.7,606,395.7,606,395.7c0.1,0,0.1,0,0.2-0.1" + ' ' +
+									"c0,0,0-0.1-0.1-0.1C606,395.6,606,395.6,606,395.7z M594,387.2c0,0,0.1-0.1,0.1-0.1c0,0-0.1,0-0.1,0" + ' ' +
+									"C594,387.1,594,387.1,594,387.2z M582.9,395.1c0,0-0.1-0.1-0.1-0.1c0,0,0,0.1,0,0.1C582.8,395.1,582.8,395.1,582.9,395.1z" + ' ' +
+									 "M587.6,415.4C587.6,415.4,587.6,415.4,587.6,415.4c0.1-0.1,0-0.1,0-0.1C587.6,415.3,587.6,415.3,587.6,415.4" + ' ' +
+									"C587.5,415.4,587.6,415.4,587.6,415.4z M606.3,376.2c0,0-0.1-0.1-0.1-0.1c0,0,0,0.1,0,0.1C606.3,376.2,606.3,376.2,606.3,376.2z" + ' ' +
+									 "M587.6,414.7L587.6,414.7L587.6,414.7L587.6,414.7z M585.9,404.2c-0.1,0-0.1,0-0.1,0C585.8,404.3,585.8,404.3,585.9,404.2" + ' ' +
+									"C585.9,404.3,585.9,404.3,585.9,404.2z M593.5,375.3c0,0,0.1-0.1,0.1-0.1c0,0-0.1,0-0.1,0C593.5,375.2,593.5,375.2,593.5,375.3z" + ' ' +
+									 "M583.9,397.6C584,397.6,584,397.5,583.9,397.6c0.1-0.1,0-0.1,0-0.1C583.9,397.5,583.9,397.6,583.9,397.6z M588.6,414.1" + ' ' +
+									"L588.6,414.1L588.6,414.1L588.6,414.1z M574.9,373.6C574.9,373.6,574.9,373.5,574.9,373.6c0-0.1,0-0.1-0.1-0.1" + ' ' +
+									"C574.8,373.5,574.8,373.6,574.9,373.6C574.8,373.6,574.9,373.6,574.9,373.6z M609.5,389.7c-0.1,0-0.1,0-0.1,0" + ' ' +
+									"C609.3,389.7,609.4,389.8,609.5,389.7C609.4,389.8,609.4,389.7,609.5,389.7z M617.1,379C617,379.1,617,379.1,617.1,379" + ' ' +
+									"c0,0.1,0,0.1,0,0.1C617.1,379.1,617.1,379.1,617.1,379C617.1,379.1,617.1,379.1,617.1,379z M614,373.7c0,0,0.1,0,0.1,0" + ' ' +
+									"c0,0,0-0.1,0-0.1C614.1,373.6,614.1,373.6,614,373.7C614,373.6,614,373.6,614,373.7z M612.1,375.6" + ' ' +
+									"C612.1,375.6,612.1,375.6,612.1,375.6c0.1-0.1,0-0.1,0-0.1C612.1,375.5,612.1,375.5,612.1,375.6" + ' ' +
+									"C612,375.6,612.1,375.6,612.1,375.6z M600.1,403.5c0.1,0,0.1,0,0.1,0C600.2,403.5,600.2,403.5,600.1,403.5" + ' ' +
+									"C600.2,403.5,600.1,403.5,600.1,403.5z"})
+							), 
+							React.createElement("rect", {x: "499.7", y: "352", width: "377.5", height: "69.5"})
+						)
 					)
 				)
 			)
@@ -208,7 +2748,36 @@ var Lineup = React.createClass({displayName: "Lineup",
 
 module.exports = Lineup; 
 
-},{"./band.jsx":2,"react":160,"superagent":161}],5:[function(require,module,exports){
+},{"./band.jsx":2,"react":161,"superagent":163}],5:[function(require,module,exports){
+/**
+ * @jsx React.DOM
+ */
+
+var React = require('react'),
+    request = require('superagent');
+
+var Tickets = React.createClass({displayName: "Tickets",
+	toggleTickets: function(){
+		this.props.tickets();
+	},
+	
+    render: function() {
+	  	var self = this;
+		    return (
+		    	React.createElement("div", {className: "tickets_container"}, 
+		    		React.createElement("span", {className: "close_lineup", onClick: self.toggleTickets}, "×"), 
+					React.createElement("div", {className: "tickets_wrap"}, 
+						React.createElement("a", {href: "http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=4383595&partner_id=376", className: "ticket_link", target: "_blank"}, React.createElement("img", {className: "price", src: "/wp-content/themes/maha2015.v2.1/svg/50.svg"}), " General Admission"), 
+						React.createElement("a", {href: "http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=6262115&partner_id=376", className: "ticket_link", target: "_blank"}, React.createElement("img", {className: "price", src: "/wp-content/themes/maha2015.v2.1/svg/175.svg"}), " Broadmoor​ VIP Package")
+					)
+				)
+		    )
+    }
+});
+ 
+module.exports = Tickets; 
+
+},{"react":161,"superagent":163}],6:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -300,7 +2869,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -327,7 +2896,7 @@ var AutoFocusMixin = {
 
 module.exports = AutoFocusMixin;
 
-},{"./focusNode":124}],7:[function(require,module,exports){
+},{"./focusNode":125}],8:[function(require,module,exports){
 /**
  * Copyright 2013-2015 Facebook, Inc.
  * All rights reserved.
@@ -822,7 +3391,7 @@ var BeforeInputEventPlugin = {
 
 module.exports = BeforeInputEventPlugin;
 
-},{"./EventConstants":19,"./EventPropagators":24,"./ExecutionEnvironment":25,"./FallbackCompositionState":26,"./SyntheticCompositionEvent":98,"./SyntheticInputEvent":102,"./keyOf":146}],8:[function(require,module,exports){
+},{"./EventConstants":20,"./EventPropagators":25,"./ExecutionEnvironment":26,"./FallbackCompositionState":27,"./SyntheticCompositionEvent":99,"./SyntheticInputEvent":103,"./keyOf":147}],9:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -947,7 +3516,7 @@ var CSSProperty = {
 
 module.exports = CSSProperty;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -1129,7 +3698,7 @@ var CSSPropertyOperations = {
 module.exports = CSSPropertyOperations;
 
 }).call(this,require('_process'))
-},{"./CSSProperty":8,"./ExecutionEnvironment":25,"./camelizeStyleName":113,"./dangerousStyleValue":118,"./hyphenateStyleName":138,"./memoizeStringOnly":148,"./warning":159,"_process":5}],10:[function(require,module,exports){
+},{"./CSSProperty":9,"./ExecutionEnvironment":26,"./camelizeStyleName":114,"./dangerousStyleValue":119,"./hyphenateStyleName":139,"./memoizeStringOnly":149,"./warning":160,"_process":6}],11:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -1229,7 +3798,7 @@ PooledClass.addPoolingTo(CallbackQueue);
 module.exports = CallbackQueue;
 
 }).call(this,require('_process'))
-},{"./Object.assign":31,"./PooledClass":32,"./invariant":140,"_process":5}],11:[function(require,module,exports){
+},{"./Object.assign":32,"./PooledClass":33,"./invariant":141,"_process":6}],12:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -1611,7 +4180,7 @@ var ChangeEventPlugin = {
 
 module.exports = ChangeEventPlugin;
 
-},{"./EventConstants":19,"./EventPluginHub":21,"./EventPropagators":24,"./ExecutionEnvironment":25,"./ReactUpdates":92,"./SyntheticEvent":100,"./isEventSupported":141,"./isTextInputElement":143,"./keyOf":146}],12:[function(require,module,exports){
+},{"./EventConstants":20,"./EventPluginHub":22,"./EventPropagators":25,"./ExecutionEnvironment":26,"./ReactUpdates":93,"./SyntheticEvent":101,"./isEventSupported":142,"./isTextInputElement":144,"./keyOf":147}],13:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -1636,7 +4205,7 @@ var ClientReactRootIndex = {
 
 module.exports = ClientReactRootIndex;
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -1774,7 +4343,7 @@ var DOMChildrenOperations = {
 module.exports = DOMChildrenOperations;
 
 }).call(this,require('_process'))
-},{"./Danger":16,"./ReactMultiChildUpdateTypes":77,"./invariant":140,"./setTextContent":154,"_process":5}],14:[function(require,module,exports){
+},{"./Danger":17,"./ReactMultiChildUpdateTypes":78,"./invariant":141,"./setTextContent":155,"_process":6}],15:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -2073,7 +4642,7 @@ var DOMProperty = {
 module.exports = DOMProperty;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],15:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],16:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -2265,7 +4834,7 @@ var DOMPropertyOperations = {
 module.exports = DOMPropertyOperations;
 
 }).call(this,require('_process'))
-},{"./DOMProperty":14,"./quoteAttributeValueForBrowser":152,"./warning":159,"_process":5}],16:[function(require,module,exports){
+},{"./DOMProperty":15,"./quoteAttributeValueForBrowser":153,"./warning":160,"_process":6}],17:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -2452,7 +5021,7 @@ var Danger = {
 module.exports = Danger;
 
 }).call(this,require('_process'))
-},{"./ExecutionEnvironment":25,"./createNodesFromMarkup":117,"./emptyFunction":119,"./getMarkupWrap":132,"./invariant":140,"_process":5}],17:[function(require,module,exports){
+},{"./ExecutionEnvironment":26,"./createNodesFromMarkup":118,"./emptyFunction":120,"./getMarkupWrap":133,"./invariant":141,"_process":6}],18:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -2491,7 +5060,7 @@ var DefaultEventPluginOrder = [
 
 module.exports = DefaultEventPluginOrder;
 
-},{"./keyOf":146}],18:[function(require,module,exports){
+},{"./keyOf":147}],19:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -2631,7 +5200,7 @@ var EnterLeaveEventPlugin = {
 
 module.exports = EnterLeaveEventPlugin;
 
-},{"./EventConstants":19,"./EventPropagators":24,"./ReactMount":75,"./SyntheticMouseEvent":104,"./keyOf":146}],19:[function(require,module,exports){
+},{"./EventConstants":20,"./EventPropagators":25,"./ReactMount":76,"./SyntheticMouseEvent":105,"./keyOf":147}],20:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -2703,7 +5272,7 @@ var EventConstants = {
 
 module.exports = EventConstants;
 
-},{"./keyMirror":145}],20:[function(require,module,exports){
+},{"./keyMirror":146}],21:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -2793,7 +5362,7 @@ var EventListener = {
 module.exports = EventListener;
 
 }).call(this,require('_process'))
-},{"./emptyFunction":119,"_process":5}],21:[function(require,module,exports){
+},{"./emptyFunction":120,"_process":6}],22:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -3071,7 +5640,7 @@ var EventPluginHub = {
 module.exports = EventPluginHub;
 
 }).call(this,require('_process'))
-},{"./EventPluginRegistry":22,"./EventPluginUtils":23,"./accumulateInto":110,"./forEachAccumulated":125,"./invariant":140,"_process":5}],22:[function(require,module,exports){
+},{"./EventPluginRegistry":23,"./EventPluginUtils":24,"./accumulateInto":111,"./forEachAccumulated":126,"./invariant":141,"_process":6}],23:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -3351,7 +5920,7 @@ var EventPluginRegistry = {
 module.exports = EventPluginRegistry;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],23:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],24:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -3572,7 +6141,7 @@ var EventPluginUtils = {
 module.exports = EventPluginUtils;
 
 }).call(this,require('_process'))
-},{"./EventConstants":19,"./invariant":140,"_process":5}],24:[function(require,module,exports){
+},{"./EventConstants":20,"./invariant":141,"_process":6}],25:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -3714,7 +6283,7 @@ var EventPropagators = {
 module.exports = EventPropagators;
 
 }).call(this,require('_process'))
-},{"./EventConstants":19,"./EventPluginHub":21,"./accumulateInto":110,"./forEachAccumulated":125,"_process":5}],25:[function(require,module,exports){
+},{"./EventConstants":20,"./EventPluginHub":22,"./accumulateInto":111,"./forEachAccumulated":126,"_process":6}],26:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -3758,7 +6327,7 @@ var ExecutionEnvironment = {
 
 module.exports = ExecutionEnvironment;
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -3849,7 +6418,7 @@ PooledClass.addPoolingTo(FallbackCompositionState);
 
 module.exports = FallbackCompositionState;
 
-},{"./Object.assign":31,"./PooledClass":32,"./getTextContentAccessor":135}],27:[function(require,module,exports){
+},{"./Object.assign":32,"./PooledClass":33,"./getTextContentAccessor":136}],28:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -4060,7 +6629,7 @@ var HTMLDOMPropertyConfig = {
 
 module.exports = HTMLDOMPropertyConfig;
 
-},{"./DOMProperty":14,"./ExecutionEnvironment":25}],28:[function(require,module,exports){
+},{"./DOMProperty":15,"./ExecutionEnvironment":26}],29:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -4216,7 +6785,7 @@ var LinkedValueUtils = {
 module.exports = LinkedValueUtils;
 
 }).call(this,require('_process'))
-},{"./ReactPropTypes":83,"./invariant":140,"_process":5}],29:[function(require,module,exports){
+},{"./ReactPropTypes":84,"./invariant":141,"_process":6}],30:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -4273,7 +6842,7 @@ var LocalEventTrapMixin = {
 module.exports = LocalEventTrapMixin;
 
 }).call(this,require('_process'))
-},{"./ReactBrowserEventEmitter":35,"./accumulateInto":110,"./forEachAccumulated":125,"./invariant":140,"_process":5}],30:[function(require,module,exports){
+},{"./ReactBrowserEventEmitter":36,"./accumulateInto":111,"./forEachAccumulated":126,"./invariant":141,"_process":6}],31:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -4331,7 +6900,7 @@ var MobileSafariClickEventPlugin = {
 
 module.exports = MobileSafariClickEventPlugin;
 
-},{"./EventConstants":19,"./emptyFunction":119}],31:[function(require,module,exports){
+},{"./EventConstants":20,"./emptyFunction":120}],32:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -4380,7 +6949,7 @@ function assign(target, sources) {
 
 module.exports = assign;
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -4496,7 +7065,7 @@ var PooledClass = {
 module.exports = PooledClass;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],33:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],34:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -4648,7 +7217,7 @@ React.version = '0.13.3';
 module.exports = React;
 
 }).call(this,require('_process'))
-},{"./EventPluginUtils":23,"./ExecutionEnvironment":25,"./Object.assign":31,"./ReactChildren":37,"./ReactClass":38,"./ReactComponent":39,"./ReactContext":43,"./ReactCurrentOwner":44,"./ReactDOM":45,"./ReactDOMTextComponent":56,"./ReactDefaultInjection":59,"./ReactElement":62,"./ReactElementValidator":63,"./ReactInstanceHandles":71,"./ReactMount":75,"./ReactPerf":80,"./ReactPropTypes":83,"./ReactReconciler":86,"./ReactServerRendering":89,"./findDOMNode":122,"./onlyChild":149,"_process":5}],34:[function(require,module,exports){
+},{"./EventPluginUtils":24,"./ExecutionEnvironment":26,"./Object.assign":32,"./ReactChildren":38,"./ReactClass":39,"./ReactComponent":40,"./ReactContext":44,"./ReactCurrentOwner":45,"./ReactDOM":46,"./ReactDOMTextComponent":57,"./ReactDefaultInjection":60,"./ReactElement":63,"./ReactElementValidator":64,"./ReactInstanceHandles":72,"./ReactMount":76,"./ReactPerf":81,"./ReactPropTypes":84,"./ReactReconciler":87,"./ReactServerRendering":90,"./findDOMNode":123,"./onlyChild":150,"_process":6}],35:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -4679,7 +7248,7 @@ var ReactBrowserComponentMixin = {
 
 module.exports = ReactBrowserComponentMixin;
 
-},{"./findDOMNode":122}],35:[function(require,module,exports){
+},{"./findDOMNode":123}],36:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -5032,7 +7601,7 @@ var ReactBrowserEventEmitter = assign({}, ReactEventEmitterMixin, {
 
 module.exports = ReactBrowserEventEmitter;
 
-},{"./EventConstants":19,"./EventPluginHub":21,"./EventPluginRegistry":22,"./Object.assign":31,"./ReactEventEmitterMixin":66,"./ViewportMetrics":109,"./isEventSupported":141}],36:[function(require,module,exports){
+},{"./EventConstants":20,"./EventPluginHub":22,"./EventPluginRegistry":23,"./Object.assign":32,"./ReactEventEmitterMixin":67,"./ViewportMetrics":110,"./isEventSupported":142}],37:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -5159,7 +7728,7 @@ var ReactChildReconciler = {
 
 module.exports = ReactChildReconciler;
 
-},{"./ReactReconciler":86,"./flattenChildren":123,"./instantiateReactComponent":139,"./shouldUpdateReactComponent":156}],37:[function(require,module,exports){
+},{"./ReactReconciler":87,"./flattenChildren":124,"./instantiateReactComponent":140,"./shouldUpdateReactComponent":157}],38:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -5312,7 +7881,7 @@ var ReactChildren = {
 module.exports = ReactChildren;
 
 }).call(this,require('_process'))
-},{"./PooledClass":32,"./ReactFragment":68,"./traverseAllChildren":158,"./warning":159,"_process":5}],38:[function(require,module,exports){
+},{"./PooledClass":33,"./ReactFragment":69,"./traverseAllChildren":159,"./warning":160,"_process":6}],39:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -6258,7 +8827,7 @@ var ReactClass = {
 module.exports = ReactClass;
 
 }).call(this,require('_process'))
-},{"./Object.assign":31,"./ReactComponent":39,"./ReactCurrentOwner":44,"./ReactElement":62,"./ReactErrorUtils":65,"./ReactInstanceMap":72,"./ReactLifeCycle":73,"./ReactPropTypeLocationNames":81,"./ReactPropTypeLocations":82,"./ReactUpdateQueue":91,"./invariant":140,"./keyMirror":145,"./keyOf":146,"./warning":159,"_process":5}],39:[function(require,module,exports){
+},{"./Object.assign":32,"./ReactComponent":40,"./ReactCurrentOwner":45,"./ReactElement":63,"./ReactErrorUtils":66,"./ReactInstanceMap":73,"./ReactLifeCycle":74,"./ReactPropTypeLocationNames":82,"./ReactPropTypeLocations":83,"./ReactUpdateQueue":92,"./invariant":141,"./keyMirror":146,"./keyOf":147,"./warning":160,"_process":6}],40:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -6412,7 +8981,7 @@ if ("production" !== process.env.NODE_ENV) {
 module.exports = ReactComponent;
 
 }).call(this,require('_process'))
-},{"./ReactUpdateQueue":91,"./invariant":140,"./warning":159,"_process":5}],40:[function(require,module,exports){
+},{"./ReactUpdateQueue":92,"./invariant":141,"./warning":160,"_process":6}],41:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -6459,7 +9028,7 @@ var ReactComponentBrowserEnvironment = {
 
 module.exports = ReactComponentBrowserEnvironment;
 
-},{"./ReactDOMIDOperations":49,"./ReactMount":75}],41:[function(require,module,exports){
+},{"./ReactDOMIDOperations":50,"./ReactMount":76}],42:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -6520,7 +9089,7 @@ var ReactComponentEnvironment = {
 module.exports = ReactComponentEnvironment;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],42:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],43:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -7433,7 +10002,7 @@ var ReactCompositeComponent = {
 module.exports = ReactCompositeComponent;
 
 }).call(this,require('_process'))
-},{"./Object.assign":31,"./ReactComponentEnvironment":41,"./ReactContext":43,"./ReactCurrentOwner":44,"./ReactElement":62,"./ReactElementValidator":63,"./ReactInstanceMap":72,"./ReactLifeCycle":73,"./ReactNativeComponent":78,"./ReactPerf":80,"./ReactPropTypeLocationNames":81,"./ReactPropTypeLocations":82,"./ReactReconciler":86,"./ReactUpdates":92,"./emptyObject":120,"./invariant":140,"./shouldUpdateReactComponent":156,"./warning":159,"_process":5}],43:[function(require,module,exports){
+},{"./Object.assign":32,"./ReactComponentEnvironment":42,"./ReactContext":44,"./ReactCurrentOwner":45,"./ReactElement":63,"./ReactElementValidator":64,"./ReactInstanceMap":73,"./ReactLifeCycle":74,"./ReactNativeComponent":79,"./ReactPerf":81,"./ReactPropTypeLocationNames":82,"./ReactPropTypeLocations":83,"./ReactReconciler":87,"./ReactUpdates":93,"./emptyObject":121,"./invariant":141,"./shouldUpdateReactComponent":157,"./warning":160,"_process":6}],44:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -7511,7 +10080,7 @@ var ReactContext = {
 module.exports = ReactContext;
 
 }).call(this,require('_process'))
-},{"./Object.assign":31,"./emptyObject":120,"./warning":159,"_process":5}],44:[function(require,module,exports){
+},{"./Object.assign":32,"./emptyObject":121,"./warning":160,"_process":6}],45:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -7545,7 +10114,7 @@ var ReactCurrentOwner = {
 
 module.exports = ReactCurrentOwner;
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -7724,7 +10293,7 @@ var ReactDOM = mapObject({
 module.exports = ReactDOM;
 
 }).call(this,require('_process'))
-},{"./ReactElement":62,"./ReactElementValidator":63,"./mapObject":147,"_process":5}],46:[function(require,module,exports){
+},{"./ReactElement":63,"./ReactElementValidator":64,"./mapObject":148,"_process":6}],47:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -7788,7 +10357,7 @@ var ReactDOMButton = ReactClass.createClass({
 
 module.exports = ReactDOMButton;
 
-},{"./AutoFocusMixin":6,"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactElement":62,"./keyMirror":145}],47:[function(require,module,exports){
+},{"./AutoFocusMixin":7,"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactElement":63,"./keyMirror":146}],48:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -8298,7 +10867,7 @@ ReactDOMComponent.injection = {
 module.exports = ReactDOMComponent;
 
 }).call(this,require('_process'))
-},{"./CSSPropertyOperations":9,"./DOMProperty":14,"./DOMPropertyOperations":15,"./Object.assign":31,"./ReactBrowserEventEmitter":35,"./ReactComponentBrowserEnvironment":40,"./ReactMount":75,"./ReactMultiChild":76,"./ReactPerf":80,"./escapeTextContentForBrowser":121,"./invariant":140,"./isEventSupported":141,"./keyOf":146,"./warning":159,"_process":5}],48:[function(require,module,exports){
+},{"./CSSPropertyOperations":10,"./DOMProperty":15,"./DOMPropertyOperations":16,"./Object.assign":32,"./ReactBrowserEventEmitter":36,"./ReactComponentBrowserEnvironment":41,"./ReactMount":76,"./ReactMultiChild":77,"./ReactPerf":81,"./escapeTextContentForBrowser":122,"./invariant":141,"./isEventSupported":142,"./keyOf":147,"./warning":160,"_process":6}],49:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -8347,7 +10916,7 @@ var ReactDOMForm = ReactClass.createClass({
 
 module.exports = ReactDOMForm;
 
-},{"./EventConstants":19,"./LocalEventTrapMixin":29,"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactElement":62}],49:[function(require,module,exports){
+},{"./EventConstants":20,"./LocalEventTrapMixin":30,"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactElement":63}],50:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -8515,7 +11084,7 @@ ReactPerf.measureMethods(ReactDOMIDOperations, 'ReactDOMIDOperations', {
 module.exports = ReactDOMIDOperations;
 
 }).call(this,require('_process'))
-},{"./CSSPropertyOperations":9,"./DOMChildrenOperations":13,"./DOMPropertyOperations":15,"./ReactMount":75,"./ReactPerf":80,"./invariant":140,"./setInnerHTML":153,"_process":5}],50:[function(require,module,exports){
+},{"./CSSPropertyOperations":10,"./DOMChildrenOperations":14,"./DOMPropertyOperations":16,"./ReactMount":76,"./ReactPerf":81,"./invariant":141,"./setInnerHTML":154,"_process":6}],51:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -8560,7 +11129,7 @@ var ReactDOMIframe = ReactClass.createClass({
 
 module.exports = ReactDOMIframe;
 
-},{"./EventConstants":19,"./LocalEventTrapMixin":29,"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactElement":62}],51:[function(require,module,exports){
+},{"./EventConstants":20,"./LocalEventTrapMixin":30,"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactElement":63}],52:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -8606,7 +11175,7 @@ var ReactDOMImg = ReactClass.createClass({
 
 module.exports = ReactDOMImg;
 
-},{"./EventConstants":19,"./LocalEventTrapMixin":29,"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactElement":62}],52:[function(require,module,exports){
+},{"./EventConstants":20,"./LocalEventTrapMixin":30,"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactElement":63}],53:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -8783,7 +11352,7 @@ var ReactDOMInput = ReactClass.createClass({
 module.exports = ReactDOMInput;
 
 }).call(this,require('_process'))
-},{"./AutoFocusMixin":6,"./DOMPropertyOperations":15,"./LinkedValueUtils":28,"./Object.assign":31,"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactElement":62,"./ReactMount":75,"./ReactUpdates":92,"./invariant":140,"_process":5}],53:[function(require,module,exports){
+},{"./AutoFocusMixin":7,"./DOMPropertyOperations":16,"./LinkedValueUtils":29,"./Object.assign":32,"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactElement":63,"./ReactMount":76,"./ReactUpdates":93,"./invariant":141,"_process":6}],54:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -8835,7 +11404,7 @@ var ReactDOMOption = ReactClass.createClass({
 module.exports = ReactDOMOption;
 
 }).call(this,require('_process'))
-},{"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactElement":62,"./warning":159,"_process":5}],54:[function(require,module,exports){
+},{"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactElement":63,"./warning":160,"_process":6}],55:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -9013,7 +11582,7 @@ var ReactDOMSelect = ReactClass.createClass({
 
 module.exports = ReactDOMSelect;
 
-},{"./AutoFocusMixin":6,"./LinkedValueUtils":28,"./Object.assign":31,"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactElement":62,"./ReactUpdates":92}],55:[function(require,module,exports){
+},{"./AutoFocusMixin":7,"./LinkedValueUtils":29,"./Object.assign":32,"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactElement":63,"./ReactUpdates":93}],56:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -9226,7 +11795,7 @@ var ReactDOMSelection = {
 
 module.exports = ReactDOMSelection;
 
-},{"./ExecutionEnvironment":25,"./getNodeForCharacterOffset":133,"./getTextContentAccessor":135}],56:[function(require,module,exports){
+},{"./ExecutionEnvironment":26,"./getNodeForCharacterOffset":134,"./getTextContentAccessor":136}],57:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -9343,7 +11912,7 @@ assign(ReactDOMTextComponent.prototype, {
 
 module.exports = ReactDOMTextComponent;
 
-},{"./DOMPropertyOperations":15,"./Object.assign":31,"./ReactComponentBrowserEnvironment":40,"./ReactDOMComponent":47,"./escapeTextContentForBrowser":121}],57:[function(require,module,exports){
+},{"./DOMPropertyOperations":16,"./Object.assign":32,"./ReactComponentBrowserEnvironment":41,"./ReactDOMComponent":48,"./escapeTextContentForBrowser":122}],58:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -9483,7 +12052,7 @@ var ReactDOMTextarea = ReactClass.createClass({
 module.exports = ReactDOMTextarea;
 
 }).call(this,require('_process'))
-},{"./AutoFocusMixin":6,"./DOMPropertyOperations":15,"./LinkedValueUtils":28,"./Object.assign":31,"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactElement":62,"./ReactUpdates":92,"./invariant":140,"./warning":159,"_process":5}],58:[function(require,module,exports){
+},{"./AutoFocusMixin":7,"./DOMPropertyOperations":16,"./LinkedValueUtils":29,"./Object.assign":32,"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactElement":63,"./ReactUpdates":93,"./invariant":141,"./warning":160,"_process":6}],59:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -9556,7 +12125,7 @@ var ReactDefaultBatchingStrategy = {
 
 module.exports = ReactDefaultBatchingStrategy;
 
-},{"./Object.assign":31,"./ReactUpdates":92,"./Transaction":108,"./emptyFunction":119}],59:[function(require,module,exports){
+},{"./Object.assign":32,"./ReactUpdates":93,"./Transaction":109,"./emptyFunction":120}],60:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -9715,7 +12284,7 @@ module.exports = {
 };
 
 }).call(this,require('_process'))
-},{"./BeforeInputEventPlugin":7,"./ChangeEventPlugin":11,"./ClientReactRootIndex":12,"./DefaultEventPluginOrder":17,"./EnterLeaveEventPlugin":18,"./ExecutionEnvironment":25,"./HTMLDOMPropertyConfig":27,"./MobileSafariClickEventPlugin":30,"./ReactBrowserComponentMixin":34,"./ReactClass":38,"./ReactComponentBrowserEnvironment":40,"./ReactDOMButton":46,"./ReactDOMComponent":47,"./ReactDOMForm":48,"./ReactDOMIDOperations":49,"./ReactDOMIframe":50,"./ReactDOMImg":51,"./ReactDOMInput":52,"./ReactDOMOption":53,"./ReactDOMSelect":54,"./ReactDOMTextComponent":56,"./ReactDOMTextarea":57,"./ReactDefaultBatchingStrategy":58,"./ReactDefaultPerf":60,"./ReactElement":62,"./ReactEventListener":67,"./ReactInjection":69,"./ReactInstanceHandles":71,"./ReactMount":75,"./ReactReconcileTransaction":85,"./SVGDOMPropertyConfig":93,"./SelectEventPlugin":94,"./ServerReactRootIndex":95,"./SimpleEventPlugin":96,"./createFullPageComponent":116,"_process":5}],60:[function(require,module,exports){
+},{"./BeforeInputEventPlugin":8,"./ChangeEventPlugin":12,"./ClientReactRootIndex":13,"./DefaultEventPluginOrder":18,"./EnterLeaveEventPlugin":19,"./ExecutionEnvironment":26,"./HTMLDOMPropertyConfig":28,"./MobileSafariClickEventPlugin":31,"./ReactBrowserComponentMixin":35,"./ReactClass":39,"./ReactComponentBrowserEnvironment":41,"./ReactDOMButton":47,"./ReactDOMComponent":48,"./ReactDOMForm":49,"./ReactDOMIDOperations":50,"./ReactDOMIframe":51,"./ReactDOMImg":52,"./ReactDOMInput":53,"./ReactDOMOption":54,"./ReactDOMSelect":55,"./ReactDOMTextComponent":57,"./ReactDOMTextarea":58,"./ReactDefaultBatchingStrategy":59,"./ReactDefaultPerf":61,"./ReactElement":63,"./ReactEventListener":68,"./ReactInjection":70,"./ReactInstanceHandles":72,"./ReactMount":76,"./ReactReconcileTransaction":86,"./SVGDOMPropertyConfig":94,"./SelectEventPlugin":95,"./ServerReactRootIndex":96,"./SimpleEventPlugin":97,"./createFullPageComponent":117,"_process":6}],61:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -9981,7 +12550,7 @@ var ReactDefaultPerf = {
 
 module.exports = ReactDefaultPerf;
 
-},{"./DOMProperty":14,"./ReactDefaultPerfAnalysis":61,"./ReactMount":75,"./ReactPerf":80,"./performanceNow":151}],61:[function(require,module,exports){
+},{"./DOMProperty":15,"./ReactDefaultPerfAnalysis":62,"./ReactMount":76,"./ReactPerf":81,"./performanceNow":152}],62:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -10187,7 +12756,7 @@ var ReactDefaultPerfAnalysis = {
 
 module.exports = ReactDefaultPerfAnalysis;
 
-},{"./Object.assign":31}],62:[function(require,module,exports){
+},{"./Object.assign":32}],63:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -10495,7 +13064,7 @@ ReactElement.isValidElement = function(object) {
 module.exports = ReactElement;
 
 }).call(this,require('_process'))
-},{"./Object.assign":31,"./ReactContext":43,"./ReactCurrentOwner":44,"./warning":159,"_process":5}],63:[function(require,module,exports){
+},{"./Object.assign":32,"./ReactContext":44,"./ReactCurrentOwner":45,"./warning":160,"_process":6}],64:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -10960,7 +13529,7 @@ var ReactElementValidator = {
 module.exports = ReactElementValidator;
 
 }).call(this,require('_process'))
-},{"./ReactCurrentOwner":44,"./ReactElement":62,"./ReactFragment":68,"./ReactNativeComponent":78,"./ReactPropTypeLocationNames":81,"./ReactPropTypeLocations":82,"./getIteratorFn":131,"./invariant":140,"./warning":159,"_process":5}],64:[function(require,module,exports){
+},{"./ReactCurrentOwner":45,"./ReactElement":63,"./ReactFragment":69,"./ReactNativeComponent":79,"./ReactPropTypeLocationNames":82,"./ReactPropTypeLocations":83,"./getIteratorFn":132,"./invariant":141,"./warning":160,"_process":6}],65:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -11055,7 +13624,7 @@ var ReactEmptyComponent = {
 module.exports = ReactEmptyComponent;
 
 }).call(this,require('_process'))
-},{"./ReactElement":62,"./ReactInstanceMap":72,"./invariant":140,"_process":5}],65:[function(require,module,exports){
+},{"./ReactElement":63,"./ReactInstanceMap":73,"./invariant":141,"_process":6}],66:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -11087,7 +13656,7 @@ var ReactErrorUtils = {
 
 module.exports = ReactErrorUtils;
 
-},{}],66:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -11137,7 +13706,7 @@ var ReactEventEmitterMixin = {
 
 module.exports = ReactEventEmitterMixin;
 
-},{"./EventPluginHub":21}],67:[function(require,module,exports){
+},{"./EventPluginHub":22}],68:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -11320,7 +13889,7 @@ var ReactEventListener = {
 
 module.exports = ReactEventListener;
 
-},{"./EventListener":20,"./ExecutionEnvironment":25,"./Object.assign":31,"./PooledClass":32,"./ReactInstanceHandles":71,"./ReactMount":75,"./ReactUpdates":92,"./getEventTarget":130,"./getUnboundedScrollPosition":136}],68:[function(require,module,exports){
+},{"./EventListener":21,"./ExecutionEnvironment":26,"./Object.assign":32,"./PooledClass":33,"./ReactInstanceHandles":72,"./ReactMount":76,"./ReactUpdates":93,"./getEventTarget":131,"./getUnboundedScrollPosition":137}],69:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2015, Facebook, Inc.
@@ -11505,7 +14074,7 @@ var ReactFragment = {
 module.exports = ReactFragment;
 
 }).call(this,require('_process'))
-},{"./ReactElement":62,"./warning":159,"_process":5}],69:[function(require,module,exports){
+},{"./ReactElement":63,"./warning":160,"_process":6}],70:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -11547,7 +14116,7 @@ var ReactInjection = {
 
 module.exports = ReactInjection;
 
-},{"./DOMProperty":14,"./EventPluginHub":21,"./ReactBrowserEventEmitter":35,"./ReactClass":38,"./ReactComponentEnvironment":41,"./ReactDOMComponent":47,"./ReactEmptyComponent":64,"./ReactNativeComponent":78,"./ReactPerf":80,"./ReactRootIndex":88,"./ReactUpdates":92}],70:[function(require,module,exports){
+},{"./DOMProperty":15,"./EventPluginHub":22,"./ReactBrowserEventEmitter":36,"./ReactClass":39,"./ReactComponentEnvironment":42,"./ReactDOMComponent":48,"./ReactEmptyComponent":65,"./ReactNativeComponent":79,"./ReactPerf":81,"./ReactRootIndex":89,"./ReactUpdates":93}],71:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -11682,7 +14251,7 @@ var ReactInputSelection = {
 
 module.exports = ReactInputSelection;
 
-},{"./ReactDOMSelection":55,"./containsNode":114,"./focusNode":124,"./getActiveElement":126}],71:[function(require,module,exports){
+},{"./ReactDOMSelection":56,"./containsNode":115,"./focusNode":125,"./getActiveElement":127}],72:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -12018,7 +14587,7 @@ var ReactInstanceHandles = {
 module.exports = ReactInstanceHandles;
 
 }).call(this,require('_process'))
-},{"./ReactRootIndex":88,"./invariant":140,"_process":5}],72:[function(require,module,exports){
+},{"./ReactRootIndex":89,"./invariant":141,"_process":6}],73:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -12067,7 +14636,7 @@ var ReactInstanceMap = {
 
 module.exports = ReactInstanceMap;
 
-},{}],73:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 /**
  * Copyright 2015, Facebook, Inc.
  * All rights reserved.
@@ -12104,7 +14673,7 @@ var ReactLifeCycle = {
 
 module.exports = ReactLifeCycle;
 
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -12152,7 +14721,7 @@ var ReactMarkupChecksum = {
 
 module.exports = ReactMarkupChecksum;
 
-},{"./adler32":111}],75:[function(require,module,exports){
+},{"./adler32":112}],76:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13043,7 +15612,7 @@ ReactPerf.measureMethods(ReactMount, 'ReactMount', {
 module.exports = ReactMount;
 
 }).call(this,require('_process'))
-},{"./DOMProperty":14,"./ReactBrowserEventEmitter":35,"./ReactCurrentOwner":44,"./ReactElement":62,"./ReactElementValidator":63,"./ReactEmptyComponent":64,"./ReactInstanceHandles":71,"./ReactInstanceMap":72,"./ReactMarkupChecksum":74,"./ReactPerf":80,"./ReactReconciler":86,"./ReactUpdateQueue":91,"./ReactUpdates":92,"./containsNode":114,"./emptyObject":120,"./getReactRootElementInContainer":134,"./instantiateReactComponent":139,"./invariant":140,"./setInnerHTML":153,"./shouldUpdateReactComponent":156,"./warning":159,"_process":5}],76:[function(require,module,exports){
+},{"./DOMProperty":15,"./ReactBrowserEventEmitter":36,"./ReactCurrentOwner":45,"./ReactElement":63,"./ReactElementValidator":64,"./ReactEmptyComponent":65,"./ReactInstanceHandles":72,"./ReactInstanceMap":73,"./ReactMarkupChecksum":75,"./ReactPerf":81,"./ReactReconciler":87,"./ReactUpdateQueue":92,"./ReactUpdates":93,"./containsNode":115,"./emptyObject":121,"./getReactRootElementInContainer":135,"./instantiateReactComponent":140,"./invariant":141,"./setInnerHTML":154,"./shouldUpdateReactComponent":157,"./warning":160,"_process":6}],77:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13473,7 +16042,7 @@ var ReactMultiChild = {
 
 module.exports = ReactMultiChild;
 
-},{"./ReactChildReconciler":36,"./ReactComponentEnvironment":41,"./ReactMultiChildUpdateTypes":77,"./ReactReconciler":86}],77:[function(require,module,exports){
+},{"./ReactChildReconciler":37,"./ReactComponentEnvironment":42,"./ReactMultiChildUpdateTypes":78,"./ReactReconciler":87}],78:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13506,7 +16075,7 @@ var ReactMultiChildUpdateTypes = keyMirror({
 
 module.exports = ReactMultiChildUpdateTypes;
 
-},{"./keyMirror":145}],78:[function(require,module,exports){
+},{"./keyMirror":146}],79:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -13613,7 +16182,7 @@ var ReactNativeComponent = {
 module.exports = ReactNativeComponent;
 
 }).call(this,require('_process'))
-},{"./Object.assign":31,"./invariant":140,"_process":5}],79:[function(require,module,exports){
+},{"./Object.assign":32,"./invariant":141,"_process":6}],80:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13725,7 +16294,7 @@ var ReactOwner = {
 module.exports = ReactOwner;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],80:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],81:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13829,7 +16398,7 @@ function _noMeasure(objName, fnName, func) {
 module.exports = ReactPerf;
 
 }).call(this,require('_process'))
-},{"_process":5}],81:[function(require,module,exports){
+},{"_process":6}],82:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -13857,7 +16426,7 @@ if ("production" !== process.env.NODE_ENV) {
 module.exports = ReactPropTypeLocationNames;
 
 }).call(this,require('_process'))
-},{"_process":5}],82:[function(require,module,exports){
+},{"_process":6}],83:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -13881,7 +16450,7 @@ var ReactPropTypeLocations = keyMirror({
 
 module.exports = ReactPropTypeLocations;
 
-},{"./keyMirror":145}],83:[function(require,module,exports){
+},{"./keyMirror":146}],84:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14230,7 +16799,7 @@ function getPreciseType(propValue) {
 
 module.exports = ReactPropTypes;
 
-},{"./ReactElement":62,"./ReactFragment":68,"./ReactPropTypeLocationNames":81,"./emptyFunction":119}],84:[function(require,module,exports){
+},{"./ReactElement":63,"./ReactFragment":69,"./ReactPropTypeLocationNames":82,"./emptyFunction":120}],85:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14286,7 +16855,7 @@ PooledClass.addPoolingTo(ReactPutListenerQueue);
 
 module.exports = ReactPutListenerQueue;
 
-},{"./Object.assign":31,"./PooledClass":32,"./ReactBrowserEventEmitter":35}],85:[function(require,module,exports){
+},{"./Object.assign":32,"./PooledClass":33,"./ReactBrowserEventEmitter":36}],86:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14462,7 +17031,7 @@ PooledClass.addPoolingTo(ReactReconcileTransaction);
 
 module.exports = ReactReconcileTransaction;
 
-},{"./CallbackQueue":10,"./Object.assign":31,"./PooledClass":32,"./ReactBrowserEventEmitter":35,"./ReactInputSelection":70,"./ReactPutListenerQueue":84,"./Transaction":108}],86:[function(require,module,exports){
+},{"./CallbackQueue":11,"./Object.assign":32,"./PooledClass":33,"./ReactBrowserEventEmitter":36,"./ReactInputSelection":71,"./ReactPutListenerQueue":85,"./Transaction":109}],87:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -14586,7 +17155,7 @@ var ReactReconciler = {
 module.exports = ReactReconciler;
 
 }).call(this,require('_process'))
-},{"./ReactElementValidator":63,"./ReactRef":87,"_process":5}],87:[function(require,module,exports){
+},{"./ReactElementValidator":64,"./ReactRef":88,"_process":6}],88:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14657,7 +17226,7 @@ ReactRef.detachRefs = function(instance, element) {
 
 module.exports = ReactRef;
 
-},{"./ReactOwner":79}],88:[function(require,module,exports){
+},{"./ReactOwner":80}],89:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -14688,7 +17257,7 @@ var ReactRootIndex = {
 
 module.exports = ReactRootIndex;
 
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -14770,7 +17339,7 @@ module.exports = {
 };
 
 }).call(this,require('_process'))
-},{"./ReactElement":62,"./ReactInstanceHandles":71,"./ReactMarkupChecksum":74,"./ReactServerRenderingTransaction":90,"./emptyObject":120,"./instantiateReactComponent":139,"./invariant":140,"_process":5}],90:[function(require,module,exports){
+},{"./ReactElement":63,"./ReactInstanceHandles":72,"./ReactMarkupChecksum":75,"./ReactServerRenderingTransaction":91,"./emptyObject":121,"./instantiateReactComponent":140,"./invariant":141,"_process":6}],91:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -14883,7 +17452,7 @@ PooledClass.addPoolingTo(ReactServerRenderingTransaction);
 
 module.exports = ReactServerRenderingTransaction;
 
-},{"./CallbackQueue":10,"./Object.assign":31,"./PooledClass":32,"./ReactPutListenerQueue":84,"./Transaction":108,"./emptyFunction":119}],91:[function(require,module,exports){
+},{"./CallbackQueue":11,"./Object.assign":32,"./PooledClass":33,"./ReactPutListenerQueue":85,"./Transaction":109,"./emptyFunction":120}],92:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2015, Facebook, Inc.
@@ -15182,7 +17751,7 @@ var ReactUpdateQueue = {
 module.exports = ReactUpdateQueue;
 
 }).call(this,require('_process'))
-},{"./Object.assign":31,"./ReactCurrentOwner":44,"./ReactElement":62,"./ReactInstanceMap":72,"./ReactLifeCycle":73,"./ReactUpdates":92,"./invariant":140,"./warning":159,"_process":5}],92:[function(require,module,exports){
+},{"./Object.assign":32,"./ReactCurrentOwner":45,"./ReactElement":63,"./ReactInstanceMap":73,"./ReactLifeCycle":74,"./ReactUpdates":93,"./invariant":141,"./warning":160,"_process":6}],93:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -15464,7 +18033,7 @@ var ReactUpdates = {
 module.exports = ReactUpdates;
 
 }).call(this,require('_process'))
-},{"./CallbackQueue":10,"./Object.assign":31,"./PooledClass":32,"./ReactCurrentOwner":44,"./ReactPerf":80,"./ReactReconciler":86,"./Transaction":108,"./invariant":140,"./warning":159,"_process":5}],93:[function(require,module,exports){
+},{"./CallbackQueue":11,"./Object.assign":32,"./PooledClass":33,"./ReactCurrentOwner":45,"./ReactPerf":81,"./ReactReconciler":87,"./Transaction":109,"./invariant":141,"./warning":160,"_process":6}],94:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -15558,7 +18127,7 @@ var SVGDOMPropertyConfig = {
 
 module.exports = SVGDOMPropertyConfig;
 
-},{"./DOMProperty":14}],94:[function(require,module,exports){
+},{"./DOMProperty":15}],95:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -15753,7 +18322,7 @@ var SelectEventPlugin = {
 
 module.exports = SelectEventPlugin;
 
-},{"./EventConstants":19,"./EventPropagators":24,"./ReactInputSelection":70,"./SyntheticEvent":100,"./getActiveElement":126,"./isTextInputElement":143,"./keyOf":146,"./shallowEqual":155}],95:[function(require,module,exports){
+},{"./EventConstants":20,"./EventPropagators":25,"./ReactInputSelection":71,"./SyntheticEvent":101,"./getActiveElement":127,"./isTextInputElement":144,"./keyOf":147,"./shallowEqual":156}],96:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -15784,7 +18353,7 @@ var ServerReactRootIndex = {
 
 module.exports = ServerReactRootIndex;
 
-},{}],96:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -16212,7 +18781,7 @@ var SimpleEventPlugin = {
 module.exports = SimpleEventPlugin;
 
 }).call(this,require('_process'))
-},{"./EventConstants":19,"./EventPluginUtils":23,"./EventPropagators":24,"./SyntheticClipboardEvent":97,"./SyntheticDragEvent":99,"./SyntheticEvent":100,"./SyntheticFocusEvent":101,"./SyntheticKeyboardEvent":103,"./SyntheticMouseEvent":104,"./SyntheticTouchEvent":105,"./SyntheticUIEvent":106,"./SyntheticWheelEvent":107,"./getEventCharCode":127,"./invariant":140,"./keyOf":146,"./warning":159,"_process":5}],97:[function(require,module,exports){
+},{"./EventConstants":20,"./EventPluginUtils":24,"./EventPropagators":25,"./SyntheticClipboardEvent":98,"./SyntheticDragEvent":100,"./SyntheticEvent":101,"./SyntheticFocusEvent":102,"./SyntheticKeyboardEvent":104,"./SyntheticMouseEvent":105,"./SyntheticTouchEvent":106,"./SyntheticUIEvent":107,"./SyntheticWheelEvent":108,"./getEventCharCode":128,"./invariant":141,"./keyOf":147,"./warning":160,"_process":6}],98:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16257,7 +18826,7 @@ SyntheticEvent.augmentClass(SyntheticClipboardEvent, ClipboardEventInterface);
 
 module.exports = SyntheticClipboardEvent;
 
-},{"./SyntheticEvent":100}],98:[function(require,module,exports){
+},{"./SyntheticEvent":101}],99:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16302,7 +18871,7 @@ SyntheticEvent.augmentClass(
 
 module.exports = SyntheticCompositionEvent;
 
-},{"./SyntheticEvent":100}],99:[function(require,module,exports){
+},{"./SyntheticEvent":101}],100:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16341,7 +18910,7 @@ SyntheticMouseEvent.augmentClass(SyntheticDragEvent, DragEventInterface);
 
 module.exports = SyntheticDragEvent;
 
-},{"./SyntheticMouseEvent":104}],100:[function(require,module,exports){
+},{"./SyntheticMouseEvent":105}],101:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16507,7 +19076,7 @@ PooledClass.addPoolingTo(SyntheticEvent, PooledClass.threeArgumentPooler);
 
 module.exports = SyntheticEvent;
 
-},{"./Object.assign":31,"./PooledClass":32,"./emptyFunction":119,"./getEventTarget":130}],101:[function(require,module,exports){
+},{"./Object.assign":32,"./PooledClass":33,"./emptyFunction":120,"./getEventTarget":131}],102:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16546,7 +19115,7 @@ SyntheticUIEvent.augmentClass(SyntheticFocusEvent, FocusEventInterface);
 
 module.exports = SyntheticFocusEvent;
 
-},{"./SyntheticUIEvent":106}],102:[function(require,module,exports){
+},{"./SyntheticUIEvent":107}],103:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16592,7 +19161,7 @@ SyntheticEvent.augmentClass(
 
 module.exports = SyntheticInputEvent;
 
-},{"./SyntheticEvent":100}],103:[function(require,module,exports){
+},{"./SyntheticEvent":101}],104:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16679,7 +19248,7 @@ SyntheticUIEvent.augmentClass(SyntheticKeyboardEvent, KeyboardEventInterface);
 
 module.exports = SyntheticKeyboardEvent;
 
-},{"./SyntheticUIEvent":106,"./getEventCharCode":127,"./getEventKey":128,"./getEventModifierState":129}],104:[function(require,module,exports){
+},{"./SyntheticUIEvent":107,"./getEventCharCode":128,"./getEventKey":129,"./getEventModifierState":130}],105:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16760,7 +19329,7 @@ SyntheticUIEvent.augmentClass(SyntheticMouseEvent, MouseEventInterface);
 
 module.exports = SyntheticMouseEvent;
 
-},{"./SyntheticUIEvent":106,"./ViewportMetrics":109,"./getEventModifierState":129}],105:[function(require,module,exports){
+},{"./SyntheticUIEvent":107,"./ViewportMetrics":110,"./getEventModifierState":130}],106:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16808,7 +19377,7 @@ SyntheticUIEvent.augmentClass(SyntheticTouchEvent, TouchEventInterface);
 
 module.exports = SyntheticTouchEvent;
 
-},{"./SyntheticUIEvent":106,"./getEventModifierState":129}],106:[function(require,module,exports){
+},{"./SyntheticUIEvent":107,"./getEventModifierState":130}],107:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16870,7 +19439,7 @@ SyntheticEvent.augmentClass(SyntheticUIEvent, UIEventInterface);
 
 module.exports = SyntheticUIEvent;
 
-},{"./SyntheticEvent":100,"./getEventTarget":130}],107:[function(require,module,exports){
+},{"./SyntheticEvent":101,"./getEventTarget":131}],108:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -16931,7 +19500,7 @@ SyntheticMouseEvent.augmentClass(SyntheticWheelEvent, WheelEventInterface);
 
 module.exports = SyntheticWheelEvent;
 
-},{"./SyntheticMouseEvent":104}],108:[function(require,module,exports){
+},{"./SyntheticMouseEvent":105}],109:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -17172,7 +19741,7 @@ var Transaction = {
 module.exports = Transaction;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],109:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],110:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17201,7 +19770,7 @@ var ViewportMetrics = {
 
 module.exports = ViewportMetrics;
 
-},{}],110:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -17267,7 +19836,7 @@ function accumulateInto(current, next) {
 module.exports = accumulateInto;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],111:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],112:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17301,7 +19870,7 @@ function adler32(data) {
 
 module.exports = adler32;
 
-},{}],112:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17333,7 +19902,7 @@ function camelize(string) {
 
 module.exports = camelize;
 
-},{}],113:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -17375,7 +19944,7 @@ function camelizeStyleName(string) {
 
 module.exports = camelizeStyleName;
 
-},{"./camelize":112}],114:[function(require,module,exports){
+},{"./camelize":113}],115:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17419,7 +19988,7 @@ function containsNode(outerNode, innerNode) {
 
 module.exports = containsNode;
 
-},{"./isTextNode":144}],115:[function(require,module,exports){
+},{"./isTextNode":145}],116:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17505,7 +20074,7 @@ function createArrayFromMixed(obj) {
 
 module.exports = createArrayFromMixed;
 
-},{"./toArray":157}],116:[function(require,module,exports){
+},{"./toArray":158}],117:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -17567,7 +20136,7 @@ function createFullPageComponent(tag) {
 module.exports = createFullPageComponent;
 
 }).call(this,require('_process'))
-},{"./ReactClass":38,"./ReactElement":62,"./invariant":140,"_process":5}],117:[function(require,module,exports){
+},{"./ReactClass":39,"./ReactElement":63,"./invariant":141,"_process":6}],118:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -17657,7 +20226,7 @@ function createNodesFromMarkup(markup, handleScript) {
 module.exports = createNodesFromMarkup;
 
 }).call(this,require('_process'))
-},{"./ExecutionEnvironment":25,"./createArrayFromMixed":115,"./getMarkupWrap":132,"./invariant":140,"_process":5}],118:[function(require,module,exports){
+},{"./ExecutionEnvironment":26,"./createArrayFromMixed":116,"./getMarkupWrap":133,"./invariant":141,"_process":6}],119:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17715,7 +20284,7 @@ function dangerousStyleValue(name, value) {
 
 module.exports = dangerousStyleValue;
 
-},{"./CSSProperty":8}],119:[function(require,module,exports){
+},{"./CSSProperty":9}],120:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17749,7 +20318,7 @@ emptyFunction.thatReturnsArgument = function(arg) { return arg; };
 
 module.exports = emptyFunction;
 
-},{}],120:[function(require,module,exports){
+},{}],121:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -17773,7 +20342,7 @@ if ("production" !== process.env.NODE_ENV) {
 module.exports = emptyObject;
 
 }).call(this,require('_process'))
-},{"_process":5}],121:[function(require,module,exports){
+},{"_process":6}],122:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -17813,7 +20382,7 @@ function escapeTextContentForBrowser(text) {
 
 module.exports = escapeTextContentForBrowser;
 
-},{}],122:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -17886,7 +20455,7 @@ function findDOMNode(componentOrElement) {
 module.exports = findDOMNode;
 
 }).call(this,require('_process'))
-},{"./ReactCurrentOwner":44,"./ReactInstanceMap":72,"./ReactMount":75,"./invariant":140,"./isNode":142,"./warning":159,"_process":5}],123:[function(require,module,exports){
+},{"./ReactCurrentOwner":45,"./ReactInstanceMap":73,"./ReactMount":76,"./invariant":141,"./isNode":143,"./warning":160,"_process":6}],124:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -17944,7 +20513,7 @@ function flattenChildren(children) {
 module.exports = flattenChildren;
 
 }).call(this,require('_process'))
-},{"./traverseAllChildren":158,"./warning":159,"_process":5}],124:[function(require,module,exports){
+},{"./traverseAllChildren":159,"./warning":160,"_process":6}],125:[function(require,module,exports){
 /**
  * Copyright 2014-2015, Facebook, Inc.
  * All rights reserved.
@@ -17973,7 +20542,7 @@ function focusNode(node) {
 
 module.exports = focusNode;
 
-},{}],125:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18004,7 +20573,7 @@ var forEachAccumulated = function(arr, cb, scope) {
 
 module.exports = forEachAccumulated;
 
-},{}],126:[function(require,module,exports){
+},{}],127:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18033,7 +20602,7 @@ function getActiveElement() /*?DOMElement*/ {
 
 module.exports = getActiveElement;
 
-},{}],127:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18085,7 +20654,7 @@ function getEventCharCode(nativeEvent) {
 
 module.exports = getEventCharCode;
 
-},{}],128:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18190,7 +20759,7 @@ function getEventKey(nativeEvent) {
 
 module.exports = getEventKey;
 
-},{"./getEventCharCode":127}],129:[function(require,module,exports){
+},{"./getEventCharCode":128}],130:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18237,7 +20806,7 @@ function getEventModifierState(nativeEvent) {
 
 module.exports = getEventModifierState;
 
-},{}],130:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18268,7 +20837,7 @@ function getEventTarget(nativeEvent) {
 
 module.exports = getEventTarget;
 
-},{}],131:[function(require,module,exports){
+},{}],132:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18312,7 +20881,7 @@ function getIteratorFn(maybeIterable) {
 
 module.exports = getIteratorFn;
 
-},{}],132:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -18431,7 +21000,7 @@ function getMarkupWrap(nodeName) {
 module.exports = getMarkupWrap;
 
 }).call(this,require('_process'))
-},{"./ExecutionEnvironment":25,"./invariant":140,"_process":5}],133:[function(require,module,exports){
+},{"./ExecutionEnvironment":26,"./invariant":141,"_process":6}],134:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18506,7 +21075,7 @@ function getNodeForCharacterOffset(root, offset) {
 
 module.exports = getNodeForCharacterOffset;
 
-},{}],134:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18541,7 +21110,7 @@ function getReactRootElementInContainer(container) {
 
 module.exports = getReactRootElementInContainer;
 
-},{}],135:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18578,7 +21147,7 @@ function getTextContentAccessor() {
 
 module.exports = getTextContentAccessor;
 
-},{"./ExecutionEnvironment":25}],136:[function(require,module,exports){
+},{"./ExecutionEnvironment":26}],137:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18618,7 +21187,7 @@ function getUnboundedScrollPosition(scrollable) {
 
 module.exports = getUnboundedScrollPosition;
 
-},{}],137:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18651,7 +21220,7 @@ function hyphenate(string) {
 
 module.exports = hyphenate;
 
-},{}],138:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18692,7 +21261,7 @@ function hyphenateStyleName(string) {
 
 module.exports = hyphenateStyleName;
 
-},{"./hyphenate":137}],139:[function(require,module,exports){
+},{"./hyphenate":138}],140:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -18830,7 +21399,7 @@ function instantiateReactComponent(node, parentCompositeType) {
 module.exports = instantiateReactComponent;
 
 }).call(this,require('_process'))
-},{"./Object.assign":31,"./ReactCompositeComponent":42,"./ReactEmptyComponent":64,"./ReactNativeComponent":78,"./invariant":140,"./warning":159,"_process":5}],140:[function(require,module,exports){
+},{"./Object.assign":32,"./ReactCompositeComponent":43,"./ReactEmptyComponent":65,"./ReactNativeComponent":79,"./invariant":141,"./warning":160,"_process":6}],141:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -18887,7 +21456,7 @@ var invariant = function(condition, format, a, b, c, d, e, f) {
 module.exports = invariant;
 
 }).call(this,require('_process'))
-},{"_process":5}],141:[function(require,module,exports){
+},{"_process":6}],142:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18952,7 +21521,7 @@ function isEventSupported(eventNameSuffix, capture) {
 
 module.exports = isEventSupported;
 
-},{"./ExecutionEnvironment":25}],142:[function(require,module,exports){
+},{"./ExecutionEnvironment":26}],143:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -18979,7 +21548,7 @@ function isNode(object) {
 
 module.exports = isNode;
 
-},{}],143:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19022,7 +21591,7 @@ function isTextInputElement(elem) {
 
 module.exports = isTextInputElement;
 
-},{}],144:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19047,7 +21616,7 @@ function isTextNode(object) {
 
 module.exports = isTextNode;
 
-},{"./isNode":142}],145:[function(require,module,exports){
+},{"./isNode":143}],146:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -19102,7 +21671,7 @@ var keyMirror = function(obj) {
 module.exports = keyMirror;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],146:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],147:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19138,7 +21707,7 @@ var keyOf = function(oneKeyObj) {
 
 module.exports = keyOf;
 
-},{}],147:[function(require,module,exports){
+},{}],148:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19191,7 +21760,7 @@ function mapObject(object, callback, context) {
 
 module.exports = mapObject;
 
-},{}],148:[function(require,module,exports){
+},{}],149:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19224,7 +21793,7 @@ function memoizeStringOnly(callback) {
 
 module.exports = memoizeStringOnly;
 
-},{}],149:[function(require,module,exports){
+},{}],150:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -19264,7 +21833,7 @@ function onlyChild(children) {
 module.exports = onlyChild;
 
 }).call(this,require('_process'))
-},{"./ReactElement":62,"./invariant":140,"_process":5}],150:[function(require,module,exports){
+},{"./ReactElement":63,"./invariant":141,"_process":6}],151:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19292,7 +21861,7 @@ if (ExecutionEnvironment.canUseDOM) {
 
 module.exports = performance || {};
 
-},{"./ExecutionEnvironment":25}],151:[function(require,module,exports){
+},{"./ExecutionEnvironment":26}],152:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19320,7 +21889,7 @@ var performanceNow = performance.now.bind(performance);
 
 module.exports = performanceNow;
 
-},{"./performance":150}],152:[function(require,module,exports){
+},{"./performance":151}],153:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19348,7 +21917,7 @@ function quoteAttributeValueForBrowser(value) {
 
 module.exports = quoteAttributeValueForBrowser;
 
-},{"./escapeTextContentForBrowser":121}],153:[function(require,module,exports){
+},{"./escapeTextContentForBrowser":122}],154:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19437,7 +22006,7 @@ if (ExecutionEnvironment.canUseDOM) {
 
 module.exports = setInnerHTML;
 
-},{"./ExecutionEnvironment":25}],154:[function(require,module,exports){
+},{"./ExecutionEnvironment":26}],155:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19479,7 +22048,7 @@ if (ExecutionEnvironment.canUseDOM) {
 
 module.exports = setTextContent;
 
-},{"./ExecutionEnvironment":25,"./escapeTextContentForBrowser":121,"./setInnerHTML":153}],155:[function(require,module,exports){
+},{"./ExecutionEnvironment":26,"./escapeTextContentForBrowser":122,"./setInnerHTML":154}],156:[function(require,module,exports){
 /**
  * Copyright 2013-2015, Facebook, Inc.
  * All rights reserved.
@@ -19523,7 +22092,7 @@ function shallowEqual(objA, objB) {
 
 module.exports = shallowEqual;
 
-},{}],156:[function(require,module,exports){
+},{}],157:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -19627,7 +22196,7 @@ function shouldUpdateReactComponent(prevElement, nextElement) {
 module.exports = shouldUpdateReactComponent;
 
 }).call(this,require('_process'))
-},{"./warning":159,"_process":5}],157:[function(require,module,exports){
+},{"./warning":160,"_process":6}],158:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -19699,7 +22268,7 @@ function toArray(obj) {
 module.exports = toArray;
 
 }).call(this,require('_process'))
-},{"./invariant":140,"_process":5}],158:[function(require,module,exports){
+},{"./invariant":141,"_process":6}],159:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2013-2015, Facebook, Inc.
@@ -19952,7 +22521,7 @@ function traverseAllChildren(children, callback, traverseContext) {
 module.exports = traverseAllChildren;
 
 }).call(this,require('_process'))
-},{"./ReactElement":62,"./ReactFragment":68,"./ReactInstanceHandles":71,"./getIteratorFn":131,"./invariant":140,"./warning":159,"_process":5}],159:[function(require,module,exports){
+},{"./ReactElement":63,"./ReactFragment":69,"./ReactInstanceHandles":72,"./getIteratorFn":132,"./invariant":141,"./warning":160,"_process":6}],160:[function(require,module,exports){
 (function (process){
 /**
  * Copyright 2014-2015, Facebook, Inc.
@@ -20015,10 +22584,2791 @@ if ("production" !== process.env.NODE_ENV) {
 module.exports = warning;
 
 }).call(this,require('_process'))
-},{"./emptyFunction":119,"_process":5}],160:[function(require,module,exports){
+},{"./emptyFunction":120,"_process":6}],161:[function(require,module,exports){
 module.exports = require('./lib/React');
 
-},{"./lib/React":33}],161:[function(require,module,exports){
+},{"./lib/React":34}],162:[function(require,module,exports){
+/*!
+ * ScrollMagic v2.0.5 (2015-04-29)
+ * The javascript library for magical scroll interactions.
+ * (c) 2015 Jan Paepke (@janpaepke)
+ * Project Website: http://scrollmagic.io
+ * 
+ * @version 2.0.5
+ * @license Dual licensed under MIT license and GPL.
+ * @author Jan Paepke - e-mail@janpaepke.de
+ *
+ * @file ScrollMagic main library.
+ */
+/**
+ * @namespace ScrollMagic
+ */
+(function (root, factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as an anonymous module.
+		define(factory);
+	} else if (typeof exports === 'object') {
+		// CommonJS
+		module.exports = factory();
+	} else {
+		// Browser global
+		root.ScrollMagic = factory();
+	}
+}(this, function () {
+	"use strict";
+
+	var ScrollMagic = function () {
+		_util.log(2, '(COMPATIBILITY NOTICE) -> As of ScrollMagic 2.0.0 you need to use \'new ScrollMagic.Controller()\' to create a new controller instance. Use \'new ScrollMagic.Scene()\' to instance a scene.');
+	};
+
+	ScrollMagic.version = "2.0.5";
+
+	// TODO: temporary workaround for chrome's scroll jitter bug
+	window.addEventListener("mousewheel", function () {});
+
+	// global const
+	var PIN_SPACER_ATTRIBUTE = "data-scrollmagic-pin-spacer";
+
+	/**
+	 * The main class that is needed once per scroll container.
+	 *
+	 * @class
+	 *
+	 * @example
+	 * // basic initialization
+	 * var controller = new ScrollMagic.Controller();
+	 *
+	 * // passing options
+	 * var controller = new ScrollMagic.Controller({container: "#myContainer", loglevel: 3});
+	 *
+	 * @param {object} [options] - An object containing one or more options for the controller.
+	 * @param {(string|object)} [options.container=window] - A selector, DOM object that references the main container for scrolling.
+	 * @param {boolean} [options.vertical=true] - Sets the scroll mode to vertical (`true`) or horizontal (`false`) scrolling.
+	 * @param {object} [options.globalSceneOptions={}] - These options will be passed to every Scene that is added to the controller using the addScene method. For more information on Scene options see {@link ScrollMagic.Scene}.
+	 * @param {number} [options.loglevel=2] Loglevel for debugging. Note that logging is disabled in the minified version of ScrollMagic.
+	 ** `0` => silent
+	 ** `1` => errors
+	 ** `2` => errors, warnings
+	 ** `3` => errors, warnings, debuginfo
+	 * @param {boolean} [options.refreshInterval=100] - Some changes don't call events by default, like changing the container size or moving a scene trigger element.  
+	 This interval polls these parameters to fire the necessary events.  
+	 If you don't use custom containers, trigger elements or have static layouts, where the positions of the trigger elements don't change, you can set this to 0 disable interval checking and improve performance.
+	 *
+	 */
+	ScrollMagic.Controller = function (options) {
+/*
+	 * ----------------------------------------------------------------
+	 * settings
+	 * ----------------------------------------------------------------
+	 */
+		var
+		NAMESPACE = 'ScrollMagic.Controller',
+			SCROLL_DIRECTION_FORWARD = 'FORWARD',
+			SCROLL_DIRECTION_REVERSE = 'REVERSE',
+			SCROLL_DIRECTION_PAUSED = 'PAUSED',
+			DEFAULT_OPTIONS = CONTROLLER_OPTIONS.defaults;
+
+/*
+	 * ----------------------------------------------------------------
+	 * private vars
+	 * ----------------------------------------------------------------
+	 */
+		var
+		Controller = this,
+			_options = _util.extend({}, DEFAULT_OPTIONS, options),
+			_sceneObjects = [],
+			_updateScenesOnNextCycle = false,
+			// can be boolean (true => all scenes) or an array of scenes to be updated
+			_scrollPos = 0,
+			_scrollDirection = SCROLL_DIRECTION_PAUSED,
+			_isDocument = true,
+			_viewPortSize = 0,
+			_enabled = true,
+			_updateTimeout, _refreshTimeout;
+
+/*
+	 * ----------------------------------------------------------------
+	 * private functions
+	 * ----------------------------------------------------------------
+	 */
+
+		/**
+		 * Internal constructor function of the ScrollMagic Controller
+		 * @private
+		 */
+		var construct = function () {
+			for (var key in _options) {
+				if (!DEFAULT_OPTIONS.hasOwnProperty(key)) {
+					log(2, "WARNING: Unknown option \"" + key + "\"");
+					delete _options[key];
+				}
+			}
+			_options.container = _util.get.elements(_options.container)[0];
+			// check ScrollContainer
+			if (!_options.container) {
+				log(1, "ERROR creating object " + NAMESPACE + ": No valid scroll container supplied");
+				throw NAMESPACE + " init failed."; // cancel
+			}
+			_isDocument = _options.container === window || _options.container === document.body || !document.body.contains(_options.container);
+			// normalize to window
+			if (_isDocument) {
+				_options.container = window;
+			}
+			// update container size immediately
+			_viewPortSize = getViewportSize();
+			// set event handlers
+			_options.container.addEventListener("resize", onChange);
+			_options.container.addEventListener("scroll", onChange);
+
+			_options.refreshInterval = parseInt(_options.refreshInterval) || DEFAULT_OPTIONS.refreshInterval;
+			scheduleRefresh();
+
+			log(3, "added new " + NAMESPACE + " controller (v" + ScrollMagic.version + ")");
+		};
+
+		/**
+		 * Schedule the next execution of the refresh function
+		 * @private
+		 */
+		var scheduleRefresh = function () {
+			if (_options.refreshInterval > 0) {
+				_refreshTimeout = window.setTimeout(refresh, _options.refreshInterval);
+			}
+		};
+
+		/**
+		 * Default function to get scroll pos - overwriteable using `Controller.scrollPos(newFunction)`
+		 * @private
+		 */
+		var getScrollPos = function () {
+			return _options.vertical ? _util.get.scrollTop(_options.container) : _util.get.scrollLeft(_options.container);
+		};
+
+		/**
+		 * Returns the current viewport Size (width vor horizontal, height for vertical)
+		 * @private
+		 */
+		var getViewportSize = function () {
+			return _options.vertical ? _util.get.height(_options.container) : _util.get.width(_options.container);
+		};
+
+		/**
+		 * Default function to set scroll pos - overwriteable using `Controller.scrollTo(newFunction)`
+		 * Make available publicly for pinned mousewheel workaround.
+		 * @private
+		 */
+		var setScrollPos = this._setScrollPos = function (pos) {
+			if (_options.vertical) {
+				if (_isDocument) {
+					window.scrollTo(_util.get.scrollLeft(), pos);
+				} else {
+					_options.container.scrollTop = pos;
+				}
+			} else {
+				if (_isDocument) {
+					window.scrollTo(pos, _util.get.scrollTop());
+				} else {
+					_options.container.scrollLeft = pos;
+				}
+			}
+		};
+
+		/**
+		 * Handle updates in cycles instead of on scroll (performance)
+		 * @private
+		 */
+		var updateScenes = function () {
+			if (_enabled && _updateScenesOnNextCycle) {
+				// determine scenes to update
+				var scenesToUpdate = _util.type.Array(_updateScenesOnNextCycle) ? _updateScenesOnNextCycle : _sceneObjects.slice(0);
+				// reset scenes
+				_updateScenesOnNextCycle = false;
+				var oldScrollPos = _scrollPos;
+				// update scroll pos now instead of onChange, as it might have changed since scheduling (i.e. in-browser smooth scroll)
+				_scrollPos = Controller.scrollPos();
+				var deltaScroll = _scrollPos - oldScrollPos;
+				if (deltaScroll !== 0) { // scroll position changed?
+					_scrollDirection = (deltaScroll > 0) ? SCROLL_DIRECTION_FORWARD : SCROLL_DIRECTION_REVERSE;
+				}
+				// reverse order of scenes if scrolling reverse
+				if (_scrollDirection === SCROLL_DIRECTION_REVERSE) {
+					scenesToUpdate.reverse();
+				}
+				// update scenes
+				scenesToUpdate.forEach(function (scene, index) {
+					log(3, "updating Scene " + (index + 1) + "/" + scenesToUpdate.length + " (" + _sceneObjects.length + " total)");
+					scene.update(true);
+				});
+				if (scenesToUpdate.length === 0 && _options.loglevel >= 3) {
+					log(3, "updating 0 Scenes (nothing added to controller)");
+				}
+			}
+		};
+
+		/**
+		 * Initializes rAF callback
+		 * @private
+		 */
+		var debounceUpdate = function () {
+			_updateTimeout = _util.rAF(updateScenes);
+		};
+
+		/**
+		 * Handles Container changes
+		 * @private
+		 */
+		var onChange = function (e) {
+			log(3, "event fired causing an update:", e.type);
+			if (e.type == "resize") {
+				// resize
+				_viewPortSize = getViewportSize();
+				_scrollDirection = SCROLL_DIRECTION_PAUSED;
+			}
+			// schedule update
+			if (_updateScenesOnNextCycle !== true) {
+				_updateScenesOnNextCycle = true;
+				debounceUpdate();
+			}
+		};
+
+		var refresh = function () {
+			if (!_isDocument) {
+				// simulate resize event. Only works for viewport relevant param (performance)
+				if (_viewPortSize != getViewportSize()) {
+					var resizeEvent;
+					try {
+						resizeEvent = new Event('resize', {
+							bubbles: false,
+							cancelable: false
+						});
+					} catch (e) { // stupid IE
+						resizeEvent = document.createEvent("Event");
+						resizeEvent.initEvent("resize", false, false);
+					}
+					_options.container.dispatchEvent(resizeEvent);
+				}
+			}
+			_sceneObjects.forEach(function (scene, index) { // refresh all scenes
+				scene.refresh();
+			});
+			scheduleRefresh();
+		};
+
+		/**
+		 * Send a debug message to the console.
+		 * provided publicly with _log for plugins
+		 * @private
+		 *
+		 * @param {number} loglevel - The loglevel required to initiate output for the message.
+		 * @param {...mixed} output - One or more variables that should be passed to the console.
+		 */
+		var log = this._log = function (loglevel, output) {
+			if (_options.loglevel >= loglevel) {
+				Array.prototype.splice.call(arguments, 1, 0, "(" + NAMESPACE + ") ->");
+				_util.log.apply(window, arguments);
+			}
+		};
+		// for scenes we have getters for each option, but for the controller we don't, so we need to make it available externally for plugins
+		this._options = _options;
+
+		/**
+		 * Sort scenes in ascending order of their start offset.
+		 * @private
+		 *
+		 * @param {array} ScenesArray - an array of ScrollMagic Scenes that should be sorted
+		 * @return {array} The sorted array of Scenes.
+		 */
+		var sortScenes = function (ScenesArray) {
+			if (ScenesArray.length <= 1) {
+				return ScenesArray;
+			} else {
+				var scenes = ScenesArray.slice(0);
+				scenes.sort(function (a, b) {
+					return a.scrollOffset() > b.scrollOffset() ? 1 : -1;
+				});
+				return scenes;
+			}
+		};
+
+		/**
+		 * ----------------------------------------------------------------
+		 * public functions
+		 * ----------------------------------------------------------------
+		 */
+
+		/**
+		 * Add one ore more scene(s) to the controller.  
+		 * This is the equivalent to `Scene.addTo(controller)`.
+		 * @public
+		 * @example
+		 * // with a previously defined scene
+		 * controller.addScene(scene);
+		 *
+		 * // with a newly created scene.
+		 * controller.addScene(new ScrollMagic.Scene({duration : 0}));
+		 *
+		 * // adding multiple scenes
+		 * controller.addScene([scene, scene2, new ScrollMagic.Scene({duration : 0})]);
+		 *
+		 * @param {(ScrollMagic.Scene|array)} newScene - ScrollMagic Scene or Array of Scenes to be added to the controller.
+		 * @return {Controller} Parent object for chaining.
+		 */
+		this.addScene = function (newScene) {
+			if (_util.type.Array(newScene)) {
+				newScene.forEach(function (scene, index) {
+					Controller.addScene(scene);
+				});
+			} else if (newScene instanceof ScrollMagic.Scene) {
+				if (newScene.controller() !== Controller) {
+					newScene.addTo(Controller);
+				} else if (_sceneObjects.indexOf(newScene) < 0) {
+					// new scene
+					_sceneObjects.push(newScene); // add to array
+					_sceneObjects = sortScenes(_sceneObjects); // sort
+					newScene.on("shift.controller_sort", function () { // resort whenever scene moves
+						_sceneObjects = sortScenes(_sceneObjects);
+					});
+					// insert Global defaults.
+					for (var key in _options.globalSceneOptions) {
+						if (newScene[key]) {
+							newScene[key].call(newScene, _options.globalSceneOptions[key]);
+						}
+					}
+					log(3, "adding Scene (now " + _sceneObjects.length + " total)");
+				}
+			} else {
+				log(1, "ERROR: invalid argument supplied for '.addScene()'");
+			}
+			return Controller;
+		};
+
+		/**
+		 * Remove one ore more scene(s) from the controller.  
+		 * This is the equivalent to `Scene.remove()`.
+		 * @public
+		 * @example
+		 * // remove a scene from the controller
+		 * controller.removeScene(scene);
+		 *
+		 * // remove multiple scenes from the controller
+		 * controller.removeScene([scene, scene2, scene3]);
+		 *
+		 * @param {(ScrollMagic.Scene|array)} Scene - ScrollMagic Scene or Array of Scenes to be removed from the controller.
+		 * @returns {Controller} Parent object for chaining.
+		 */
+		this.removeScene = function (Scene) {
+			if (_util.type.Array(Scene)) {
+				Scene.forEach(function (scene, index) {
+					Controller.removeScene(scene);
+				});
+			} else {
+				var index = _sceneObjects.indexOf(Scene);
+				if (index > -1) {
+					Scene.off("shift.controller_sort");
+					_sceneObjects.splice(index, 1);
+					log(3, "removing Scene (now " + _sceneObjects.length + " left)");
+					Scene.remove();
+				}
+			}
+			return Controller;
+		};
+
+		/**
+		 * Update one ore more scene(s) according to the scroll position of the container.  
+		 * This is the equivalent to `Scene.update()`.  
+		 * The update method calculates the scene's start and end position (based on the trigger element, trigger hook, duration and offset) and checks it against the current scroll position of the container.  
+		 * It then updates the current scene state accordingly (or does nothing, if the state is already correct) – Pins will be set to their correct position and tweens will be updated to their correct progress.  
+		 * _**Note:** This method gets called constantly whenever Controller detects a change. The only application for you is if you change something outside of the realm of ScrollMagic, like moving the trigger or changing tween parameters._
+		 * @public
+		 * @example
+		 * // update a specific scene on next cycle
+		 * controller.updateScene(scene);
+		 *
+		 * // update a specific scene immediately
+		 * controller.updateScene(scene, true);
+		 *
+		 * // update multiple scenes scene on next cycle
+		 * controller.updateScene([scene1, scene2, scene3]);
+		 *
+		 * @param {ScrollMagic.Scene} Scene - ScrollMagic Scene or Array of Scenes that is/are supposed to be updated.
+		 * @param {boolean} [immediately=false] - If `true` the update will be instant, if `false` it will wait until next update cycle.  
+		 This is useful when changing multiple properties of the scene - this way it will only be updated once all new properties are set (updateScenes).
+		 * @return {Controller} Parent object for chaining.
+		 */
+		this.updateScene = function (Scene, immediately) {
+			if (_util.type.Array(Scene)) {
+				Scene.forEach(function (scene, index) {
+					Controller.updateScene(scene, immediately);
+				});
+			} else {
+				if (immediately) {
+					Scene.update(true);
+				} else if (_updateScenesOnNextCycle !== true && Scene instanceof ScrollMagic.Scene) { // if _updateScenesOnNextCycle is true, all connected scenes are already scheduled for update
+					// prep array for next update cycle
+					_updateScenesOnNextCycle = _updateScenesOnNextCycle || [];
+					if (_updateScenesOnNextCycle.indexOf(Scene) == -1) {
+						_updateScenesOnNextCycle.push(Scene);
+					}
+					_updateScenesOnNextCycle = sortScenes(_updateScenesOnNextCycle); // sort
+					debounceUpdate();
+				}
+			}
+			return Controller;
+		};
+
+		/**
+		 * Updates the controller params and calls updateScene on every scene, that is attached to the controller.  
+		 * See `Controller.updateScene()` for more information about what this means.  
+		 * In most cases you will not need this function, as it is called constantly, whenever ScrollMagic detects a state change event, like resize or scroll.  
+		 * The only application for this method is when ScrollMagic fails to detect these events.  
+		 * One application is with some external scroll libraries (like iScroll) that move an internal container to a negative offset instead of actually scrolling. In this case the update on the controller needs to be called whenever the child container's position changes.
+		 * For this case there will also be the need to provide a custom function to calculate the correct scroll position. See `Controller.scrollPos()` for details.
+		 * @public
+		 * @example
+		 * // update the controller on next cycle (saves performance due to elimination of redundant updates)
+		 * controller.update();
+		 *
+		 * // update the controller immediately
+		 * controller.update(true);
+		 *
+		 * @param {boolean} [immediately=false] - If `true` the update will be instant, if `false` it will wait until next update cycle (better performance)
+		 * @return {Controller} Parent object for chaining.
+		 */
+		this.update = function (immediately) {
+			onChange({
+				type: "resize"
+			}); // will update size and set _updateScenesOnNextCycle to true
+			if (immediately) {
+				updateScenes();
+			}
+			return Controller;
+		};
+
+		/**
+		 * Scroll to a numeric scroll offset, a DOM element, the start of a scene or provide an alternate method for scrolling.  
+		 * For vertical controllers it will change the top scroll offset and for horizontal applications it will change the left offset.
+		 * @public
+		 *
+		 * @since 1.1.0
+		 * @example
+		 * // scroll to an offset of 100
+		 * controller.scrollTo(100);
+		 *
+		 * // scroll to a DOM element
+		 * controller.scrollTo("#anchor");
+		 *
+		 * // scroll to the beginning of a scene
+		 * var scene = new ScrollMagic.Scene({offset: 200});
+		 * controller.scrollTo(scene);
+		 *
+		 * // define a new scroll position modification function (jQuery animate instead of jump)
+		 * controller.scrollTo(function (newScrollPos) {
+		 *	$("html, body").animate({scrollTop: newScrollPos});
+		 * });
+		 * controller.scrollTo(100); // call as usual, but the new function will be used instead
+		 *
+		 * // define a new scroll function with an additional parameter
+		 * controller.scrollTo(function (newScrollPos, message) {
+		 *  console.log(message);
+		 *	$(this).animate({scrollTop: newScrollPos});
+		 * });
+		 * // call as usual, but supply an extra parameter to the defined custom function
+		 * controller.scrollTo(100, "my message");
+		 *
+		 * // define a new scroll function with an additional parameter containing multiple variables
+		 * controller.scrollTo(function (newScrollPos, options) {
+		 *  someGlobalVar = options.a + options.b;
+		 *	$(this).animate({scrollTop: newScrollPos});
+		 * });
+		 * // call as usual, but supply an extra parameter containing multiple options
+		 * controller.scrollTo(100, {a: 1, b: 2});
+		 *
+		 * // define a new scroll function with a callback supplied as an additional parameter
+		 * controller.scrollTo(function (newScrollPos, callback) {
+		 *	$(this).animate({scrollTop: newScrollPos}, 400, "swing", callback);
+		 * });
+		 * // call as usual, but supply an extra parameter, which is used as a callback in the previously defined custom scroll function
+		 * controller.scrollTo(100, function() {
+		 *	console.log("scroll has finished.");
+		 * });
+		 *
+		 * @param {mixed} scrollTarget - The supplied argument can be one of these types:
+		 * 1. `number` -> The container will scroll to this new scroll offset.
+		 * 2. `string` or `object` -> Can be a selector or a DOM object.  
+		 *  The container will scroll to the position of this element.
+		 * 3. `ScrollMagic Scene` -> The container will scroll to the start of this scene.
+		 * 4. `function` -> This function will be used for future scroll position modifications.  
+		 *  This provides a way for you to change the behaviour of scrolling and adding new behaviour like animation. The function receives the new scroll position as a parameter and a reference to the container element using `this`.  
+		 *  It may also optionally receive an optional additional parameter (see below)  
+		 *  _**NOTE:**  
+		 *  All other options will still work as expected, using the new function to scroll._
+		 * @param {mixed} [additionalParameter] - If a custom scroll function was defined (see above 4.), you may want to supply additional parameters to it, when calling it. You can do this using this parameter – see examples for details. Please note, that this parameter will have no effect, if you use the default scrolling function.
+		 * @returns {Controller} Parent object for chaining.
+		 */
+		this.scrollTo = function (scrollTarget, additionalParameter) {
+			if (_util.type.Number(scrollTarget)) { // excecute
+				setScrollPos.call(_options.container, scrollTarget, additionalParameter);
+			} else if (scrollTarget instanceof ScrollMagic.Scene) { // scroll to scene
+				if (scrollTarget.controller() === Controller) { // check if the controller is associated with this scene
+					Controller.scrollTo(scrollTarget.scrollOffset(), additionalParameter);
+				} else {
+					log(2, "scrollTo(): The supplied scene does not belong to this controller. Scroll cancelled.", scrollTarget);
+				}
+			} else if (_util.type.Function(scrollTarget)) { // assign new scroll function
+				setScrollPos = scrollTarget;
+			} else { // scroll to element
+				var elem = _util.get.elements(scrollTarget)[0];
+				if (elem) {
+					// if parent is pin spacer, use spacer position instead so correct start position is returned for pinned elements.
+					while (elem.parentNode.hasAttribute(PIN_SPACER_ATTRIBUTE)) {
+						elem = elem.parentNode;
+					}
+
+					var
+					param = _options.vertical ? "top" : "left",
+						// which param is of interest ?
+						containerOffset = _util.get.offset(_options.container),
+						// container position is needed because element offset is returned in relation to document, not in relation to container.
+						elementOffset = _util.get.offset(elem);
+
+					if (!_isDocument) { // container is not the document root, so substract scroll Position to get correct trigger element position relative to scrollcontent
+						containerOffset[param] -= Controller.scrollPos();
+					}
+
+					Controller.scrollTo(elementOffset[param] - containerOffset[param], additionalParameter);
+				} else {
+					log(2, "scrollTo(): The supplied argument is invalid. Scroll cancelled.", scrollTarget);
+				}
+			}
+			return Controller;
+		};
+
+		/**
+		 * **Get** the current scrollPosition or **Set** a new method to calculate it.  
+		 * -> **GET**:
+		 * When used as a getter this function will return the current scroll position.  
+		 * To get a cached value use Controller.info("scrollPos"), which will be updated in the update cycle.  
+		 * For vertical controllers it will return the top scroll offset and for horizontal applications it will return the left offset.
+		 *
+		 * -> **SET**:
+		 * When used as a setter this method prodes a way to permanently overwrite the controller's scroll position calculation.  
+		 * A typical usecase is when the scroll position is not reflected by the containers scrollTop or scrollLeft values, but for example by the inner offset of a child container.  
+		 * Moving a child container inside a parent is a commonly used method for several scrolling frameworks, including iScroll.  
+		 * By providing an alternate calculation function you can make sure ScrollMagic receives the correct scroll position.  
+		 * Please also bear in mind that your function should return y values for vertical scrolls an x for horizontals.
+		 *
+		 * To change the current scroll position please use `Controller.scrollTo()`.
+		 * @public
+		 *
+		 * @example
+		 * // get the current scroll Position
+		 * var scrollPos = controller.scrollPos();
+		 *
+		 * // set a new scroll position calculation method
+		 * controller.scrollPos(function () {
+		 *	return this.info("vertical") ? -mychildcontainer.y : -mychildcontainer.x
+		 * });
+		 *
+		 * @param {function} [scrollPosMethod] - The function to be used for the scroll position calculation of the container.
+		 * @returns {(number|Controller)} Current scroll position or parent object for chaining.
+		 */
+		this.scrollPos = function (scrollPosMethod) {
+			if (!arguments.length) { // get
+				return getScrollPos.call(Controller);
+			} else { // set
+				if (_util.type.Function(scrollPosMethod)) {
+					getScrollPos = scrollPosMethod;
+				} else {
+					log(2, "Provided value for method 'scrollPos' is not a function. To change the current scroll position use 'scrollTo()'.");
+				}
+			}
+			return Controller;
+		};
+
+		/**
+		 * **Get** all infos or one in particular about the controller.
+		 * @public
+		 * @example
+		 * // returns the current scroll position (number)
+		 * var scrollPos = controller.info("scrollPos");
+		 *
+		 * // returns all infos as an object
+		 * var infos = controller.info();
+		 *
+		 * @param {string} [about] - If passed only this info will be returned instead of an object containing all.  
+		 Valid options are:
+		 ** `"size"` => the current viewport size of the container
+		 ** `"vertical"` => true if vertical scrolling, otherwise false
+		 ** `"scrollPos"` => the current scroll position
+		 ** `"scrollDirection"` => the last known direction of the scroll
+		 ** `"container"` => the container element
+		 ** `"isDocument"` => true if container element is the document.
+		 * @returns {(mixed|object)} The requested info(s).
+		 */
+		this.info = function (about) {
+			var values = {
+				size: _viewPortSize,
+				// contains height or width (in regard to orientation);
+				vertical: _options.vertical,
+				scrollPos: _scrollPos,
+				scrollDirection: _scrollDirection,
+				container: _options.container,
+				isDocument: _isDocument
+			};
+			if (!arguments.length) { // get all as an object
+				return values;
+			} else if (values[about] !== undefined) {
+				return values[about];
+			} else {
+				log(1, "ERROR: option \"" + about + "\" is not available");
+				return;
+			}
+		};
+
+		/**
+		 * **Get** or **Set** the current loglevel option value.
+		 * @public
+		 *
+		 * @example
+		 * // get the current value
+		 * var loglevel = controller.loglevel();
+		 *
+		 * // set a new value
+		 * controller.loglevel(3);
+		 *
+		 * @param {number} [newLoglevel] - The new loglevel setting of the Controller. `[0-3]`
+		 * @returns {(number|Controller)} Current loglevel or parent object for chaining.
+		 */
+		this.loglevel = function (newLoglevel) {
+			if (!arguments.length) { // get
+				return _options.loglevel;
+			} else if (_options.loglevel != newLoglevel) { // set
+				_options.loglevel = newLoglevel;
+			}
+			return Controller;
+		};
+
+		/**
+		 * **Get** or **Set** the current enabled state of the controller.  
+		 * This can be used to disable all Scenes connected to the controller without destroying or removing them.
+		 * @public
+		 *
+		 * @example
+		 * // get the current value
+		 * var enabled = controller.enabled();
+		 *
+		 * // disable the controller
+		 * controller.enabled(false);
+		 *
+		 * @param {boolean} [newState] - The new enabled state of the controller `true` or `false`.
+		 * @returns {(boolean|Controller)} Current enabled state or parent object for chaining.
+		 */
+		this.enabled = function (newState) {
+			if (!arguments.length) { // get
+				return _enabled;
+			} else if (_enabled != newState) { // set
+				_enabled = !! newState;
+				Controller.updateScene(_sceneObjects, true);
+			}
+			return Controller;
+		};
+
+		/**
+		 * Destroy the Controller, all Scenes and everything.
+		 * @public
+		 *
+		 * @example
+		 * // without resetting the scenes
+		 * controller = controller.destroy();
+		 *
+		 * // with scene reset
+		 * controller = controller.destroy(true);
+		 *
+		 * @param {boolean} [resetScenes=false] - If `true` the pins and tweens (if existent) of all scenes will be reset.
+		 * @returns {null} Null to unset handler variables.
+		 */
+		this.destroy = function (resetScenes) {
+			window.clearTimeout(_refreshTimeout);
+			var i = _sceneObjects.length;
+			while (i--) {
+				_sceneObjects[i].destroy(resetScenes);
+			}
+			_options.container.removeEventListener("resize", onChange);
+			_options.container.removeEventListener("scroll", onChange);
+			_util.cAF(_updateTimeout);
+			log(3, "destroyed " + NAMESPACE + " (reset: " + (resetScenes ? "true" : "false") + ")");
+			return null;
+		};
+
+		// INIT
+		construct();
+		return Controller;
+	};
+
+	// store pagewide controller options
+	var CONTROLLER_OPTIONS = {
+		defaults: {
+			container: window,
+			vertical: true,
+			globalSceneOptions: {},
+			loglevel: 2,
+			refreshInterval: 100
+		}
+	};
+/*
+ * method used to add an option to ScrollMagic Scenes.
+ */
+	ScrollMagic.Controller.addOption = function (name, defaultValue) {
+		CONTROLLER_OPTIONS.defaults[name] = defaultValue;
+	};
+	// instance extension function for plugins
+	ScrollMagic.Controller.extend = function (extension) {
+		var oldClass = this;
+		ScrollMagic.Controller = function () {
+			oldClass.apply(this, arguments);
+			this.$super = _util.extend({}, this); // copy parent state
+			return extension.apply(this, arguments) || this;
+		};
+		_util.extend(ScrollMagic.Controller, oldClass); // copy properties
+		ScrollMagic.Controller.prototype = oldClass.prototype; // copy prototype
+		ScrollMagic.Controller.prototype.constructor = ScrollMagic.Controller; // restore constructor
+	};
+
+
+	/**
+	 * A Scene defines where the controller should react and how.
+	 *
+	 * @class
+	 *
+	 * @example
+	 * // create a standard scene and add it to a controller
+	 * new ScrollMagic.Scene()
+	 *		.addTo(controller);
+	 *
+	 * // create a scene with custom options and assign a handler to it.
+	 * var scene = new ScrollMagic.Scene({
+	 * 		duration: 100,
+	 *		offset: 200,
+	 *		triggerHook: "onEnter",
+	 *		reverse: false
+	 * });
+	 *
+	 * @param {object} [options] - Options for the Scene. The options can be updated at any time.  
+	 Instead of setting the options for each scene individually you can also set them globally in the controller as the controllers `globalSceneOptions` option. The object accepts the same properties as the ones below.  
+	 When a scene is added to the controller the options defined using the Scene constructor will be overwritten by those set in `globalSceneOptions`.
+	 * @param {(number|function)} [options.duration=0] - The duration of the scene. 
+	 If `0` tweens will auto-play when reaching the scene start point, pins will be pinned indefinetly starting at the start position.  
+	 A function retuning the duration value is also supported. Please see `Scene.duration()` for details.
+	 * @param {number} [options.offset=0] - Offset Value for the Trigger Position. If no triggerElement is defined this will be the scroll distance from the start of the page, after which the scene will start.
+	 * @param {(string|object)} [options.triggerElement=null] - Selector or DOM object that defines the start of the scene. If undefined the scene will start right at the start of the page (unless an offset is set).
+	 * @param {(number|string)} [options.triggerHook="onCenter"] - Can be a number between 0 and 1 defining the position of the trigger Hook in relation to the viewport.  
+	 Can also be defined using a string:
+	 ** `"onEnter"` => `1`
+	 ** `"onCenter"` => `0.5`
+	 ** `"onLeave"` => `0`
+	 * @param {boolean} [options.reverse=true] - Should the scene reverse, when scrolling up?
+	 * @param {number} [options.loglevel=2] - Loglevel for debugging. Note that logging is disabled in the minified version of ScrollMagic.
+	 ** `0` => silent
+	 ** `1` => errors
+	 ** `2` => errors, warnings
+	 ** `3` => errors, warnings, debuginfo
+	 * 
+	 */
+	ScrollMagic.Scene = function (options) {
+
+/*
+	 * ----------------------------------------------------------------
+	 * settings
+	 * ----------------------------------------------------------------
+	 */
+
+		var
+		NAMESPACE = 'ScrollMagic.Scene',
+			SCENE_STATE_BEFORE = 'BEFORE',
+			SCENE_STATE_DURING = 'DURING',
+			SCENE_STATE_AFTER = 'AFTER',
+			DEFAULT_OPTIONS = SCENE_OPTIONS.defaults;
+
+/*
+	 * ----------------------------------------------------------------
+	 * private vars
+	 * ----------------------------------------------------------------
+	 */
+
+		var
+		Scene = this,
+			_options = _util.extend({}, DEFAULT_OPTIONS, options),
+			_state = SCENE_STATE_BEFORE,
+			_progress = 0,
+			_scrollOffset = {
+				start: 0,
+				end: 0
+			},
+			// reflects the controllers's scroll position for the start and end of the scene respectively
+			_triggerPos = 0,
+			_enabled = true,
+			_durationUpdateMethod, _controller;
+
+		/**
+		 * Internal constructor function of the ScrollMagic Scene
+		 * @private
+		 */
+		var construct = function () {
+			for (var key in _options) { // check supplied options
+				if (!DEFAULT_OPTIONS.hasOwnProperty(key)) {
+					log(2, "WARNING: Unknown option \"" + key + "\"");
+					delete _options[key];
+				}
+			}
+			// add getters/setters for all possible options
+			for (var optionName in DEFAULT_OPTIONS) {
+				addSceneOption(optionName);
+			}
+			// validate all options
+			validateOption();
+		};
+
+/*
+ * ----------------------------------------------------------------
+ * Event Management
+ * ----------------------------------------------------------------
+ */
+
+		var _listeners = {};
+		/**
+		 * Scene start event.  
+		 * Fires whenever the scroll position its the starting point of the scene.  
+		 * It will also fire when scrolling back up going over the start position of the scene. If you want something to happen only when scrolling down/right, use the scrollDirection parameter passed to the callback.
+		 *
+		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
+		 *
+		 * @event ScrollMagic.Scene#start
+		 *
+		 * @example
+		 * scene.on("start", function (event) {
+		 * 	console.log("Hit start point of scene.");
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {number} event.progress - Reflects the current progress of the scene
+		 * @property {string} event.state - The current state of the scene `"BEFORE"` or `"DURING"`
+		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
+		 */
+		/**
+		 * Scene end event.  
+		 * Fires whenever the scroll position its the ending point of the scene.  
+		 * It will also fire when scrolling back up from after the scene and going over its end position. If you want something to happen only when scrolling down/right, use the scrollDirection parameter passed to the callback.
+		 *
+		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
+		 *
+		 * @event ScrollMagic.Scene#end
+		 *
+		 * @example
+		 * scene.on("end", function (event) {
+		 * 	console.log("Hit end point of scene.");
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {number} event.progress - Reflects the current progress of the scene
+		 * @property {string} event.state - The current state of the scene `"DURING"` or `"AFTER"`
+		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
+		 */
+		/**
+		 * Scene enter event.  
+		 * Fires whenever the scene enters the "DURING" state.  
+		 * Keep in mind that it doesn't matter if the scene plays forward or backward: This event always fires when the scene enters its active scroll timeframe, regardless of the scroll-direction.
+		 *
+		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
+		 *
+		 * @event ScrollMagic.Scene#enter
+		 *
+		 * @example
+		 * scene.on("enter", function (event) {
+		 * 	console.log("Scene entered.");
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {number} event.progress - Reflects the current progress of the scene
+		 * @property {string} event.state - The current state of the scene - always `"DURING"`
+		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
+		 */
+		/**
+		 * Scene leave event.  
+		 * Fires whenever the scene's state goes from "DURING" to either "BEFORE" or "AFTER".  
+		 * Keep in mind that it doesn't matter if the scene plays forward or backward: This event always fires when the scene leaves its active scroll timeframe, regardless of the scroll-direction.
+		 *
+		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
+		 *
+		 * @event ScrollMagic.Scene#leave
+		 *
+		 * @example
+		 * scene.on("leave", function (event) {
+		 * 	console.log("Scene left.");
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {number} event.progress - Reflects the current progress of the scene
+		 * @property {string} event.state - The current state of the scene `"BEFORE"` or `"AFTER"`
+		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
+		 */
+		/**
+		 * Scene update event.  
+		 * Fires whenever the scene is updated (but not necessarily changes the progress).
+		 *
+		 * @event ScrollMagic.Scene#update
+		 *
+		 * @example
+		 * scene.on("update", function (event) {
+		 * 	console.log("Scene updated.");
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {number} event.startPos - The starting position of the scene (in relation to the conainer)
+		 * @property {number} event.endPos - The ending position of the scene (in relation to the conainer)
+		 * @property {number} event.scrollPos - The current scroll position of the container
+		 */
+		/**
+		 * Scene progress event.  
+		 * Fires whenever the progress of the scene changes.
+		 *
+		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
+		 *
+		 * @event ScrollMagic.Scene#progress
+		 *
+		 * @example
+		 * scene.on("progress", function (event) {
+		 * 	console.log("Scene progress changed to " + event.progress);
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {number} event.progress - Reflects the current progress of the scene
+		 * @property {string} event.state - The current state of the scene `"BEFORE"`, `"DURING"` or `"AFTER"`
+		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
+		 */
+		/**
+		 * Scene change event.  
+		 * Fires whenvever a property of the scene is changed.
+		 *
+		 * @event ScrollMagic.Scene#change
+		 *
+		 * @example
+		 * scene.on("change", function (event) {
+		 * 	console.log("Scene Property \"" + event.what + "\" changed to " + event.newval);
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {string} event.what - Indicates what value has been changed
+		 * @property {mixed} event.newval - The new value of the changed property
+		 */
+		/**
+		 * Scene shift event.  
+		 * Fires whenvever the start or end **scroll offset** of the scene change.
+		 * This happens explicitely, when one of these values change: `offset`, `duration` or `triggerHook`.
+		 * It will fire implicitly when the `triggerElement` changes, if the new element has a different position (most cases).
+		 * It will also fire implicitly when the size of the container changes and the triggerHook is anything other than `onLeave`.
+		 *
+		 * @event ScrollMagic.Scene#shift
+		 * @since 1.1.0
+		 *
+		 * @example
+		 * scene.on("shift", function (event) {
+		 * 	console.log("Scene moved, because the " + event.reason + " has changed.)");
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {string} event.reason - Indicates why the scene has shifted
+		 */
+		/**
+		 * Scene destroy event.  
+		 * Fires whenvever the scene is destroyed.
+		 * This can be used to tidy up custom behaviour used in events.
+		 *
+		 * @event ScrollMagic.Scene#destroy
+		 * @since 1.1.0
+		 *
+		 * @example
+		 * scene.on("enter", function (event) {
+		 *        // add custom action
+		 *        $("#my-elem").left("200");
+		 *      })
+		 *      .on("destroy", function (event) {
+		 *        // reset my element to start position
+		 *        if (event.reset) {
+		 *          $("#my-elem").left("0");
+		 *        }
+		 *      });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {boolean} event.reset - Indicates if the destroy method was called with reset `true` or `false`.
+		 */
+		/**
+		 * Scene add event.  
+		 * Fires when the scene is added to a controller.
+		 * This is mostly used by plugins to know that change might be due.
+		 *
+		 * @event ScrollMagic.Scene#add
+		 * @since 2.0.0
+		 *
+		 * @example
+		 * scene.on("add", function (event) {
+		 * 	console.log('Scene was added to a new controller.');
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 * @property {boolean} event.controller - The controller object the scene was added to.
+		 */
+		/**
+		 * Scene remove event.  
+		 * Fires when the scene is removed from a controller.
+		 * This is mostly used by plugins to know that change might be due.
+		 *
+		 * @event ScrollMagic.Scene#remove
+		 * @since 2.0.0
+		 *
+		 * @example
+		 * scene.on("remove", function (event) {
+		 * 	console.log('Scene was removed from its controller.');
+		 * });
+		 *
+		 * @property {object} event - The event Object passed to each callback
+		 * @property {string} event.type - The name of the event
+		 * @property {Scene} event.target - The Scene object that triggered this event
+		 */
+
+		/**
+		 * Add one ore more event listener.  
+		 * The callback function will be fired at the respective event, and an object containing relevant data will be passed to the callback.
+		 * @method ScrollMagic.Scene#on
+		 *
+		 * @example
+		 * function callback (event) {
+		 * 		console.log("Event fired! (" + event.type + ")");
+		 * }
+		 * // add listeners
+		 * scene.on("change update progress start end enter leave", callback);
+		 *
+		 * @param {string} names - The name or names of the event the callback should be attached to.
+		 * @param {function} callback - A function that should be executed, when the event is dispatched. An event object will be passed to the callback.
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.on = function (names, callback) {
+			if (_util.type.Function(callback)) {
+				names = names.trim().split(' ');
+				names.forEach(function (fullname) {
+					var
+					nameparts = fullname.split('.'),
+						eventname = nameparts[0],
+						namespace = nameparts[1];
+					if (eventname != "*") { // disallow wildcards
+						if (!_listeners[eventname]) {
+							_listeners[eventname] = [];
+						}
+						_listeners[eventname].push({
+							namespace: namespace || '',
+							callback: callback
+						});
+					}
+				});
+			} else {
+				log(1, "ERROR when calling '.on()': Supplied callback for '" + names + "' is not a valid function!");
+			}
+			return Scene;
+		};
+
+		/**
+		 * Remove one or more event listener.
+		 * @method ScrollMagic.Scene#off
+		 *
+		 * @example
+		 * function callback (event) {
+		 * 		console.log("Event fired! (" + event.type + ")");
+		 * }
+		 * // add listeners
+		 * scene.on("change update", callback);
+		 * // remove listeners
+		 * scene.off("change update", callback);
+		 *
+		 * @param {string} names - The name or names of the event that should be removed.
+		 * @param {function} [callback] - A specific callback function that should be removed. If none is passed all callbacks to the event listener will be removed.
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.off = function (names, callback) {
+			if (!names) {
+				log(1, "ERROR: Invalid event name supplied.");
+				return Scene;
+			}
+			names = names.trim().split(' ');
+			names.forEach(function (fullname, key) {
+				var
+				nameparts = fullname.split('.'),
+					eventname = nameparts[0],
+					namespace = nameparts[1] || '',
+					removeList = eventname === '*' ? Object.keys(_listeners) : [eventname];
+				removeList.forEach(function (remove) {
+					var
+					list = _listeners[remove] || [],
+						i = list.length;
+					while (i--) {
+						var listener = list[i];
+						if (listener && (namespace === listener.namespace || namespace === '*') && (!callback || callback == listener.callback)) {
+							list.splice(i, 1);
+						}
+					}
+					if (!list.length) {
+						delete _listeners[remove];
+					}
+				});
+			});
+			return Scene;
+		};
+
+		/**
+		 * Trigger an event.
+		 * @method ScrollMagic.Scene#trigger
+		 *
+		 * @example
+		 * this.trigger("change");
+		 *
+		 * @param {string} name - The name of the event that should be triggered.
+		 * @param {object} [vars] - An object containing info that should be passed to the callback.
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.trigger = function (name, vars) {
+			if (name) {
+				var
+				nameparts = name.trim().split('.'),
+					eventname = nameparts[0],
+					namespace = nameparts[1],
+					listeners = _listeners[eventname];
+				log(3, 'event fired:', eventname, vars ? "->" : '', vars || '');
+				if (listeners) {
+					listeners.forEach(function (listener, key) {
+						if (!namespace || namespace === listener.namespace) {
+							listener.callback.call(Scene, new ScrollMagic.Event(eventname, listener.namespace, Scene, vars));
+						}
+					});
+				}
+			} else {
+				log(1, "ERROR: Invalid event name supplied.");
+			}
+			return Scene;
+		};
+
+		// set event listeners
+		Scene.on("change.internal", function (e) {
+			if (e.what !== "loglevel" && e.what !== "tweenChanges") { // no need for a scene update scene with these options...
+				if (e.what === "triggerElement") {
+					updateTriggerElementPosition();
+				} else if (e.what === "reverse") { // the only property left that may have an impact on the current scene state. Everything else is handled by the shift event.
+					Scene.update();
+				}
+			}
+		}).on("shift.internal", function (e) {
+			updateScrollOffset();
+			Scene.update(); // update scene to reflect new position
+		});
+
+		/**
+		 * Send a debug message to the console.
+		 * @private
+		 * but provided publicly with _log for plugins
+		 *
+		 * @param {number} loglevel - The loglevel required to initiate output for the message.
+		 * @param {...mixed} output - One or more variables that should be passed to the console.
+		 */
+		var log = this._log = function (loglevel, output) {
+			if (_options.loglevel >= loglevel) {
+				Array.prototype.splice.call(arguments, 1, 0, "(" + NAMESPACE + ") ->");
+				_util.log.apply(window, arguments);
+			}
+		};
+
+		/**
+		 * Add the scene to a controller.  
+		 * This is the equivalent to `Controller.addScene(scene)`.
+		 * @method ScrollMagic.Scene#addTo
+		 *
+		 * @example
+		 * // add a scene to a ScrollMagic Controller
+		 * scene.addTo(controller);
+		 *
+		 * @param {ScrollMagic.Controller} controller - The controller to which the scene should be added.
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.addTo = function (controller) {
+			if (!(controller instanceof ScrollMagic.Controller)) {
+				log(1, "ERROR: supplied argument of 'addTo()' is not a valid ScrollMagic Controller");
+			} else if (_controller != controller) {
+				// new controller
+				if (_controller) { // was associated to a different controller before, so remove it...
+					_controller.removeScene(Scene);
+				}
+				_controller = controller;
+				validateOption();
+				updateDuration(true);
+				updateTriggerElementPosition(true);
+				updateScrollOffset();
+				_controller.info("container").addEventListener('resize', onContainerResize);
+				controller.addScene(Scene);
+				Scene.trigger("add", {
+					controller: _controller
+				});
+				log(3, "added " + NAMESPACE + " to controller");
+				Scene.update();
+			}
+			return Scene;
+		};
+
+		/**
+		 * **Get** or **Set** the current enabled state of the scene.  
+		 * This can be used to disable this scene without removing or destroying it.
+		 * @method ScrollMagic.Scene#enabled
+		 *
+		 * @example
+		 * // get the current value
+		 * var enabled = scene.enabled();
+		 *
+		 * // disable the scene
+		 * scene.enabled(false);
+		 *
+		 * @param {boolean} [newState] - The new enabled state of the scene `true` or `false`.
+		 * @returns {(boolean|Scene)} Current enabled state or parent object for chaining.
+		 */
+		this.enabled = function (newState) {
+			if (!arguments.length) { // get
+				return _enabled;
+			} else if (_enabled != newState) { // set
+				_enabled = !! newState;
+				Scene.update(true);
+			}
+			return Scene;
+		};
+
+		/**
+		 * Remove the scene from the controller.  
+		 * This is the equivalent to `Controller.removeScene(scene)`.
+		 * The scene will not be updated anymore until you readd it to a controller.
+		 * To remove the pin or the tween you need to call removeTween() or removePin() respectively.
+		 * @method ScrollMagic.Scene#remove
+		 * @example
+		 * // remove the scene from its controller
+		 * scene.remove();
+		 *
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.remove = function () {
+			if (_controller) {
+				_controller.info("container").removeEventListener('resize', onContainerResize);
+				var tmpParent = _controller;
+				_controller = undefined;
+				tmpParent.removeScene(Scene);
+				Scene.trigger("remove");
+				log(3, "removed " + NAMESPACE + " from controller");
+			}
+			return Scene;
+		};
+
+		/**
+		 * Destroy the scene and everything.
+		 * @method ScrollMagic.Scene#destroy
+		 * @example
+		 * // destroy the scene without resetting the pin and tween to their initial positions
+		 * scene = scene.destroy();
+		 *
+		 * // destroy the scene and reset the pin and tween
+		 * scene = scene.destroy(true);
+		 *
+		 * @param {boolean} [reset=false] - If `true` the pin and tween (if existent) will be reset.
+		 * @returns {null} Null to unset handler variables.
+		 */
+		this.destroy = function (reset) {
+			Scene.trigger("destroy", {
+				reset: reset
+			});
+			Scene.remove();
+			Scene.off("*.*");
+			log(3, "destroyed " + NAMESPACE + " (reset: " + (reset ? "true" : "false") + ")");
+			return null;
+		};
+
+
+		/**
+		 * Updates the Scene to reflect the current state.  
+		 * This is the equivalent to `Controller.updateScene(scene, immediately)`.  
+		 * The update method calculates the scene's start and end position (based on the trigger element, trigger hook, duration and offset) and checks it against the current scroll position of the container.  
+		 * It then updates the current scene state accordingly (or does nothing, if the state is already correct) – Pins will be set to their correct position and tweens will be updated to their correct progress.
+		 * This means an update doesn't necessarily result in a progress change. The `progress` event will be fired if the progress has indeed changed between this update and the last.  
+		 * _**NOTE:** This method gets called constantly whenever ScrollMagic detects a change. The only application for you is if you change something outside of the realm of ScrollMagic, like moving the trigger or changing tween parameters._
+		 * @method ScrollMagic.Scene#update
+		 * @example
+		 * // update the scene on next tick
+		 * scene.update();
+		 *
+		 * // update the scene immediately
+		 * scene.update(true);
+		 *
+		 * @fires Scene.update
+		 *
+		 * @param {boolean} [immediately=false] - If `true` the update will be instant, if `false` it will wait until next update cycle (better performance).
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.update = function (immediately) {
+			if (_controller) {
+				if (immediately) {
+					if (_controller.enabled() && _enabled) {
+						var
+						scrollPos = _controller.info("scrollPos"),
+							newProgress;
+
+						if (_options.duration > 0) {
+							newProgress = (scrollPos - _scrollOffset.start) / (_scrollOffset.end - _scrollOffset.start);
+						} else {
+							newProgress = scrollPos >= _scrollOffset.start ? 1 : 0;
+						}
+
+						Scene.trigger("update", {
+							startPos: _scrollOffset.start,
+							endPos: _scrollOffset.end,
+							scrollPos: scrollPos
+						});
+
+						Scene.progress(newProgress);
+					} else if (_pin && _state === SCENE_STATE_DURING) {
+						updatePinState(true); // unpin in position
+					}
+				} else {
+					_controller.updateScene(Scene, false);
+				}
+			}
+			return Scene;
+		};
+
+		/**
+		 * Updates dynamic scene variables like the trigger element position or the duration.
+		 * This method is automatically called in regular intervals from the controller. See {@link ScrollMagic.Controller} option `refreshInterval`.
+		 * 
+		 * You can call it to minimize lag, for example when you intentionally change the position of the triggerElement.
+		 * If you don't it will simply be updated in the next refresh interval of the container, which is usually sufficient.
+		 *
+		 * @method ScrollMagic.Scene#refresh
+		 * @since 1.1.0
+		 * @example
+		 * scene = new ScrollMagic.Scene({triggerElement: "#trigger"});
+		 * 
+		 * // change the position of the trigger
+		 * $("#trigger").css("top", 500);
+		 * // immediately let the scene know of this change
+		 * scene.refresh();
+		 *
+		 * @fires {@link Scene.shift}, if the trigger element position or the duration changed
+		 * @fires {@link Scene.change}, if the duration changed
+		 *
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.refresh = function () {
+			updateDuration();
+			updateTriggerElementPosition();
+			// update trigger element position
+			return Scene;
+		};
+
+		/**
+		 * **Get** or **Set** the scene's progress.  
+		 * Usually it shouldn't be necessary to use this as a setter, as it is set automatically by scene.update().  
+		 * The order in which the events are fired depends on the duration of the scene:
+		 *  1. Scenes with `duration == 0`:  
+		 *  Scenes that have no duration by definition have no ending. Thus the `end` event will never be fired.  
+		 *  When the trigger position of the scene is passed the events are always fired in this order:  
+		 *  `enter`, `start`, `progress` when scrolling forward  
+		 *  and  
+		 *  `progress`, `start`, `leave` when scrolling in reverse
+		 *  2. Scenes with `duration > 0`:  
+		 *  Scenes with a set duration have a defined start and end point.  
+		 *  When scrolling past the start position of the scene it will fire these events in this order:  
+		 *  `enter`, `start`, `progress`  
+		 *  When continuing to scroll and passing the end point it will fire these events:  
+		 *  `progress`, `end`, `leave`  
+		 *  When reversing through the end point these events are fired:  
+		 *  `enter`, `end`, `progress`  
+		 *  And when continuing to scroll past the start position in reverse it will fire:  
+		 *  `progress`, `start`, `leave`  
+		 *  In between start and end the `progress` event will be called constantly, whenever the progress changes.
+		 * 
+		 * In short:  
+		 * `enter` events will always trigger **before** the progress update and `leave` envents will trigger **after** the progress update.  
+		 * `start` and `end` will always trigger at their respective position.
+		 * 
+		 * Please review the event descriptions for details on the events and the event object that is passed to the callback.
+		 * 
+		 * @method ScrollMagic.Scene#progress
+		 * @example
+		 * // get the current scene progress
+		 * var progress = scene.progress();
+		 *
+		 * // set new scene progress
+		 * scene.progress(0.3);
+		 *
+		 * @fires {@link Scene.enter}, when used as setter
+		 * @fires {@link Scene.start}, when used as setter
+		 * @fires {@link Scene.progress}, when used as setter
+		 * @fires {@link Scene.end}, when used as setter
+		 * @fires {@link Scene.leave}, when used as setter
+		 *
+		 * @param {number} [progress] - The new progress value of the scene `[0-1]`.
+		 * @returns {number} `get` -  Current scene progress.
+		 * @returns {Scene} `set` -  Parent object for chaining.
+		 */
+		this.progress = function (progress) {
+			if (!arguments.length) { // get
+				return _progress;
+			} else { // set
+				var
+				doUpdate = false,
+					oldState = _state,
+					scrollDirection = _controller ? _controller.info("scrollDirection") : 'PAUSED',
+					reverseOrForward = _options.reverse || progress >= _progress;
+				if (_options.duration === 0) {
+					// zero duration scenes
+					doUpdate = _progress != progress;
+					_progress = progress < 1 && reverseOrForward ? 0 : 1;
+					_state = _progress === 0 ? SCENE_STATE_BEFORE : SCENE_STATE_DURING;
+				} else {
+					// scenes with start and end
+					if (progress < 0 && _state !== SCENE_STATE_BEFORE && reverseOrForward) {
+						// go back to initial state
+						_progress = 0;
+						_state = SCENE_STATE_BEFORE;
+						doUpdate = true;
+					} else if (progress >= 0 && progress < 1 && reverseOrForward) {
+						_progress = progress;
+						_state = SCENE_STATE_DURING;
+						doUpdate = true;
+					} else if (progress >= 1 && _state !== SCENE_STATE_AFTER) {
+						_progress = 1;
+						_state = SCENE_STATE_AFTER;
+						doUpdate = true;
+					} else if (_state === SCENE_STATE_DURING && !reverseOrForward) {
+						updatePinState(); // in case we scrolled backwards mid-scene and reverse is disabled => update the pin position, so it doesn't move back as well.
+					}
+				}
+				if (doUpdate) {
+					// fire events
+					var
+					eventVars = {
+						progress: _progress,
+						state: _state,
+						scrollDirection: scrollDirection
+					},
+						stateChanged = _state != oldState;
+
+					var trigger = function (eventName) { // tmp helper to simplify code
+						Scene.trigger(eventName, eventVars);
+					};
+
+					if (stateChanged) { // enter events
+						if (oldState !== SCENE_STATE_DURING) {
+							trigger("enter");
+							trigger(oldState === SCENE_STATE_BEFORE ? "start" : "end");
+						}
+					}
+					trigger("progress");
+					if (stateChanged) { // leave events
+						if (_state !== SCENE_STATE_DURING) {
+							trigger(_state === SCENE_STATE_BEFORE ? "start" : "end");
+							trigger("leave");
+						}
+					}
+				}
+
+				return Scene;
+			}
+		};
+
+
+		/**
+		 * Update the start and end scrollOffset of the container.
+		 * The positions reflect what the controller's scroll position will be at the start and end respectively.
+		 * Is called, when:
+		 *   - Scene event "change" is called with: offset, triggerHook, duration 
+		 *   - scroll container event "resize" is called
+		 *   - the position of the triggerElement changes
+		 *   - the controller changes -> addTo()
+		 * @private
+		 */
+		var updateScrollOffset = function () {
+			_scrollOffset = {
+				start: _triggerPos + _options.offset
+			};
+			if (_controller && _options.triggerElement) {
+				// take away triggerHook portion to get relative to top
+				_scrollOffset.start -= _controller.info("size") * _options.triggerHook;
+			}
+			_scrollOffset.end = _scrollOffset.start + _options.duration;
+		};
+
+		/**
+		 * Updates the duration if set to a dynamic function.
+		 * This method is called when the scene is added to a controller and in regular intervals from the controller through scene.refresh().
+		 * 
+		 * @fires {@link Scene.change}, if the duration changed
+		 * @fires {@link Scene.shift}, if the duration changed
+		 *
+		 * @param {boolean} [suppressEvents=false] - If true the shift event will be suppressed.
+		 * @private
+		 */
+		var updateDuration = function (suppressEvents) {
+			// update duration
+			if (_durationUpdateMethod) {
+				var varname = "duration";
+				if (changeOption(varname, _durationUpdateMethod.call(Scene)) && !suppressEvents) { // set
+					Scene.trigger("change", {
+						what: varname,
+						newval: _options[varname]
+					});
+					Scene.trigger("shift", {
+						reason: varname
+					});
+				}
+			}
+		};
+
+		/**
+		 * Updates the position of the triggerElement, if present.
+		 * This method is called ...
+		 *  - ... when the triggerElement is changed
+		 *  - ... when the scene is added to a (new) controller
+		 *  - ... in regular intervals from the controller through scene.refresh().
+		 * 
+		 * @fires {@link Scene.shift}, if the position changed
+		 *
+		 * @param {boolean} [suppressEvents=false] - If true the shift event will be suppressed.
+		 * @private
+		 */
+		var updateTriggerElementPosition = function (suppressEvents) {
+			var
+			elementPos = 0,
+				telem = _options.triggerElement;
+			if (_controller && telem) {
+				var
+				controllerInfo = _controller.info(),
+					containerOffset = _util.get.offset(controllerInfo.container),
+					// container position is needed because element offset is returned in relation to document, not in relation to container.
+					param = controllerInfo.vertical ? "top" : "left"; // which param is of interest ?
+				// if parent is spacer, use spacer position instead so correct start position is returned for pinned elements.
+				while (telem.parentNode.hasAttribute(PIN_SPACER_ATTRIBUTE)) {
+					telem = telem.parentNode;
+				}
+
+				var elementOffset = _util.get.offset(telem);
+
+				if (!controllerInfo.isDocument) { // container is not the document root, so substract scroll Position to get correct trigger element position relative to scrollcontent
+					containerOffset[param] -= _controller.scrollPos();
+				}
+
+				elementPos = elementOffset[param] - containerOffset[param];
+			}
+			var changed = elementPos != _triggerPos;
+			_triggerPos = elementPos;
+			if (changed && !suppressEvents) {
+				Scene.trigger("shift", {
+					reason: "triggerElementPosition"
+				});
+			}
+		};
+
+		/**
+		 * Trigger a shift event, when the container is resized and the triggerHook is > 1.
+		 * @private
+		 */
+		var onContainerResize = function (e) {
+			if (_options.triggerHook > 0) {
+				Scene.trigger("shift", {
+					reason: "containerResize"
+				});
+			}
+		};
+
+		var _validate = _util.extend(SCENE_OPTIONS.validate, {
+			// validation for duration handled internally for reference to private var _durationMethod
+			duration: function (val) {
+				if (_util.type.String(val) && val.match(/^(\.|\d)*\d+%$/)) {
+					// percentage value
+					var perc = parseFloat(val) / 100;
+					val = function () {
+						return _controller ? _controller.info("size") * perc : 0;
+					};
+				}
+				if (_util.type.Function(val)) {
+					// function
+					_durationUpdateMethod = val;
+					try {
+						val = parseFloat(_durationUpdateMethod());
+					} catch (e) {
+						val = -1; // will cause error below
+					}
+				}
+				// val has to be float
+				val = parseFloat(val);
+				if (!_util.type.Number(val) || val < 0) {
+					if (_durationUpdateMethod) {
+						_durationUpdateMethod = undefined;
+						throw ["Invalid return value of supplied function for option \"duration\":", val];
+					} else {
+						throw ["Invalid value for option \"duration\":", val];
+					}
+				}
+				return val;
+			}
+		});
+
+		/**
+		 * Checks the validity of a specific or all options and reset to default if neccessary.
+		 * @private
+		 */
+		var validateOption = function (check) {
+			check = arguments.length ? [check] : Object.keys(_validate);
+			check.forEach(function (optionName, key) {
+				var value;
+				if (_validate[optionName]) { // there is a validation method for this option
+					try { // validate value
+						value = _validate[optionName](_options[optionName]);
+					} catch (e) { // validation failed -> reset to default
+						value = DEFAULT_OPTIONS[optionName];
+						var logMSG = _util.type.String(e) ? [e] : e;
+						if (_util.type.Array(logMSG)) {
+							logMSG[0] = "ERROR: " + logMSG[0];
+							logMSG.unshift(1); // loglevel 1 for error msg
+							log.apply(this, logMSG);
+						} else {
+							log(1, "ERROR: Problem executing validation callback for option '" + optionName + "':", e.message);
+						}
+					} finally {
+						_options[optionName] = value;
+					}
+				}
+			});
+		};
+
+		/**
+		 * Helper used by the setter/getters for scene options
+		 * @private
+		 */
+		var changeOption = function (varname, newval) {
+			var
+			changed = false,
+				oldval = _options[varname];
+			if (_options[varname] != newval) {
+				_options[varname] = newval;
+				validateOption(varname); // resets to default if necessary
+				changed = oldval != _options[varname];
+			}
+			return changed;
+		};
+
+		// generate getters/setters for all options
+		var addSceneOption = function (optionName) {
+			if (!Scene[optionName]) {
+				Scene[optionName] = function (newVal) {
+					if (!arguments.length) { // get
+						return _options[optionName];
+					} else {
+						if (optionName === "duration") { // new duration is set, so any previously set function must be unset
+							_durationUpdateMethod = undefined;
+						}
+						if (changeOption(optionName, newVal)) { // set
+							Scene.trigger("change", {
+								what: optionName,
+								newval: _options[optionName]
+							});
+							if (SCENE_OPTIONS.shifts.indexOf(optionName) > -1) {
+								Scene.trigger("shift", {
+									reason: optionName
+								});
+							}
+						}
+					}
+					return Scene;
+				};
+			}
+		};
+
+		/**
+		 * **Get** or **Set** the duration option value.
+		 * As a setter it also accepts a function returning a numeric value.  
+		 * This is particularly useful for responsive setups.
+		 *
+		 * The duration is updated using the supplied function every time `Scene.refresh()` is called, which happens periodically from the controller (see ScrollMagic.Controller option `refreshInterval`).  
+		 * _**NOTE:** Be aware that it's an easy way to kill performance, if you supply a function that has high CPU demand.  
+		 * Even for size and position calculations it is recommended to use a variable to cache the value. (see example)  
+		 * This counts double if you use the same function for multiple scenes._
+		 *
+		 * @method ScrollMagic.Scene#duration
+		 * @example
+		 * // get the current duration value
+		 * var duration = scene.duration();
+		 *
+		 * // set a new duration
+		 * scene.duration(300);
+		 *
+		 * // use a function to automatically adjust the duration to the window height.
+		 * var durationValueCache;
+		 * function getDuration () {
+		 *   return durationValueCache;
+		 * }
+		 * function updateDuration (e) {
+		 *   durationValueCache = window.innerHeight;
+		 * }
+		 * $(window).on("resize", updateDuration); // update the duration when the window size changes
+		 * $(window).triggerHandler("resize"); // set to initial value
+		 * scene.duration(getDuration); // supply duration method
+		 *
+		 * @fires {@link Scene.change}, when used as setter
+		 * @fires {@link Scene.shift}, when used as setter
+		 * @param {(number|function)} [newDuration] - The new duration of the scene.
+		 * @returns {number} `get` -  Current scene duration.
+		 * @returns {Scene} `set` -  Parent object for chaining.
+		 */
+
+		/**
+		 * **Get** or **Set** the offset option value.
+		 * @method ScrollMagic.Scene#offset
+		 * @example
+		 * // get the current offset
+		 * var offset = scene.offset();
+		 *
+		 * // set a new offset
+		 * scene.offset(100);
+		 *
+		 * @fires {@link Scene.change}, when used as setter
+		 * @fires {@link Scene.shift}, when used as setter
+		 * @param {number} [newOffset] - The new offset of the scene.
+		 * @returns {number} `get` -  Current scene offset.
+		 * @returns {Scene} `set` -  Parent object for chaining.
+		 */
+
+		/**
+		 * **Get** or **Set** the triggerElement option value.
+		 * Does **not** fire `Scene.shift`, because changing the trigger Element doesn't necessarily mean the start position changes. This will be determined in `Scene.refresh()`, which is automatically triggered.
+		 * @method ScrollMagic.Scene#triggerElement
+		 * @example
+		 * // get the current triggerElement
+		 * var triggerElement = scene.triggerElement();
+		 *
+		 * // set a new triggerElement using a selector
+		 * scene.triggerElement("#trigger");
+		 * // set a new triggerElement using a DOM object
+		 * scene.triggerElement(document.getElementById("trigger"));
+		 *
+		 * @fires {@link Scene.change}, when used as setter
+		 * @param {(string|object)} [newTriggerElement] - The new trigger element for the scene.
+		 * @returns {(string|object)} `get` -  Current triggerElement.
+		 * @returns {Scene} `set` -  Parent object for chaining.
+		 */
+
+		/**
+		 * **Get** or **Set** the triggerHook option value.
+		 * @method ScrollMagic.Scene#triggerHook
+		 * @example
+		 * // get the current triggerHook value
+		 * var triggerHook = scene.triggerHook();
+		 *
+		 * // set a new triggerHook using a string
+		 * scene.triggerHook("onLeave");
+		 * // set a new triggerHook using a number
+		 * scene.triggerHook(0.7);
+		 *
+		 * @fires {@link Scene.change}, when used as setter
+		 * @fires {@link Scene.shift}, when used as setter
+		 * @param {(number|string)} [newTriggerHook] - The new triggerHook of the scene. See {@link Scene} parameter description for value options.
+		 * @returns {number} `get` -  Current triggerHook (ALWAYS numerical).
+		 * @returns {Scene} `set` -  Parent object for chaining.
+		 */
+
+		/**
+		 * **Get** or **Set** the reverse option value.
+		 * @method ScrollMagic.Scene#reverse
+		 * @example
+		 * // get the current reverse option
+		 * var reverse = scene.reverse();
+		 *
+		 * // set new reverse option
+		 * scene.reverse(false);
+		 *
+		 * @fires {@link Scene.change}, when used as setter
+		 * @param {boolean} [newReverse] - The new reverse setting of the scene.
+		 * @returns {boolean} `get` -  Current reverse option value.
+		 * @returns {Scene} `set` -  Parent object for chaining.
+		 */
+
+		/**
+		 * **Get** or **Set** the loglevel option value.
+		 * @method ScrollMagic.Scene#loglevel
+		 * @example
+		 * // get the current loglevel
+		 * var loglevel = scene.loglevel();
+		 *
+		 * // set new loglevel
+		 * scene.loglevel(3);
+		 *
+		 * @fires {@link Scene.change}, when used as setter
+		 * @param {number} [newLoglevel] - The new loglevel setting of the scene. `[0-3]`
+		 * @returns {number} `get` -  Current loglevel.
+		 * @returns {Scene} `set` -  Parent object for chaining.
+		 */
+
+		/**
+		 * **Get** the associated controller.
+		 * @method ScrollMagic.Scene#controller
+		 * @example
+		 * // get the controller of a scene
+		 * var controller = scene.controller();
+		 *
+		 * @returns {ScrollMagic.Controller} Parent controller or `undefined`
+		 */
+		this.controller = function () {
+			return _controller;
+		};
+
+		/**
+		 * **Get** the current state.
+		 * @method ScrollMagic.Scene#state
+		 * @example
+		 * // get the current state
+		 * var state = scene.state();
+		 *
+		 * @returns {string} `"BEFORE"`, `"DURING"` or `"AFTER"`
+		 */
+		this.state = function () {
+			return _state;
+		};
+
+		/**
+		 * **Get** the current scroll offset for the start of the scene.  
+		 * Mind, that the scrollOffset is related to the size of the container, if `triggerHook` is bigger than `0` (or `"onLeave"`).  
+		 * This means, that resizing the container or changing the `triggerHook` will influence the scene's start offset.
+		 * @method ScrollMagic.Scene#scrollOffset
+		 * @example
+		 * // get the current scroll offset for the start and end of the scene.
+		 * var start = scene.scrollOffset();
+		 * var end = scene.scrollOffset() + scene.duration();
+		 * console.log("the scene starts at", start, "and ends at", end);
+		 *
+		 * @returns {number} The scroll offset (of the container) at which the scene will trigger. Y value for vertical and X value for horizontal scrolls.
+		 */
+		this.scrollOffset = function () {
+			return _scrollOffset.start;
+		};
+
+		/**
+		 * **Get** the trigger position of the scene (including the value of the `offset` option).  
+		 * @method ScrollMagic.Scene#triggerPosition
+		 * @example
+		 * // get the scene's trigger position
+		 * var triggerPosition = scene.triggerPosition();
+		 *
+		 * @returns {number} Start position of the scene. Top position value for vertical and left position value for horizontal scrolls.
+		 */
+		this.triggerPosition = function () {
+			var pos = _options.offset; // the offset is the basis
+			if (_controller) {
+				// get the trigger position
+				if (_options.triggerElement) {
+					// Element as trigger
+					pos += _triggerPos;
+				} else {
+					// return the height of the triggerHook to start at the beginning
+					pos += _controller.info("size") * Scene.triggerHook();
+				}
+			}
+			return pos;
+		};
+
+		var
+		_pin, _pinOptions;
+
+		Scene.on("shift.internal", function (e) {
+			var durationChanged = e.reason === "duration";
+			if ((_state === SCENE_STATE_AFTER && durationChanged) || (_state === SCENE_STATE_DURING && _options.duration === 0)) {
+				// if [duration changed after a scene (inside scene progress updates pin position)] or [duration is 0, we are in pin phase and some other value changed].
+				updatePinState();
+			}
+			if (durationChanged) {
+				updatePinDimensions();
+			}
+		}).on("progress.internal", function (e) {
+			updatePinState();
+		}).on("add.internal", function (e) {
+			updatePinDimensions();
+		}).on("destroy.internal", function (e) {
+			Scene.removePin(e.reset);
+		});
+		/**
+		 * Update the pin state.
+		 * @private
+		 */
+		var updatePinState = function (forceUnpin) {
+			if (_pin && _controller) {
+				var
+				containerInfo = _controller.info(),
+					pinTarget = _pinOptions.spacer.firstChild; // may be pin element or another spacer, if cascading pins
+				if (!forceUnpin && _state === SCENE_STATE_DURING) { // during scene or if duration is 0 and we are past the trigger
+					// pinned state
+					if (_util.css(pinTarget, "position") != "fixed") {
+						// change state before updating pin spacer (position changes due to fixed collapsing might occur.)
+						_util.css(pinTarget, {
+							"position": "fixed"
+						});
+						// update pin spacer
+						updatePinDimensions();
+					}
+
+					var
+					fixedPos = _util.get.offset(_pinOptions.spacer, true),
+						// get viewport position of spacer
+						scrollDistance = _options.reverse || _options.duration === 0 ? containerInfo.scrollPos - _scrollOffset.start // quicker
+						: Math.round(_progress * _options.duration * 10) / 10; // if no reverse and during pin the position needs to be recalculated using the progress
+					// add scrollDistance
+					fixedPos[containerInfo.vertical ? "top" : "left"] += scrollDistance;
+
+					// set new values
+					_util.css(_pinOptions.spacer.firstChild, {
+						top: fixedPos.top,
+						left: fixedPos.left
+					});
+				} else {
+					// unpinned state
+					var
+					newCSS = {
+						position: _pinOptions.inFlow ? "relative" : "absolute",
+						top: 0,
+						left: 0
+					},
+						change = _util.css(pinTarget, "position") != newCSS.position;
+
+					if (!_pinOptions.pushFollowers) {
+						newCSS[containerInfo.vertical ? "top" : "left"] = _options.duration * _progress;
+					} else if (_options.duration > 0) { // only concerns scenes with duration
+						if (_state === SCENE_STATE_AFTER && parseFloat(_util.css(_pinOptions.spacer, "padding-top")) === 0) {
+							change = true; // if in after state but havent updated spacer yet (jumped past pin)
+						} else if (_state === SCENE_STATE_BEFORE && parseFloat(_util.css(_pinOptions.spacer, "padding-bottom")) === 0) { // before
+							change = true; // jumped past fixed state upward direction
+						}
+					}
+					// set new values
+					_util.css(pinTarget, newCSS);
+					if (change) {
+						// update pin spacer if state changed
+						updatePinDimensions();
+					}
+				}
+			}
+		};
+
+		/**
+		 * Update the pin spacer and/or element size.
+		 * The size of the spacer needs to be updated whenever the duration of the scene changes, if it is to push down following elements.
+		 * @private
+		 */
+		var updatePinDimensions = function () {
+			if (_pin && _controller && _pinOptions.inFlow) { // no spacerresize, if original position is absolute
+				var
+				after = (_state === SCENE_STATE_AFTER),
+					before = (_state === SCENE_STATE_BEFORE),
+					during = (_state === SCENE_STATE_DURING),
+					vertical = _controller.info("vertical"),
+					pinTarget = _pinOptions.spacer.firstChild,
+					// usually the pined element but can also be another spacer (cascaded pins)
+					marginCollapse = _util.isMarginCollapseType(_util.css(_pinOptions.spacer, "display")),
+					css = {};
+
+				// set new size
+				// if relsize: spacer -> pin | else: pin -> spacer
+				if (_pinOptions.relSize.width || _pinOptions.relSize.autoFullWidth) {
+					if (during) {
+						_util.css(_pin, {
+							"width": _util.get.width(_pinOptions.spacer)
+						});
+					} else {
+						_util.css(_pin, {
+							"width": "100%"
+						});
+					}
+				} else {
+					// minwidth is needed for cascaded pins.
+					css["min-width"] = _util.get.width(vertical ? _pin : pinTarget, true, true);
+					css.width = during ? css["min-width"] : "auto";
+				}
+				if (_pinOptions.relSize.height) {
+					if (during) {
+						// the only padding the spacer should ever include is the duration (if pushFollowers = true), so we need to substract that.
+						_util.css(_pin, {
+							"height": _util.get.height(_pinOptions.spacer) - (_pinOptions.pushFollowers ? _options.duration : 0)
+						});
+					} else {
+						_util.css(_pin, {
+							"height": "100%"
+						});
+					}
+				} else {
+					// margin is only included if it's a cascaded pin to resolve an IE9 bug
+					css["min-height"] = _util.get.height(vertical ? pinTarget : _pin, true, !marginCollapse); // needed for cascading pins
+					css.height = during ? css["min-height"] : "auto";
+				}
+
+				// add space for duration if pushFollowers is true
+				if (_pinOptions.pushFollowers) {
+					css["padding" + (vertical ? "Top" : "Left")] = _options.duration * _progress;
+					css["padding" + (vertical ? "Bottom" : "Right")] = _options.duration * (1 - _progress);
+				}
+				_util.css(_pinOptions.spacer, css);
+			}
+		};
+
+		/**
+		 * Updates the Pin state (in certain scenarios)
+		 * If the controller container is not the document and we are mid-pin-phase scrolling or resizing the main document can result to wrong pin positions.
+		 * So this function is called on resize and scroll of the document.
+		 * @private
+		 */
+		var updatePinInContainer = function () {
+			if (_controller && _pin && _state === SCENE_STATE_DURING && !_controller.info("isDocument")) {
+				updatePinState();
+			}
+		};
+
+		/**
+		 * Updates the Pin spacer size state (in certain scenarios)
+		 * If container is resized during pin and relatively sized the size of the pin might need to be updated...
+		 * So this function is called on resize of the container.
+		 * @private
+		 */
+		var updateRelativePinSpacer = function () {
+			if (_controller && _pin && // well, duh
+			_state === SCENE_STATE_DURING && // element in pinned state?
+			( // is width or height relatively sized, but not in relation to body? then we need to recalc.
+			((_pinOptions.relSize.width || _pinOptions.relSize.autoFullWidth) && _util.get.width(window) != _util.get.width(_pinOptions.spacer.parentNode)) || (_pinOptions.relSize.height && _util.get.height(window) != _util.get.height(_pinOptions.spacer.parentNode)))) {
+				updatePinDimensions();
+			}
+		};
+
+		/**
+		 * Is called, when the mousewhel is used while over a pinned element inside a div container.
+		 * If the scene is in fixed state scroll events would be counted towards the body. This forwards the event to the scroll container.
+		 * @private
+		 */
+		var onMousewheelOverPin = function (e) {
+			if (_controller && _pin && _state === SCENE_STATE_DURING && !_controller.info("isDocument")) { // in pin state
+				e.preventDefault();
+				_controller._setScrollPos(_controller.info("scrollPos") - ((e.wheelDelta || e[_controller.info("vertical") ? "wheelDeltaY" : "wheelDeltaX"]) / 3 || -e.detail * 30));
+			}
+		};
+
+		/**
+		 * Pin an element for the duration of the tween.  
+		 * If the scene duration is 0 the element will only be unpinned, if the user scrolls back past the start position.  
+		 * Make sure only one pin is applied to an element at the same time.
+		 * An element can be pinned multiple times, but only successively.
+		 * _**NOTE:** The option `pushFollowers` has no effect, when the scene duration is 0._
+		 * @method ScrollMagic.Scene#setPin
+		 * @example
+		 * // pin element and push all following elements down by the amount of the pin duration.
+		 * scene.setPin("#pin");
+		 *
+		 * // pin element and keeping all following elements in their place. The pinned element will move past them.
+		 * scene.setPin("#pin", {pushFollowers: false});
+		 *
+		 * @param {(string|object)} element - A Selector targeting an element or a DOM object that is supposed to be pinned.
+		 * @param {object} [settings] - settings for the pin
+		 * @param {boolean} [settings.pushFollowers=true] - If `true` following elements will be "pushed" down for the duration of the pin, if `false` the pinned element will just scroll past them.  
+		 Ignored, when duration is `0`.
+		 * @param {string} [settings.spacerClass="scrollmagic-pin-spacer"] - Classname of the pin spacer element, which is used to replace the element.
+		 *
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.setPin = function (element, settings) {
+			var
+			defaultSettings = {
+				pushFollowers: true,
+				spacerClass: "scrollmagic-pin-spacer"
+			};
+			settings = _util.extend({}, defaultSettings, settings);
+
+			// validate Element
+			element = _util.get.elements(element)[0];
+			if (!element) {
+				log(1, "ERROR calling method 'setPin()': Invalid pin element supplied.");
+				return Scene; // cancel
+			} else if (_util.css(element, "position") === "fixed") {
+				log(1, "ERROR calling method 'setPin()': Pin does not work with elements that are positioned 'fixed'.");
+				return Scene; // cancel
+			}
+
+			if (_pin) { // preexisting pin?
+				if (_pin === element) {
+					// same pin we already have -> do nothing
+					return Scene; // cancel
+				} else {
+					// kill old pin
+					Scene.removePin();
+				}
+
+			}
+			_pin = element;
+
+			var
+			parentDisplay = _pin.parentNode.style.display,
+				boundsParams = ["top", "left", "bottom", "right", "margin", "marginLeft", "marginRight", "marginTop", "marginBottom"];
+
+			_pin.parentNode.style.display = 'none'; // hack start to force css to return stylesheet values instead of calculated px values.
+			var
+			inFlow = _util.css(_pin, "position") != "absolute",
+				pinCSS = _util.css(_pin, boundsParams.concat(["display"])),
+				sizeCSS = _util.css(_pin, ["width", "height"]);
+			_pin.parentNode.style.display = parentDisplay; // hack end.
+			if (!inFlow && settings.pushFollowers) {
+				log(2, "WARNING: If the pinned element is positioned absolutely pushFollowers will be disabled.");
+				settings.pushFollowers = false;
+			}
+			window.setTimeout(function () { // wait until all finished, because with responsive duration it will only be set after scene is added to controller
+				if (_pin && _options.duration === 0 && settings.pushFollowers) {
+					log(2, "WARNING: pushFollowers =", true, "has no effect, when scene duration is 0.");
+				}
+			}, 0);
+
+			// create spacer and insert
+			var
+			spacer = _pin.parentNode.insertBefore(document.createElement('div'), _pin),
+				spacerCSS = _util.extend(pinCSS, {
+					position: inFlow ? "relative" : "absolute",
+					boxSizing: "content-box",
+					mozBoxSizing: "content-box",
+					webkitBoxSizing: "content-box"
+				});
+
+			if (!inFlow) { // copy size if positioned absolutely, to work for bottom/right positioned elements.
+				_util.extend(spacerCSS, _util.css(_pin, ["width", "height"]));
+			}
+
+			_util.css(spacer, spacerCSS);
+			spacer.setAttribute(PIN_SPACER_ATTRIBUTE, "");
+			_util.addClass(spacer, settings.spacerClass);
+
+			// set the pin Options
+			_pinOptions = {
+				spacer: spacer,
+				relSize: { // save if size is defined using % values. if so, handle spacer resize differently...
+					width: sizeCSS.width.slice(-1) === "%",
+					height: sizeCSS.height.slice(-1) === "%",
+					autoFullWidth: sizeCSS.width === "auto" && inFlow && _util.isMarginCollapseType(pinCSS.display)
+				},
+				pushFollowers: settings.pushFollowers,
+				inFlow: inFlow,
+				// stores if the element takes up space in the document flow
+			};
+
+			if (!_pin.___origStyle) {
+				_pin.___origStyle = {};
+				var
+				pinInlineCSS = _pin.style,
+					copyStyles = boundsParams.concat(["width", "height", "position", "boxSizing", "mozBoxSizing", "webkitBoxSizing"]);
+				copyStyles.forEach(function (val) {
+					_pin.___origStyle[val] = pinInlineCSS[val] || "";
+				});
+			}
+
+			// if relative size, transfer it to spacer and make pin calculate it...
+			if (_pinOptions.relSize.width) {
+				_util.css(spacer, {
+					width: sizeCSS.width
+				});
+			}
+			if (_pinOptions.relSize.height) {
+				_util.css(spacer, {
+					height: sizeCSS.height
+				});
+			}
+
+			// now place the pin element inside the spacer	
+			spacer.appendChild(_pin);
+			// and set new css
+			_util.css(_pin, {
+				position: inFlow ? "relative" : "absolute",
+				margin: "auto",
+				top: "auto",
+				left: "auto",
+				bottom: "auto",
+				right: "auto"
+			});
+
+			if (_pinOptions.relSize.width || _pinOptions.relSize.autoFullWidth) {
+				_util.css(_pin, {
+					boxSizing: "border-box",
+					mozBoxSizing: "border-box",
+					webkitBoxSizing: "border-box"
+				});
+			}
+
+			// add listener to document to update pin position in case controller is not the document.
+			window.addEventListener('scroll', updatePinInContainer);
+			window.addEventListener('resize', updatePinInContainer);
+			window.addEventListener('resize', updateRelativePinSpacer);
+			// add mousewheel listener to catch scrolls over fixed elements
+			_pin.addEventListener("mousewheel", onMousewheelOverPin);
+			_pin.addEventListener("DOMMouseScroll", onMousewheelOverPin);
+
+			log(3, "added pin");
+
+			// finally update the pin to init
+			updatePinState();
+
+			return Scene;
+		};
+
+		/**
+		 * Remove the pin from the scene.
+		 * @method ScrollMagic.Scene#removePin
+		 * @example
+		 * // remove the pin from the scene without resetting it (the spacer is not removed)
+		 * scene.removePin();
+		 *
+		 * // remove the pin from the scene and reset the pin element to its initial position (spacer is removed)
+		 * scene.removePin(true);
+		 *
+		 * @param {boolean} [reset=false] - If `false` the spacer will not be removed and the element's position will not be reset.
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.removePin = function (reset) {
+			if (_pin) {
+				if (_state === SCENE_STATE_DURING) {
+					updatePinState(true); // force unpin at position
+				}
+				if (reset || !_controller) { // if there's no controller no progress was made anyway...
+					var pinTarget = _pinOptions.spacer.firstChild; // usually the pin element, but may be another spacer (cascaded pins)...
+					if (pinTarget.hasAttribute(PIN_SPACER_ATTRIBUTE)) { // copy margins to child spacer
+						var
+						style = _pinOptions.spacer.style,
+							values = ["margin", "marginLeft", "marginRight", "marginTop", "marginBottom"];
+						margins = {};
+						values.forEach(function (val) {
+							margins[val] = style[val] || "";
+						});
+						_util.css(pinTarget, margins);
+					}
+					_pinOptions.spacer.parentNode.insertBefore(pinTarget, _pinOptions.spacer);
+					_pinOptions.spacer.parentNode.removeChild(_pinOptions.spacer);
+					if (!_pin.parentNode.hasAttribute(PIN_SPACER_ATTRIBUTE)) { // if it's the last pin for this element -> restore inline styles
+						// TODO: only correctly set for first pin (when cascading) - how to fix?
+						_util.css(_pin, _pin.___origStyle);
+						delete _pin.___origStyle;
+					}
+				}
+				window.removeEventListener('scroll', updatePinInContainer);
+				window.removeEventListener('resize', updatePinInContainer);
+				window.removeEventListener('resize', updateRelativePinSpacer);
+				_pin.removeEventListener("mousewheel", onMousewheelOverPin);
+				_pin.removeEventListener("DOMMouseScroll", onMousewheelOverPin);
+				_pin = undefined;
+				log(3, "removed pin (reset: " + (reset ? "true" : "false") + ")");
+			}
+			return Scene;
+		};
+
+
+		var
+		_cssClasses, _cssClassElems = [];
+
+		Scene.on("destroy.internal", function (e) {
+			Scene.removeClassToggle(e.reset);
+		});
+		/**
+		 * Define a css class modification while the scene is active.  
+		 * When the scene triggers the classes will be added to the supplied element and removed, when the scene is over.
+		 * If the scene duration is 0 the classes will only be removed if the user scrolls back past the start position.
+		 * @method ScrollMagic.Scene#setClassToggle
+		 * @example
+		 * // add the class 'myclass' to the element with the id 'my-elem' for the duration of the scene
+		 * scene.setClassToggle("#my-elem", "myclass");
+		 *
+		 * // add multiple classes to multiple elements defined by the selector '.classChange'
+		 * scene.setClassToggle(".classChange", "class1 class2 class3");
+		 *
+		 * @param {(string|object)} element - A Selector targeting one or more elements or a DOM object that is supposed to be modified.
+		 * @param {string} classes - One or more Classnames (separated by space) that should be added to the element during the scene.
+		 *
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.setClassToggle = function (element, classes) {
+			var elems = _util.get.elements(element);
+			if (elems.length === 0 || !_util.type.String(classes)) {
+				log(1, "ERROR calling method 'setClassToggle()': Invalid " + (elems.length === 0 ? "element" : "classes") + " supplied.");
+				return Scene;
+			}
+			if (_cssClassElems.length > 0) {
+				// remove old ones
+				Scene.removeClassToggle();
+			}
+			_cssClasses = classes;
+			_cssClassElems = elems;
+			Scene.on("enter.internal_class leave.internal_class", function (e) {
+				var toggle = e.type === "enter" ? _util.addClass : _util.removeClass;
+				_cssClassElems.forEach(function (elem, key) {
+					toggle(elem, _cssClasses);
+				});
+			});
+			return Scene;
+		};
+
+		/**
+		 * Remove the class binding from the scene.
+		 * @method ScrollMagic.Scene#removeClassToggle
+		 * @example
+		 * // remove class binding from the scene without reset
+		 * scene.removeClassToggle();
+		 *
+		 * // remove class binding and remove the changes it caused
+		 * scene.removeClassToggle(true);
+		 *
+		 * @param {boolean} [reset=false] - If `false` and the classes are currently active, they will remain on the element. If `true` they will be removed.
+		 * @returns {Scene} Parent object for chaining.
+		 */
+		this.removeClassToggle = function (reset) {
+			if (reset) {
+				_cssClassElems.forEach(function (elem, key) {
+					_util.removeClass(elem, _cssClasses);
+				});
+			}
+			Scene.off("start.internal_class end.internal_class");
+			_cssClasses = undefined;
+			_cssClassElems = [];
+			return Scene;
+		};
+
+		// INIT
+		construct();
+		return Scene;
+	};
+
+	// store pagewide scene options
+	var SCENE_OPTIONS = {
+		defaults: {
+			duration: 0,
+			offset: 0,
+			triggerElement: undefined,
+			triggerHook: 0.5,
+			reverse: true,
+			loglevel: 2
+		},
+		validate: {
+			offset: function (val) {
+				val = parseFloat(val);
+				if (!_util.type.Number(val)) {
+					throw ["Invalid value for option \"offset\":", val];
+				}
+				return val;
+			},
+			triggerElement: function (val) {
+				val = val || undefined;
+				if (val) {
+					var elem = _util.get.elements(val)[0];
+					if (elem) {
+						val = elem;
+					} else {
+						throw ["Element defined in option \"triggerElement\" was not found:", val];
+					}
+				}
+				return val;
+			},
+			triggerHook: function (val) {
+				var translate = {
+					"onCenter": 0.5,
+					"onEnter": 1,
+					"onLeave": 0
+				};
+				if (_util.type.Number(val)) {
+					val = Math.max(0, Math.min(parseFloat(val), 1)); //  make sure its betweeen 0 and 1
+				} else if (val in translate) {
+					val = translate[val];
+				} else {
+					throw ["Invalid value for option \"triggerHook\": ", val];
+				}
+				return val;
+			},
+			reverse: function (val) {
+				return !!val; // force boolean
+			},
+			loglevel: function (val) {
+				val = parseInt(val);
+				if (!_util.type.Number(val) || val < 0 || val > 3) {
+					throw ["Invalid value for option \"loglevel\":", val];
+				}
+				return val;
+			}
+		},
+		// holder for  validation methods. duration validation is handled in 'getters-setters.js'
+		shifts: ["duration", "offset", "triggerHook"],
+		// list of options that trigger a `shift` event
+	};
+/*
+ * method used to add an option to ScrollMagic Scenes.
+ * TODO: DOC (private for dev)
+ */
+	ScrollMagic.Scene.addOption = function (name, defaultValue, validationCallback, shifts) {
+		if (!(name in SCENE_OPTIONS.defaults)) {
+			SCENE_OPTIONS.defaults[name] = defaultValue;
+			SCENE_OPTIONS.validate[name] = validationCallback;
+			if (shifts) {
+				SCENE_OPTIONS.shifts.push(name);
+			}
+		} else {
+			ScrollMagic._util.log(1, "[static] ScrollMagic.Scene -> Cannot add Scene option '" + name + "', because it already exists.");
+		}
+	};
+	// instance extension function for plugins
+	// TODO: DOC (private for dev)
+	ScrollMagic.Scene.extend = function (extension) {
+		var oldClass = this;
+		ScrollMagic.Scene = function () {
+			oldClass.apply(this, arguments);
+			this.$super = _util.extend({}, this); // copy parent state
+			return extension.apply(this, arguments) || this;
+		};
+		_util.extend(ScrollMagic.Scene, oldClass); // copy properties
+		ScrollMagic.Scene.prototype = oldClass.prototype; // copy prototype
+		ScrollMagic.Scene.prototype.constructor = ScrollMagic.Scene; // restore constructor
+	};
+
+
+	/**
+	 * TODO: DOCS (private for dev)
+	 * @class
+	 * @private
+	 */
+
+	ScrollMagic.Event = function (type, namespace, target, vars) {
+		vars = vars || {};
+		for (var key in vars) {
+			this[key] = vars[key];
+		}
+		this.type = type;
+		this.target = this.currentTarget = target;
+		this.namespace = namespace || '';
+		this.timeStamp = this.timestamp = Date.now();
+		return this;
+	};
+
+/*
+ * TODO: DOCS (private for dev)
+ */
+
+	var _util = ScrollMagic._util = (function (window) {
+		var U = {},
+			i;
+
+		/**
+		 * ------------------------------
+		 * internal helpers
+		 * ------------------------------
+		 */
+
+		// parse float and fall back to 0.
+		var floatval = function (number) {
+			return parseFloat(number) || 0;
+		};
+		// get current style IE safe (otherwise IE would return calculated values for 'auto')
+		var _getComputedStyle = function (elem) {
+			return elem.currentStyle ? elem.currentStyle : window.getComputedStyle(elem);
+		};
+
+		// get element dimension (width or height)
+		var _dimension = function (which, elem, outer, includeMargin) {
+			elem = (elem === document) ? window : elem;
+			if (elem === window) {
+				includeMargin = false;
+			} else if (!_type.DomElement(elem)) {
+				return 0;
+			}
+			which = which.charAt(0).toUpperCase() + which.substr(1).toLowerCase();
+			var dimension = (outer ? elem['offset' + which] || elem['outer' + which] : elem['client' + which] || elem['inner' + which]) || 0;
+			if (outer && includeMargin) {
+				var style = _getComputedStyle(elem);
+				dimension += which === 'Height' ? floatval(style.marginTop) + floatval(style.marginBottom) : floatval(style.marginLeft) + floatval(style.marginRight);
+			}
+			return dimension;
+		};
+		// converts 'margin-top' into 'marginTop'
+		var _camelCase = function (str) {
+			return str.replace(/^[^a-z]+([a-z])/g, '$1').replace(/-([a-z])/g, function (g) {
+				return g[1].toUpperCase();
+			});
+		};
+
+		/**
+		 * ------------------------------
+		 * external helpers
+		 * ------------------------------
+		 */
+
+		// extend obj – same as jQuery.extend({}, objA, objB)
+		U.extend = function (obj) {
+			obj = obj || {};
+			for (i = 1; i < arguments.length; i++) {
+				if (!arguments[i]) {
+					continue;
+				}
+				for (var key in arguments[i]) {
+					if (arguments[i].hasOwnProperty(key)) {
+						obj[key] = arguments[i][key];
+					}
+				}
+			}
+			return obj;
+		};
+
+		// check if a css display type results in margin-collapse or not
+		U.isMarginCollapseType = function (str) {
+			return ["block", "flex", "list-item", "table", "-webkit-box"].indexOf(str) > -1;
+		};
+
+		// implementation of requestAnimationFrame
+		// based on https://gist.github.com/paulirish/1579671
+		var
+		lastTime = 0,
+			vendors = ['ms', 'moz', 'webkit', 'o'];
+		var _requestAnimationFrame = window.requestAnimationFrame;
+		var _cancelAnimationFrame = window.cancelAnimationFrame;
+		// try vendor prefixes if the above doesn't work
+		for (i = 0; !_requestAnimationFrame && i < vendors.length; ++i) {
+			_requestAnimationFrame = window[vendors[i] + 'RequestAnimationFrame'];
+			_cancelAnimationFrame = window[vendors[i] + 'CancelAnimationFrame'] || window[vendors[i] + 'CancelRequestAnimationFrame'];
+		}
+
+		// fallbacks
+		if (!_requestAnimationFrame) {
+			_requestAnimationFrame = function (callback) {
+				var
+				currTime = new Date().getTime(),
+					timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+					id = window.setTimeout(function () {
+						callback(currTime + timeToCall);
+					}, timeToCall);
+				lastTime = currTime + timeToCall;
+				return id;
+			};
+		}
+		if (!_cancelAnimationFrame) {
+			_cancelAnimationFrame = function (id) {
+				window.clearTimeout(id);
+			};
+		}
+		U.rAF = _requestAnimationFrame.bind(window);
+		U.cAF = _cancelAnimationFrame.bind(window);
+
+		var
+		loglevels = ["error", "warn", "log"],
+			console = window.console || {};
+
+		console.log = console.log ||
+		function () {}; // no console log, well - do nothing then...
+		// make sure methods for all levels exist.
+		for (i = 0; i < loglevels.length; i++) {
+			var method = loglevels[i];
+			if (!console[method]) {
+				console[method] = console.log; // prefer .log over nothing
+			}
+		}
+		U.log = function (loglevel) {
+			if (loglevel > loglevels.length || loglevel <= 0) loglevel = loglevels.length;
+			var now = new Date(),
+				time = ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2) + ":" + ("0" + now.getSeconds()).slice(-2) + ":" + ("00" + now.getMilliseconds()).slice(-3),
+				method = loglevels[loglevel - 1],
+				args = Array.prototype.splice.call(arguments, 1),
+				func = Function.prototype.bind.call(console[method], console);
+			args.unshift(time);
+			func.apply(console, args);
+		};
+
+		/**
+		 * ------------------------------
+		 * type testing
+		 * ------------------------------
+		 */
+
+		var _type = U.type = function (v) {
+			return Object.prototype.toString.call(v).replace(/^\[object (.+)\]$/, "$1").toLowerCase();
+		};
+		_type.String = function (v) {
+			return _type(v) === 'string';
+		};
+		_type.Function = function (v) {
+			return _type(v) === 'function';
+		};
+		_type.Array = function (v) {
+			return Array.isArray(v);
+		};
+		_type.Number = function (v) {
+			return !_type.Array(v) && (v - parseFloat(v) + 1) >= 0;
+		};
+		_type.DomElement = function (o) {
+			return (
+			typeof HTMLElement === "object" ? o instanceof HTMLElement : //DOM2
+			o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName === "string");
+		};
+
+		/**
+		 * ------------------------------
+		 * DOM Element info
+		 * ------------------------------
+		 */
+		// always returns a list of matching DOM elements, from a selector, a DOM element or an list of elements or even an array of selectors
+		var _get = U.get = {};
+		_get.elements = function (selector) {
+			var arr = [];
+			if (_type.String(selector)) {
+				try {
+					selector = document.querySelectorAll(selector);
+				} catch (e) { // invalid selector
+					return arr;
+				}
+			}
+			if (_type(selector) === 'nodelist' || _type.Array(selector)) {
+				for (var i = 0, ref = arr.length = selector.length; i < ref; i++) { // list of elements
+					var elem = selector[i];
+					arr[i] = _type.DomElement(elem) ? elem : _get.elements(elem); // if not an element, try to resolve recursively
+				}
+			} else if (_type.DomElement(selector) || selector === document || selector === window) {
+				arr = [selector]; // only the element
+			}
+			return arr;
+		};
+		// get scroll top value
+		_get.scrollTop = function (elem) {
+			return (elem && typeof elem.scrollTop === 'number') ? elem.scrollTop : window.pageYOffset || 0;
+		};
+		// get scroll left value
+		_get.scrollLeft = function (elem) {
+			return (elem && typeof elem.scrollLeft === 'number') ? elem.scrollLeft : window.pageXOffset || 0;
+		};
+		// get element height
+		_get.width = function (elem, outer, includeMargin) {
+			return _dimension('width', elem, outer, includeMargin);
+		};
+		// get element width
+		_get.height = function (elem, outer, includeMargin) {
+			return _dimension('height', elem, outer, includeMargin);
+		};
+
+		// get element position (optionally relative to viewport)
+		_get.offset = function (elem, relativeToViewport) {
+			var offset = {
+				top: 0,
+				left: 0
+			};
+			if (elem && elem.getBoundingClientRect) { // check if available
+				var rect = elem.getBoundingClientRect();
+				offset.top = rect.top;
+				offset.left = rect.left;
+				if (!relativeToViewport) { // clientRect is by default relative to viewport...
+					offset.top += _get.scrollTop();
+					offset.left += _get.scrollLeft();
+				}
+			}
+			return offset;
+		};
+
+		/**
+		 * ------------------------------
+		 * DOM Element manipulation
+		 * ------------------------------
+		 */
+
+		U.addClass = function (elem, classname) {
+			if (classname) {
+				if (elem.classList) elem.classList.add(classname);
+				else elem.className += ' ' + classname;
+			}
+		};
+		U.removeClass = function (elem, classname) {
+			if (classname) {
+				if (elem.classList) elem.classList.remove(classname);
+				else elem.className = elem.className.replace(new RegExp('(^|\\b)' + classname.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
+			}
+		};
+		// if options is string -> returns css value
+		// if options is array -> returns object with css value pairs
+		// if options is object -> set new css values
+		U.css = function (elem, options) {
+			if (_type.String(options)) {
+				return _getComputedStyle(elem)[_camelCase(options)];
+			} else if (_type.Array(options)) {
+				var
+				obj = {},
+					style = _getComputedStyle(elem);
+				options.forEach(function (option, key) {
+					obj[option] = style[_camelCase(option)];
+				});
+				return obj;
+			} else {
+				for (var option in options) {
+					var val = options[option];
+					if (val == parseFloat(val)) { // assume pixel for seemingly numerical values
+						val += 'px';
+					}
+					elem.style[_camelCase(option)] = val;
+				}
+			}
+		};
+
+		return U;
+	}(window || {}));
+
+	ScrollMagic.Scene.prototype.addIndicators = function () {
+		ScrollMagic._util.log(1, '(ScrollMagic.Scene) -> ERROR calling addIndicators() due to missing Plugin \'debug.addIndicators\'. Please make sure to include plugins/debug.addIndicators.js');
+		return this;
+	}
+	ScrollMagic.Scene.prototype.removeIndicators = function () {
+		ScrollMagic._util.log(1, '(ScrollMagic.Scene) -> ERROR calling removeIndicators() due to missing Plugin \'debug.addIndicators\'. Please make sure to include plugins/debug.addIndicators.js');
+		return this;
+	}
+	ScrollMagic.Scene.prototype.setTween = function () {
+		ScrollMagic._util.log(1, '(ScrollMagic.Scene) -> ERROR calling setTween() due to missing Plugin \'animation.gsap\'. Please make sure to include plugins/animation.gsap.js');
+		return this;
+	}
+	ScrollMagic.Scene.prototype.removeTween = function () {
+		ScrollMagic._util.log(1, '(ScrollMagic.Scene) -> ERROR calling removeTween() due to missing Plugin \'animation.gsap\'. Please make sure to include plugins/animation.gsap.js');
+		return this;
+	}
+	ScrollMagic.Scene.prototype.setVelocity = function () {
+		ScrollMagic._util.log(1, '(ScrollMagic.Scene) -> ERROR calling setVelocity() due to missing Plugin \'animation.velocity\'. Please make sure to include plugins/animation.velocity.js');
+		return this;
+	}
+	ScrollMagic.Scene.prototype.removeVelocity = function () {
+		ScrollMagic._util.log(1, '(ScrollMagic.Scene) -> ERROR calling removeVelocity() due to missing Plugin \'animation.velocity\'. Please make sure to include plugins/animation.velocity.js');
+		return this;
+	}
+
+	return ScrollMagic;
+}));
+},{}],163:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -21143,7 +26493,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":162,"reduce":163}],162:[function(require,module,exports){
+},{"emitter":164,"reduce":165}],164:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -21309,7 +26659,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],163:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.

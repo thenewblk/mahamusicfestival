@@ -19,6 +19,14 @@ var Band = React.createClass({
         backgroundImage: 'url(' + self.state.band.meta.background_image.url + ')',
       };
 
+      var news = self.props.news.map(function(object){
+        return <div className="news_item">
+                  <h3 className="news_title"><a href={object.meta.link_url} target="_blank">{object.title}</a></h3>
+                  <h5 className="news_source">{object.meta.source_name}</h5> 
+                </div>;
+
+      })
+
       return (
         <div className="band_card">
         	<div className="band_top" style={topImage}>
@@ -26,19 +34,23 @@ var Band = React.createClass({
         	</div>
         	<div className="band_content">
         		<div className="info">
-        			<p>{self.state.band.meta.genre}</p>
-        			<p>{self.state.band.meta.record_label}</p>
-        			<p>{self.state.band.meta.hometown}</p>
-        			<p className="band_link"><a href={self.state.band.meta.url_link}>{self.state.band.meta.url_title}</a></p>
+        			{ self.state.band.meta.genre ? <p>{self.state.band.meta.genre}</p> : null }
+        			{ self.state.band.meta.record_label ? <p>{self.state.band.meta.record_label}</p> : null }
+        			{ self.state.band.meta.hometown ? <p>{self.state.band.meta.hometown}</p> : null }
+        			{ (self.state.band.meta.url_link && self.state.band.meta.url_title) ? <p className="band_link"><a href={self.state.band.meta.url_link}>{self.state.band.meta.url_title}</a></p> : null }
         		</div>
-        		<div className="video">
-              <div className="video-wrapper">
-                <iframe src={self.state.band.meta.video_link} frameBorder="0" allowfullscreen></iframe>
-              </div>
-        		</div>
-        		<div className="news">
-        			<p>news</p>
-        		</div>
+            { self.state.band.meta.video_link ?
+          		<div className="video">
+                <div className="video-wrapper">
+                  <iframe src={self.state.band.meta.video_link} frameBorder="0" allowfullscreen></iframe>
+                </div>
+          		</div>
+            : null }
+            { news ?
+          		<div className="news">
+          			{news}
+          		</div>
+            : null }
         	</div>
         </div>
       )
