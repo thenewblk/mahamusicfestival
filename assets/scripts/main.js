@@ -22,22 +22,6 @@
     // All pages
     'common': {
       init: function() {
-        $('.mobile_click').click(function(){
-          $('.mobile_menu').addClass('up');
-        });
-        $('.mobile_close').click(function(){
-          $('.mobile_menu').removeClass('up');
-        });
-
-        $('.close_button').click(function(){
-          $('body').removeClass('omaha_gives');
-        });
-
-        // setTimeout(
-          // function() 
-          // {
-          //   $( "body" ).addClass( 'omaha_gives' );
-          // }, 2000); 
       },
       finalize: function() {
         // JavaScript to be fired on all pages, after page specific JS is fired

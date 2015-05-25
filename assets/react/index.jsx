@@ -4,136 +4,118 @@
 
 var React = require('react'),
     request = require('superagent');
+    ScrollMagic = require('scrollmagic');
 
 var Header = require('./header.jsx'),
 	Band = require('./band.jsx'),
 	Lineup = require('./lineup.jsx'),
-	Tickets = require('./tickets.jsx');
+	Tickets = require('./tickets.jsx'),
+	Festival = require('./festival.jsx'),
+	TopSection = require('./topsection.jsx'),
+	SummerSeries = require('./summerseries.jsx'),
+	FYI = require('./fyi.jsx'),
+	Sponsors = require('./sponsors.jsx'),
+	Menu = require('./menu.jsx'),
+	GetInvolved = require('./getinvolved.jsx'),
+	OmahaGives = require('./omaha_gives.jsx'),
+	InstagramFeed = require('./instagramfeed.jsx');
 
-
-var TopMenu = React.createClass({  
+var Website = React.createClass({  
 	getInitialState: function(){
-		return { lineup: false, tickets: false, content: null };
+		return { body: false, menu: null, windowWidth: window.innerWidth }
 	},
-
-	componentWillMount: function(){
-	},
-
 	componentDidMount: function(){
-		window.addEventListener('scroll', this.handleScroll);
+		// window.addEventListener('scroll', this.handleScroll);
+		// window.addEventListener('resize', this.handleResize);
+
+		var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
+	    var top = new ScrollMagic.Scene({
+	                triggerElement: ".top-tape",
+	                offset: 100 
+	            })
+	            .setClassToggle("body", "orange-open")
+	            .addTo(controller);  
 	},
 
-	handleScroll: function(event) {
-		this.setState({content: null, lineup: false, tickets: false})
+	// handleResize: function(e) {
+	// 	this.setState({windowWidth: window.innerWidth});
+	// },
+
+	// handleScroll: function(event) {
+		// var self = this;
+		// var node = React.findDOMNode(self.refs.website);
+		// console.log("node: " + JSON.stringify(node)); 
+		// console.log("node.scrollTop: " + node.scrollTop);
+		// console.log("node.scrollHeight: " + node.scrollHeight);
+		// console.log("$(document).scrollTop(): " + $(document).scrollTop());
+
+		// if (self.state.windowWidth > 480) {
+
+		// 	this.setState({menu: 'scrolled'});  
+		// }
+	// }, 
+
+	bodyClass: function(){
+		this.setState({body: !this.state.body});
 	},
 
-	toggleLineup: function() {
-		var self = this;
-		if ( self.state.lineup ) {
-			var content = null;
-			self.setState({lineup: false, content: content})
-		} else {
-			var content = <Lineup lineup={self.toggleLineup}/>;
-			self.setState({lineup: true, content: content, tickets: false})
-		}
+	openBody: function(){
+		this.setState({body: true});
 	},
 
-	toggleTickets: function() {
-		var self = this;
-		if ( self.state.tickets ) {
-			var content = null;
-			self.setState({tickets: false, content: content})
-		} else {
-			var content = <Tickets tickets={self.toggleTickets}/>;
-			self.setState({tickets: true, content: content, lineup: false})
-		}
+	closeBody: function(){
+		this.setState({body: false});
 	},
 
+	setMenu: function(string){
+		this.setState({menu: string}); 
+	},
+
+	clearMenu: function(){
+		this.setState({menu: null});
+	},
+ 
 	render: function() {
 		var self = this;
+		var body = self.state.body;
 
-		var content = self.state.content;
-		if (content) {
-			var content_class = "top_container";
+		var menu = self.state.menu;
+
+		if (body) {
+			var body_class = "website topdrawer";
 		} else {
-			var content_class = "top_container hidden";
+			var body_class = "website";
 		}
-
 		return (
-			<div className="top-menu">
-				<Header lineup={self.toggleLineup} tickets={self.toggleTickets} />
-
-				<div className={content_class}>{ content }</div>
-
+			<div className={body_class} ref="website">
+				<Menu body={self.bodyClass} close_body={self.closeBody} open_body={self.openBody} open={ menu } clear_menu={ self.clearMenu }/>
+				<div className="orangebar">
+					<div className="orange-wrapper">
+						<img className="schnakel-black" src="/wp-content/themes/maha2015.v2.2/dist/images/schnakel-black.png" />
+						<img className="orange-middle" src="/wp-content/themes/maha2015.v2.2/dist/images/schnackel-bar.png" />
+					</div>
+				</div>
+				<TopSection open_menu={ self.setMenu } />
+				<SummerSeries />
+				<InstagramFeed />
+				<FYI />
+				<Sponsors />
+				<GetInvolved />
+				<div className="social">
+					<a href="https://twitter.com/mahafestival" target="_blank" className="link"><img src="/wp-content/themes/maha2015.v2.2/dist/images/twitter-04.svg" /></a>
+					<a href="https://www.facebook.com/MahaMusicFestival" target="_blank" className="link"><img src="/wp-content/themes/maha2015.v2.2/dist/images/facebook-05.svg" /></a>
+					<a href="https://instagram.com/mahamusicfest/" target="_blank" className="link"><img src="/wp-content/themes/maha2015.v2.2/dist/images/instagram-06.svg" /></a>
+					<a href="mailto:info@mahamusicfestival.com" target="_blank" className="link"><img src="/wp-content/themes/maha2015.v2.2/dist/images/mail-07.svg" /></a>
+				</div>
 			</div>
 		)
 	}
 });
 
+function hasClass(ele,cls) {
+     return ele.className.match(new RegExp('(\\s|^)'+cls+'(\\s|$)'));
+}
 
-var Sponsors = React.createClass({  
-	getInitialState: function(){
-		return { sponsors: [] };
-	},
-
-	componentWillMount: function(){
-		this.loadSponsors();
-	},
-
-	loadSponsors: function(){
-	    var self = this;
-	      request
-	        .get('http://www.mahamusicfestival.com/wp-json/posts')
-	        .query('type[]=sponsor&filter[posts_per_page]=-1')
-	        .end(function(err, res) {
-	      if (res.ok) {
-	        var sponsors = res.body;
-	        console.log(sponsors);
-	        self.setState({sponsors: sponsors});
-
-	      } else {
-	        console.log('Oh no! error ' + res.text);
-	      }
-	        }.bind(self));  
-	  },
-
-	render: function() {
-		var self = this;
-
-		var sponsors = self.state.sponsors.map(function(object){
-			return <img className="spimage" src={object.meta.image.url} />
-		});
-
-		var tier = [];
-		for (var i=1; i < 8; i++) {
-			tier[i] = self.state.sponsors.filter(function(object){
-				return object.meta.tier == i.toString();
-			});
-		}
-
-		var sponsors = [];
-		for (var i=1; i < 8; i++) {
-			sponsors[i] = tier[i].map(function(object){
-				return <img className="spimage" src={object.meta.image.url} />
-			});
-		}
-
-		return (
-			<div className="sponsors_list">
-				<img className="sponsors_title" src="/wp-content/themes/maha2015.v2.1/svg/sponsors.svg" />
-					<p className="sponsors_copy">We`re grateful to our partners who make Maha possible. To join this mix and support the party that makes Omaha proud, contact us at <a href="mailto:sponsor@mahamusicfestival.com">sponsor@mahamusicfestival.com</a>. </p>
-				<div className="sponsors_tier">{ sponsors[1] }</div>
-				<div className="sponsors_tier">{ sponsors[2] }</div>
-				<div className="sponsors_tier">{ sponsors[3] }</div>
-				<div className="sponsors_tier">{ sponsors[4] }</div>
-				<div className="sponsors_tier">{ sponsors[5] }</div>
-				<div className="sponsors_tier">{ sponsors[6] }</div>
-				<div className="sponsors_tier">{ sponsors[7] }</div>
-			</div>
-		)
-	}
-});
-
-React.render(<TopMenu />, document.getElementById('menu')); 
-
-React.render(<Sponsors />, document.getElementById('sponsors')); 
+if(hasClass(document.body, "home")){
+	React.render(<Website />, document.body);
+}

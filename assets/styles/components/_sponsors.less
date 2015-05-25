@@ -1,37 +1,44 @@
 .sponsors_tier {
+	font-size: 0;
+	img.spimage:first-child {
+		// border-left: 1px solid rgba(191,163,120,0.5);
+	}
 	img.spimage {
-		display: inline;
+		display: inline-block;
 		width: 200px;
-		height:100px;
-		margin: 10px;
+		height: 100px;
+		padding: 10px 20px;
+		border: 1px solid rgba(191,163,120,0.5);
+		// border-left: none;
 	}
 }
 
 
 .sponsor-section {
-	background: url(/wp-content/themes/maha2015.v2.1/dist/images/pattern.png) #000;
+	background: url(/wp-content/themes/maha2015.v2.2/dist/images/pattern.png) #000; 
 	color: white;
+	padding-bottom: 1px!important;
 }
 
 .sponsors_tier {
-	border-bottom: solid 1px rgba(191,163,120,0.5);
+	// border-bottom: solid 1px rgba(191,163,120,0.5);
 	margin: auto;
 	text-align: center;
 	padding: 15px;
 	max-width: 1200px;
+	&.media-title {
+		color: @tan;
+		z-index: 1;
+		position: relative;
+		font-size: 30px;
+		font-family: 'Gotham Cond A','Gotham Cond B';
+		font-weight: 400;
+		font-style: normal;
+	}
 }
 
 .sponsors_tier:last-child {
 	border: none;
-}
-
-.sponsors_tier:nth-child(3) {
-	img.spimage {
-		display: inline;
-		width: 400px;
-		height:200px;
-		margin: 10px;
-	}
 }
 
 .underline {

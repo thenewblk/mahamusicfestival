@@ -1,17 +1,28 @@
 // ## Globals
-/*global $:true*/
-var $           = require('gulp-load-plugins')();
-var argv        = require('minimist')(process.argv.slice(2));
-var browserSync = require('browser-sync');
-var gulp        = require('gulp');
-var lazypipe    = require('lazypipe');
-var merge       = require('merge-stream');
-var runSequence = require('run-sequence');
+var argv         = require('minimist')(process.argv.slice(2));
+var autoprefixer = require('gulp-autoprefixer');
+var browserSync  = require('browser-sync').create();
+var changed      = require('gulp-changed');
+var concat       = require('gulp-concat');
+var flatten      = require('gulp-flatten');
+var gulp         = require('gulp');
+var gulpif       = require('gulp-if');
+var imagemin     = require('gulp-imagemin');
+var jshint       = require('gulp-jshint');
+var lazypipe     = require('lazypipe');
+var less         = require('gulp-less');
+var merge        = require('merge-stream');
+var minifyCss    = require('gulp-minify-css');
+var plumber      = require('gulp-plumber');
+var rev          = require('gulp-rev');
+var runSequence  = require('run-sequence');
+var sass         = require('gulp-sass');
+var sourcemaps   = require('gulp-sourcemaps');
+var uglify       = require('gulp-uglify');
 
 var browserify = require('browserify'),
     gbrowserify = require('gulp-browserify'),
     reactify = require('reactify'),
-    uglify = require('gulp-uglify'),
     streamify = require('gulp-streamify'),
     source = require('vinyl-source-stream');
 
@@ -71,35 +82,42 @@ var revManifest = path.dist + 'assets.json';
 var cssTasks = function(filename) {
   return lazypipe()
     .pipe(function() {
-      return $.if(!enabled.failStyleTask, $.plumber());
+      return gulpif(!enabled.failStyleTask, plumber());
     })
     .pipe(function() {
-      return $.if(enabled.maps, $.sourcemaps.init());
-    })
-      .pipe(function() {
-        return $.if('*.less', $.less());
-      })
-      .pipe(function() {
-        return $.if('*.scss', $.sass({
-          outputStyle: 'nested', // libsass doesn't support expanded yet
-          precision: 10,
-          includePaths: ['.'],
-          errLogToConsole: !enabled.failStyleTask
-        }));
-      })
-      .pipe($.concat, filename)
-      .pipe($.autoprefixer, {
-        browsers: [
-          'last 2 versions', 'ie 8', 'ie 9', 'android 2.3', 'android 4',
-          'opera 12'
-        ]
-      })
-      .pipe($.minifyCss)
-    .pipe(function() {
-      return $.if(enabled.rev, $.rev());
+      return gulpif(enabled.maps, sourcemaps.init());
     })
     .pipe(function() {
-      return $.if(enabled.maps, $.sourcemaps.write('.'));
+      return gulpif('*.less', less());
+    })
+    .pipe(function() {
+      return gulpif('*.scss', sass({
+        outputStyle: 'nested', // libsass doesn't support expanded yet
+        precision: 10,
+        includePaths: ['.'],
+        errLogToConsole: !enabled.failStyleTask
+      }));
+    })
+    .pipe(concat, filename)
+    .pipe(autoprefixer, {
+      browsers: [
+        'last 2 versions',
+        'ie 8',
+        'ie 9',
+        'android 2.3',
+        'android 4',
+        'opera 12'
+      ]
+    })
+    .pipe(minifyCss, {
+      advanced: false,
+      rebase: false
+    })
+    .pipe(function() {
+      return gulpif(enabled.rev, rev());
+    })
+    .pipe(function() {
+      return gulpif(enabled.maps, sourcemaps.write('.'));
     })();
 };
 
@@ -113,15 +131,15 @@ var cssTasks = function(filename) {
 var jsTasks = function(filename) {
   return lazypipe()
     .pipe(function() {
-      return $.if(enabled.maps, $.sourcemaps.init());
+      return gulpif(enabled.maps, sourcemaps.init());
     })
-    .pipe($.concat, filename)
-    .pipe($.uglify)
+    .pipe(concat, filename)
+    .pipe(uglify)
     .pipe(function() {
-      return $.if(enabled.rev, $.rev());
+      return gulpif(enabled.rev, rev());
     })
     .pipe(function() {
-      return $.if(enabled.maps, $.sourcemaps.write('.'));
+      return gulpif(enabled.maps, sourcemaps.write('.'));
     })();
 };
 
@@ -131,10 +149,8 @@ var jsTasks = function(filename) {
 var writeToManifest = function(directory) {
   return lazypipe()
     .pipe(gulp.dest, path.dist + directory)
-    .pipe(function() {
-      return $.if('**/*.{js,css}', browserSync.reload({stream:true}));
-    })
-    .pipe($.rev.manifest, revManifest, {
+    .pipe(browserSync.stream, {match: '**/*.{js,css}'})
+    .pipe(rev.manifest, revManifest, {
       base: path.dist,
       merge: true
     })
@@ -185,20 +201,22 @@ gulp.task('scripts', function() {
 // structure. See: https://github.com/armed/gulp-flatten
 gulp.task('fonts', function() {
   return gulp.src(globs.fonts)
-    .pipe($.flatten())
-    .pipe(gulp.dest(path.dist + 'fonts'));
+    .pipe(flatten())
+    .pipe(gulp.dest(path.dist + 'fonts'))
+    .pipe(browserSync.stream());
 });
 
 // ### Images
 // `gulp images` - Run lossless compression on all the images.
 gulp.task('images', function() {
   return gulp.src(globs.images)
-    .pipe($.imagemin({
+    .pipe(imagemin({
       progressive: true,
       interlaced: true,
-      svgoPlugins: [{removeUnknownsAndDefaults: false}]
+      svgoPlugins: [{removeUnknownsAndDefaults: false}, {cleanupIDs: false}]
     }))
-    .pipe(gulp.dest(path.dist + 'images'));
+    .pipe(gulp.dest(path.dist + 'images'))
+    .pipe(browserSync.stream());
 });
 
 // ### JSHint
@@ -207,14 +225,26 @@ gulp.task('jshint', function() {
   return gulp.src([
     'bower.json', 'gulpfile.js'
   ].concat(project.js))
-    .pipe($.jshint())
-    .pipe($.jshint.reporter('jshint-stylish'))
-    .pipe($.jshint.reporter('fail'));
+    .pipe(jshint())
+    .pipe(jshint.reporter('jshint-stylish'))
+    .pipe(jshint.reporter('fail'));
 });
 
 // ### Clean
 // `gulp clean` - Deletes the build folder entirely.
 gulp.task('clean', require('del').bind(null, [path.dist]));
+
+// ### Reacts
+// `gulp` reacts - Compile and build React.js files.
+gulp.task('reacts', function(){
+
+    return browserify('./assets/react/index.jsx')
+        .transform(reactify)
+        .bundle()
+        .pipe(source('react.js'))
+        .pipe(gulp.dest('./assets/scripts/'));
+});
+
 
 // ### Watch
 // `gulp watch` - Use BrowserSync to proxy your dev server and synchronize code
@@ -223,22 +253,20 @@ gulp.task('clean', require('del').bind(null, [path.dist]));
 // build step for that asset and inject the changes into the page.
 // See: http://www.browsersync.io
 gulp.task('watch', function() {
-  browserSync({
+  browserSync.init({
+    files: ['{lib,templates}/**/*.php', '*.php'],
     proxy: config.devUrl,
     snippetOptions: {
       whitelist: ['/wp-admin/admin-ajax.php'],
       blacklist: ['/wp-admin/**']
     }
   });
-  gulp.watch([path.source + 'react/**/*'], ['build-reacts']);
+  gulp.watch([path.source + 'react/**/*'], ['reacts']);
   gulp.watch([path.source + 'styles/**/*'], ['styles']);
-  gulp.watch([path.source + 'scripts/**/*'], [ 'scripts']);
+  gulp.watch([path.source + 'scripts/**/*'], ['scripts']);
   gulp.watch([path.source + 'fonts/**/*'], ['fonts']);
   gulp.watch([path.source + 'images/**/*'], ['images']);
   gulp.watch(['bower.json', 'assets/manifest.json'], ['build']);
-  gulp.watch('**/*.php', function() {
-    browserSync.reload();
-  });
 });
 
 // ### Build
@@ -246,7 +274,7 @@ gulp.task('watch', function() {
 // Generally you should be running `gulp` instead of `gulp build`.
 gulp.task('build', function(callback) {
   runSequence('styles',
-              'build-reacts',
+              'reacts',
               'scripts',
               ['fonts', 'images'],
               callback);
@@ -259,8 +287,8 @@ gulp.task('wiredep', function() {
   var wiredep = require('wiredep').stream;
   return gulp.src(project.css)
     .pipe(wiredep())
-    .pipe($.changed(path.source + 'styles', {
-      hasChanged: $.changed.compareSha1Digest
+    .pipe(changed(path.source + 'styles', {
+      hasChanged: changed.compareSha1Digest
     }))
     .pipe(gulp.dest(path.source + 'styles'));
 });
@@ -269,13 +297,4 @@ gulp.task('wiredep', function() {
 // `gulp` - Run a complete build. To compile for production run `gulp --production`.
 gulp.task('default', ['clean'], function() {
   gulp.start('build');
-});
-
-gulp.task('build-reacts', function(){
-
-    return browserify('./assets/react/index.jsx')
-        .transform(reactify)
-        .bundle()
-        .pipe(source('react.js'))
-        .pipe(gulp.dest('./assets/scripts/'));
 });

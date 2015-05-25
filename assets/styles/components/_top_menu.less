@@ -20,10 +20,11 @@
 	  margin: auto;
 	  max-width: 675px;
 	  width: 100%;
+	  padding-bottom: 50px;
 	}
 	.tickets_container {
 		position: relative;
-		padding: 30px;
+		padding: 0 0 30px;
 	}
 	.tickets_wrap {
 	  display: table;
@@ -41,25 +42,8 @@
 	}
 }
 
-.scrolled {
-	.top-menu .top_container {
-		transition: 0.15s ease-out;
-		margin-top: -50px;
-		padding-top: 50px;
-		opacity: 1;
-		background: black;
-		width: 100%;
-	}
-	.top_container.hidden {
-		transition: 0.5s ease-out;
-		margin-top: -150px;
-		opacity: 0;
-	}
-}
-
-
 .close_band {
-	display: block;
+	display: table;
 	background: black;
 	color: @tan;
 	text-align: center;
@@ -68,6 +52,7 @@
 	line-height: 50px;
 	cursor: pointer;
 	transition: 0.15s ease-out;
+  	margin: auto;
 	&:hover {
 		color: @pink;
 	}
@@ -92,6 +77,11 @@
 
 .band_card {
 	background: @pink;
+	a, .news_title a {
+		border: none;
+		color: white;
+	}
+
 	.band_top {
 		background-size: cover;
 		background-position: center;
@@ -101,6 +91,7 @@
 		  	width: 400px;
 		  	display: table;
 		  	margin: 0 auto;
+		  	max-width: 100%;
 		}
 	}
 	.band_content {
@@ -111,13 +102,20 @@
 		max-width: 1000px;
 		margin: auto;
 		color: white;
-		padding: 15px;
+		padding: 15px 15px 50px;
+		
 		.video {
 			width: 40%;
 		}
 		.info, .video, .news {
 			display: table-cell;
 			vertical-align: top;
+		}
+		.info, .news {
+			padding: 0 15px;
+		}
+		.info {
+			min-width: 275px;
 		}
 		p {
 			font-family: 'Gotham Cond A', 'Gotham Cond B';
@@ -132,7 +130,7 @@
 			text-transform: none;
 			margin: 0;
 			.news_item {
-				padding: 10px 30px;
+				padding: 10px 0;
 				margin: 0 10px 10px;
 				border-top: 1px solid @tan;
 				border-bottom: 1px solid @tan;
@@ -181,6 +179,9 @@
 	p.band_link {
 		font-weight: bold;
 		font-size: 18px;
+		a {
+			color: white;
+		}
 	}
 }
 
@@ -198,6 +199,7 @@
 	.header_container {
 		max-width: 1000px;
 		margin: auto;
+		position: relative;
 	}
 	.link {
 		transition: 0.15s ease-in;
@@ -210,7 +212,9 @@
 		color: white;
 	}
 	.right_header {
-		float: right;
+		position: absolute;
+		top: 0;
+		right: 0;
 	}
 	.small_bird_logo {
 		opacity: 0;
@@ -221,6 +225,10 @@
 		position: absolute;
 		left: 50%;
 		margin-left: -25px;
+		top: 0;
+	}
+	.mobile_header {
+		display: none;
 	}
 }
 
@@ -228,21 +236,37 @@
 	position: relative;
 }
 
-.scrolled .header {
-	background: @tan;
-	color: black;
-	height: 50px;
-	.link {
-		line-height: 50px;
-		color: black;
-		margin: 0 20px;
-	}
-	.link:hover {
-		color: white;
-	}
-	.small_bird_logo {
+.scrolled {
+	.top-menu .top_container {
+		transition: 0.15s ease-out;
+		margin-top: -50px;
+		padding-top: 50px;
 		opacity: 1;
-		margin-top: 0px;
+		background: black;
+		width: 100%;
+	}
+	.top_container.hidden {
+		transition: 0.5s ease-out;
+		margin-top: -150px;
+		opacity: 0;
+	}
+
+	.header {
+		background: @darktan;
+		color: black;
+		height: 50px;
+		.link {
+			line-height: 50px;
+			color: black;
+			margin: 0 20px;
+		}
+		.link:hover {
+			color: white;
+		}
+		.small_bird_logo {
+			opacity: 1;
+			margin-top: 0px;
+		}
 	}
 }
 
@@ -251,7 +275,7 @@
 }
 
 .band_lineup_link.tan {
-	fill: @tan;
+	fill: @darktan;
 	background: @pink;
 	transition: 0.15s ease-out;
 	cursor: pointer;
@@ -270,4 +294,96 @@
 
 .band_lineup_link:hover {
 	fill: white;
+}
+
+.lineup_controller {
+	max-width: 1000px;
+	margin: auto;
+	position: relative;
+}
+
+.previous_band, .next_band {
+	color: @tan;
+	width: 70px;
+	position: relative;
+	display: inline-block;
+	position: absolute;
+	top: 0;
+	line-height: 50px;
+	cursor: pointer;
+	transition: 0.15s ease-in;
+	padding: 5px 15px;
+	svg {
+		fill: @tan;
+		width: 100%;
+		transition: 0.15s ease-in;
+	}
+	&:hover{
+		svg {
+			fill: @pink;
+		}
+	}
+}
+
+.previous_band {
+	left: 15px;
+}
+
+.next_band {
+	right: 15px;
+}
+
+.orangebar {
+	background: @pink;
+	position: fixed;
+	top: -150px;
+	width: 100%;
+	height: 55px;
+	z-index: 11;
+	padding: 6px 0 0;
+	transition: 0.3s ease-out;
+	.orange-wrapper {
+		max-width: 1000px;
+		margin: auto;
+		position: relative;
+	}
+	.schnakel-black {
+		position: absolute;
+		left: 0;
+	}
+	.orange-middle {
+		display: table; 
+		margin: auto;
+	}
+}
+
+.orange-open {
+	.orangebar {
+		top: 50px;
+	}
+}
+
+.festival_wrap {
+	max-width: 1000px;
+	margin: auto;
+	.scroll-link {
+		position: relative;
+		display: inline-block;
+		vertical-align: middle;
+		margin: 0 20px;
+		img {
+			height: 50px;
+			max-width: 100%;
+		}
+		&.about, &.sponsors{ 
+			img {
+				height: 35px;
+			}
+		}
+		&.instagram, &.getinvolved { 
+			img {
+				height: 30px;
+			}
+		}
+	}
 }

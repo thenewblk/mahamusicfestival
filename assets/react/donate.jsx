@@ -17,8 +17,8 @@ var Donate = React.createClass({
 		    		
 					<div className="donate_wrap">
 						<span className="close_donate" onClick={self.toggleDonate}>×</span>
-						<a href="http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=4383595&partner_id=376" className="ticket_link" target="_blank"><img className="price" src="/wp-content/themes/maha2015.v2.1/svg/50.svg" /> General Admission</a>
-						<a href="http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=6262115&partner_id=376" className="ticket_link" target="_blank"><img className="price" src="/wp-content/themes/maha2015.v2.1/svg/175.svg" /> Broadmoor​ VIP Package</a>
+						<a href="http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=4383595&partner_id=376" className="ticket_link" target="_blank"><img className="price" src="/wp-content/themes/maha2015.v2.2/dist/images/50.svg" /> General Admission</a>
+						<a href="http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=6262115&partner_id=376" className="ticket_link" target="_blank"><img className="price" src="/wp-content/themes/maha2015.v2.2/dist/images/175.svg" /> Broadmoor​ VIP Package</a>
 					</div>
 				</div>
 		    )

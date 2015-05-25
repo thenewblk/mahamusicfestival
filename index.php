@@ -1,26 +1,5 @@
 <?php get_template_part('templates/page', 'header'); ?>
 
-		<div class="top_small_logo">
-			<img class="content" src="<?php bloginfo('template_directory'); ?>/svg/bird_logo.svg" />
-		</div> 
-		<div class="mobile_click">
-			<span class="button_wrapper">
-					<span class="ticket button">
-						<img src="<?php bloginfo('template_directory'); ?>/svg/buytickets.svg" />
-						<img src="<?php bloginfo('template_directory'); ?>/svg/underline_2.svg" />
-					</span>
-			</span>
-		</div>
-		<div class="mobile_menu">
-		<span class="mobile_close">×</span>
-		<div class="social">
-			<a href="https://twitter.com/mahafestival" target="_blank" class="link"><img src="<?php bloginfo('template_directory'); ?>/img/twitter-04.svg" /></a>
-			<a href="https://www.facebook.com/MahaMusicFestival" target="_blank" class="link"><img src="<?php bloginfo('template_directory'); ?>/img/facebook-05.svg" /></a>
-			<a href="https://instagram.com/mahamusicfest/" target="_blank" class="link"><img src="<?php bloginfo('template_directory'); ?>/img/instagram-06.svg" /></a>
-			<a href="mailto:info@mahamusicfestival.com" target="_blank" class="link"><img src="<?php bloginfo('template_directory'); ?>/img/mail-07.svg" /></a>
-		</div>		
-		</div>
-		
 		<div class="social">
 			<a href="https://twitter.com/mahafestival" target="_blank" class="link"><img src="<?php bloginfo('template_directory'); ?>/img/twitter-04.svg" /></a>
 			<a href="https://www.facebook.com/MahaMusicFestival" target="_blank" class="link"><img src="<?php bloginfo('template_directory'); ?>/img/facebook-05.svg" /></a>

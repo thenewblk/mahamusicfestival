@@ -216,6 +216,73 @@ function sponsor_post_type() {
 // Hook into the 'init' action
 add_action('init', __NAMESPACE__ . '\\sponsor_post_type');
 
+// Register Custom Post Type
+function blocked_instagram_type() {
+
+  $labels = array(
+    'name'                => _x( 'Blocked Instagrams', 'Post Type General Name', 'text_domain' ),
+    'singular_name'       => _x( 'Blocked Instagram', 'Post Type Singular Name', 'text_domain' ),
+    'menu_name'           => __( 'Blocked Instagram', 'text_domain' ),
+    'name_admin_bar'      => __( 'Blocked Instagram', 'text_domain' ),
+    'parent_item_colon'   => __( 'Parent Item:', 'text_domain' ),
+    'all_items'           => __( 'All Blocked Instagram', 'text_domain' ),
+    'add_new_item'        => __( 'Add New Blocked Instagram User', 'text_domain' ),
+    'add_new'             => __( 'Add New', 'text_domain' ),
+    'new_item'            => __( 'New Blocked Instagram User', 'text_domain' ),
+    'edit_item'           => __( 'Edit Blocked Instagram User', 'text_domain' ),
+    'update_item'         => __( 'Update Blocked Instagram User', 'text_domain' ),
+    'view_item'           => __( 'View Blocked Instagram User', 'text_domain' ),
+    'search_items'        => __( 'Search Blocked Instagram User', 'text_domain' ),
+    'not_found'           => __( 'No Blocked Instagram User found', 'text_domain' ),
+    'not_found_in_trash'  => __( 'No Blocked Instagram Users found in Trash', 'text_domain' ),
+  );
+  $rewrite = array(
+    'slug'                => 'blocked_instagram',
+    'with_front'          => true,
+    'pages'               => true,
+    'feeds'               => true,
+  );
+  $args = array(
+    'label'               => __( 'blocked_instagram', 'text_domain' ),
+    'description'         => __( 'Blocked Instagram Description', 'text_domain' ),
+    'labels'              => $labels,
+    'supports'            => array( 'title' ),
+    'hierarchical'        => false,
+    'public'              => true,
+    'show_ui'             => true,
+    'show_in_menu'        => true,
+    'menu_position'       => 5,
+    'show_in_admin_bar'   => true,
+    'show_in_nav_menus'   => true,
+    'can_export'          => true,
+    'has_archive'         => true,
+    'exclude_from_search' => false,
+    'publicly_queryable'  => true,
+    'rewrite'             => $rewrite,
+    'capability_type'     => 'page',
+  );
+  $title = 'Enter movie name with release year';
+  register_post_type( 'blocked_instagram', $args );
+
+}
+
+// Hook into the 'init' action
+add_action('init', __NAMESPACE__ . '\\blocked_instagram_type');
+
+
+function change_default_title( $title ){
+     $screen = get_current_screen();
+ 
+     if  ( $screen->post_type == 'blocked_instagram' ) {
+          return 'Enter A Blocked Instagram Username';
+     } else {
+      return 'Enter Title Here';
+     }
+
+
+}
+ 
+add_filter( 'enter_title_here', __NAMESPACE__ . '\\change_default_title' );
 
 function wp_api_encode_acf($data,$post,$context){
   $data['meta'] = array_merge($data['meta'],get_fields($post['ID']));

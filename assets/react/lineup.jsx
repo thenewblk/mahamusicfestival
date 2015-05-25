@@ -7,6 +7,21 @@ var React = require('react'),
 
 var	Band = require('./band.jsx');
 
+var bandList = [
+		"Modest Mouse",	
+		"Atmosphere",
+		"Purity Ring",
+		"Wavves",
+		"Alvvays",
+		"Ex Hex",
+		"The Jayhawks",
+		"The Good Life",
+		"Speedy Ortiz",
+		"FREAKABOUT",
+		"All Young Girls Are Machine Guns",
+		"BOTH!"
+	];
+
 var Lineup = React.createClass({
 	getInitialState: function(){
 		return { bands: [] };
@@ -68,6 +83,29 @@ var Lineup = React.createClass({
 	        }.bind(self));  
 	  },
 
+	  prevBand: function(){
+	  	var self = this;
+	  	var current_band = self.state.current_band;
+	  	var index = bandList.indexOf(current_band.title);
+	  	if (index == 0) {
+	  		var new_band = bandList.length-1;
+	  	} else {
+	  		var new_band = index - 1;
+	  	}
+	  	self.openBand(bandList[new_band]);
+	  },
+	  
+	  nextBand: function(){
+	  	var self = this;
+	  	var current_band = self.state.current_band;
+	  	var index = bandList.indexOf(current_band.title);
+	  	if (index == bandList.length-1) {
+	  		var new_band = 0;
+	  	} else {
+	  		var new_band = index + 1; 
+	  	}
+	  	self.openBand(bandList[new_band]);
+	  },
 
   render: function() {
   	var self = this;
@@ -77,34 +115,52 @@ var Lineup = React.createClass({
 
 		var current_news = self.state.news.filter(function(news){
 			return news.meta.band.ID == current_band.ID;
-		});
+		});  
 
 		return (
 			<div className="lineup_container">
-				<span className="close_band" onClick={self.closeBand}>×</span>
-		  		<Band band={current_band} news={current_news}  />
+				<div className="lineup_controller">
+					<span className="previous_band" onClick={self.prevBand}>
+						<svg x="0px" y="0px" viewBox="0 0 22.3 10.9" enable-background="new 0 0 22.3 10.9" >
+							<g>
+								<path d="M0,5.4c0,0.2,10.8,5.8,11.2,5.4c0.4-0.4,0.2-10.7,0-10.9"/>
+								<path d="M22.1,0c-0.2-0.2-11.2,5.2-11.2,5.4c0,0.2,10.8,5.8,11.2,5.4C22.5,10.5,22.2,0.2,22.1,0"/>
+							</g>
+						</svg>
+					</span>
+					<span className="close_band" onClick={self.closeBand}>×</span>
+					<span className="next_band" onClick={self.nextBand}>
+						<svg x="0px" y="0px" viewBox="0 0 19.2 9.4" enable-background="new 0 0 19.2 9.4" >
+							<g>
+								<path d="M9.6,0c0.2-0.2,9.6,4.5,9.6,4.7s-9.3,5-9.6,4.7C9.2,9,9.4,0.2,9.6,0z"/>
+								<path d="M0.2,0c0.2-0.2,9.6,4.5,9.6,4.7s-9.3,5-9.6,4.7C-0.1,9,0,0.2,0.2,0z"/>
+							</g>
+						</svg>
+					</span>
+				</div>
+		  		<Band band={current_band} news={current_news} key={current_band.title}  />
 	  		</div>
   		)
 	} else {
 	    return (
 	    	<div className="lineup_container">
-	    		<span className="close_lineup" onClick={self.toggleLineup}>×</span>
+	    		<span className="close_band" onClick={self.toggleLineup}>×</span>
 				<div className="lineup">
 					<svg className="lineup_image" x="0px" y="0px" viewBox="0 0 899.6 429.3" enable-background="new 0 0 899.6 429.3" >
 						<g id="background">
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="0" y1="69.5" x2="428.2" y2="69.5"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="0" y1="128.7" x2="428.2" y2="128.7"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="0" y1="187.8" x2="428.2" y2="187.8"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="0" y1="247" x2="428.2" y2="247"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="0" y1="306.1" x2="428.2" y2="306.1"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="0" y1="365.3" x2="428.2" y2="365.3"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="0" y1="423.6" x2="428.2" y2="423.6"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="471.5" y1="128.7" x2="899.6" y2="128.7"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="471.5" y1="187.8" x2="899.6" y2="187.8"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="471.5" y1="247" x2="899.6" y2="247"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="471.5" y1="306.1" x2="899.6" y2="306.1"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="471.5" y1="365.3" x2="899.6" y2="365.3"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="471.5" y1="424.4" x2="899.6" y2="424.4"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="0" y1="69.5" x2="428.2" y2="69.5"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="0" y1="128.7" x2="428.2" y2="128.7"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="0" y1="187.8" x2="428.2" y2="187.8"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="0" y1="247" x2="428.2" y2="247"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="0" y1="306.1" x2="428.2" y2="306.1"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="0" y1="365.3" x2="428.2" y2="365.3"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="0" y1="423.6" x2="428.2" y2="423.6"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="471.5" y1="128.7" x2="899.6" y2="128.7"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="471.5" y1="187.8" x2="899.6" y2="187.8"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="471.5" y1="247" x2="899.6" y2="247"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="471.5" y1="306.1" x2="899.6" y2="306.1"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="471.5" y1="365.3" x2="899.6" y2="365.3"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="471.5" y1="424.4" x2="899.6" y2="424.4"/>
 							<path fill="#F0594A" d="M22.9,414.5c0.6,0.6,1.3,1,1.7,1.8c0.2,0.3,0.5,0.6,0.7,0.9c0.3,0.4,0.5,0.9,0.8,1.4
 								c-0.1,0.7-0.9,0.8-0.9,1.5c-0.5-0.1-1,0.2-1.5,0c-0.1-0.1-0.3-0.1-0.4-0.2c-0.5-0.5-1-0.9-1.5-1.4c-0.1-0.1-0.3-0.2-0.6-0.3
 								c0.1,0.1,0.1,0.2,0.2,0.3c0.4,0.5,0.9,1,1.3,1.6c0.1,0.2,0.2,0.3,0.3,0.5c0.1,0.5-0.2,0.9-0.7,0.9c-0.6,0-1.1-0.1-1.5-0.5
@@ -171,7 +227,7 @@ var Lineup = React.createClass({
 								C4.7,406.2,4.7,406.2,4.7,406.2C4.7,406.2,4.7,406.2,4.7,406.2C4.7,406.2,4.7,406.2,4.7,406.2z M3.4,405.3L3.4,405.3L3.4,405.3
 								L3.4,405.3z M4.6,416.1C4.7,416.1,4.7,416.1,4.6,416.1C4.7,416.1,4.7,416.1,4.6,416.1C4.7,416.1,4.6,416.1,4.6,416.1z M12.7,427.7
 								L12.7,427.7L12.7,427.7L12.7,427.7z"/>
-							<line fill="none" stroke="#D3BE8B" stroke-width="0.7059" stroke-miterlimit="10" x1="471.5" y1="69.5" x2="899.6" y2="69.5"/>
+							<line fill="none" stroke="#D3BE8B" strokeWidth="0.7059" strokeMiterlimit="10" x1="471.5" y1="69.5" x2="899.6" y2="69.5"/>
 						</g>
 						<g id="modest_mouse" className="band_lineup_link tan" onClick={self.openBand.bind(this, "Modest Mouse")}>
 							<g>

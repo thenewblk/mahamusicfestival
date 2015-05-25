@@ -6,9 +6,7 @@ body, html {
 }
 
 body {
-	background-image: url(/wp-content/themes/maha2015.v2.1/img/video.png);
-	background-size: cover;
-	background-position: center;
+	background-image: white;
 }
 
 *, *:before, *:after {
@@ -22,7 +20,7 @@ body {
 	overflow: scroll;
 	top: 0;
 	left: 0;
-	background-image: url(/wp-content/themes/maha2015.v2.1/img/video.png);
+	background-image: url(/wp-content/themes/maha2015.v2.2/img/video.png);
 	-webkit-background-size: cover;
 	background-size: cover;
 	background-position: center;
@@ -42,6 +40,16 @@ body {
   border: 0;
   min-height: 100%;
   min-width: 100%;
+}
+
+.video-overlay {
+	background: url(/wp-content/themes/maha2015.v2.2/dist/images/maha-birds-pattern-10-percent.png), rgba(0,0,0,1);
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	z-index: 1;
+	left: 0;
+	opacity: 0.5;
 }
 
 .content-wrapper {
@@ -144,8 +152,10 @@ img#wpstats {
 }
 
 .home a {
-	color: white;
+	color: @pink;
 	text-decoration: none;
+	border: none;
+	font-weight: bold;
 }
 
 .ticket_container {
@@ -345,13 +355,13 @@ img[src*=".svg"] {
 }
 
 .top-section {
-	height: 100%;
 	padding-top: 1px;
 	.content-inner {
 		margin-top: 100px;
 		height: 100%;
 		position: relative;
-
+		padding-bottom: 10%;
+		z-index: 1;
 	}
 }
 
@@ -386,10 +396,22 @@ img[src*=".svg"] {
 .top-tape {
 	display: table;
 	margin: 100px auto 50px;
+	max-width: 100%;
 }
 
 .top.ticket.button {
 	display: table;
 	margin: auto;
 	width: 150px;
+	transition: 0.15s ease-out;
+	cursor: pointer;
+}
+
+.top.ticket.button:hover {
+	opacity: 0.7;
+}
+
+.website {
+	height: 100%;
+	width: 100%;
 }
