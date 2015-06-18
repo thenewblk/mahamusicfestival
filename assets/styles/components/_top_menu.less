@@ -21,6 +21,12 @@
 	  max-width: 675px;
 	  width: 100%;
 	  padding-bottom: 50px;
+	  .lineup_image {
+		margin: 20px auto;
+		width: 675px;
+		height: 322px;
+		max-width: 100%;
+	  }
 	}
 	.tickets_container {
 		position: relative;
@@ -118,8 +124,7 @@
 			min-width: 275px;
 		}
 		p {
-			font-family: 'Gotham Cond A', 'Gotham Cond B';
-			font-weight: 500;
+			font-weight: 600;
 			font-style: normal;
 			font-size: 30px;
 			margin: 0;
@@ -207,6 +212,7 @@
 		color: @tan;
 		margin: 0 20px;
 		cursor: pointer;
+		font-weight: 500;
 	}
 	.link:hover {
 		color: white;
@@ -374,6 +380,9 @@
 		img {
 			height: 50px;
 			max-width: 100%;
+		}
+		&.community-village img {
+			height: 30px;
 		}
 		&.about, &.sponsors{ 
 			img {

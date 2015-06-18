@@ -5,6 +5,9 @@
 var React = require('react'),
     request = require('superagent');
 
+var Router = require('react-router');
+var Navigation = require('react-router').Navigation;
+
 var	Band = require('./band.jsx');
 
 var bandList = [
@@ -22,16 +25,40 @@ var bandList = [
 		"BOTH!"
 	];
 
+var bandSlugList = [
+		"modest-mouse",	
+		"atmosphere",
+		"purity-ring",
+		"wavves",
+		"alvvays",
+		"ex-hex",
+		"the-jayhawks",
+		"the-good-life",
+		"speedy-ortiz",
+		"freakabout",
+		"all-young-girls-are-machine-guns",
+		"both"
+	];
+
 var Lineup = React.createClass({
+	
 	getInitialState: function(){
-		return { bands: [] };
+		return { bands: [], news: [] };
 	},
 	openBand: function(clicked_band) {
-		console.log("clicked_band: " + clicked_band);
 		var current_band = this.state.bands.filter(function(band){
 			return band.title == clicked_band;
 		});
-		console.log("current_band: " + current_band[0]);
+
+		var index = bandList.indexOf(clicked_band);
+		this.setState({current_band: current_band[0]});
+	}, 
+
+	openBandIndex: function(index) {
+		var current_band = this.state.bands.filter(function(band){
+			return band.title == bandList[index];
+		});
+
 		this.setState({current_band: current_band[0]});
 	}, 
 
@@ -39,17 +66,18 @@ var Lineup = React.createClass({
 		this.setState({current_band: null});
 	},
 
-	toggleLineup: function(){
+	toggleLineup: function(){ 
 		this.props.lineup();
 	},
 	
 	
 	componentWillMount: function(){
-		this.loadBands();
-		this.loadNews();
+		var self = this;
+		self.loadBands(self.props.band);
+		self.loadNews();
 	},
 	
-	loadBands: function(){
+	loadBands: function(band){
 		var self = this; 
 	    request
 	      .get('http://www.mahamusicfestival.com/wp-json/posts')
@@ -59,6 +87,10 @@ var Lineup = React.createClass({
 				var bands = res.body;
 
 				self.setState({bands: bands});
+
+				if (band > -1) {
+					self.openBandIndex(band);
+				}
 
 			} else {
 				console.log('Oh no! error ' + res.text);
@@ -111,7 +143,6 @@ var Lineup = React.createClass({
   	var self = this;
 	if (self.state.current_band) {
 		var current_band = self.state.current_band;
-		console.log("current_band: " + current_band);
 
 		var current_news = self.state.news.filter(function(news){
 			return news.meta.band.ID == current_band.ID;

@@ -18,7 +18,6 @@ function JSON_stringify(s, emit_unicode)
 
 var Band = React.createClass({
   componentWillMount: function(){
-    console.log("Band: " + this.props.band );
     this.setState({ band: this.props.band });
   },
   render: function() {

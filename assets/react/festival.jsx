@@ -33,9 +33,9 @@ var Festival = React.createClass({
 	    
 	    controller.scrollTo(function (newpos) {
 	      if(self.state.windowWidth > 480){
-	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105}, ease:Power1.easeOut});
+	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105, autoKill: false }, ease:Power1.easeOut});
 	      } else {
-	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 50}, ease:Power1.easeOut});
+	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 50, autoKill: false }, ease:Power1.easeOut});
 	      }
 	    });
 
@@ -71,6 +71,9 @@ var Festival = React.createClass({
 						</a>
 						<a href="#instafeed" className="scroll-link instagram">
 							<img src="/wp-content/themes/maha2015.v2.2/dist/images/hashtag.svg" />
+						</a>
+						<a href="#community-village" className="scroll-link community-village">
+							<img src="/wp-content/themes/maha2015.v2.2/assets/images/communityvillage-white.png" />
 						</a>
 						<a href="#fyi" className="scroll-link fyi">
 							<img src="/wp-content/themes/maha2015.v2.2/assets/images/fyi.svg" />

@@ -12,6 +12,11 @@
 	<meta property="og:image" content="http://www.mahamusicfestival.com/wp-content/themes/maha2014/images/logo-about.png">
 
     <link rel="alternate" type="application/rss+xml" title="<?= get_bloginfo('name'); ?> Feed" href="<?= esc_url(get_feed_link()); ?>">
-    <link rel="stylesheet" type="text/css" href="//cloud.typography.com/6175872/614126/css/fonts.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="//cloud.typography.com/6175872/614126/css/fonts.css" /> -->
+
+    <script src="//use.typekit.net/liv5jaf.js"></script>
+    <script>try{Typekit.load();}catch(e){}</script>
+
+
     <?php wp_head(); ?>
   </head>

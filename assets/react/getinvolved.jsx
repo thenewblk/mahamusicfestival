@@ -26,6 +26,9 @@ var GetInvolved = React.createClass({
 						<div className="ticket_wrap">
 							<a href="http://www.mahamusicfestival.com/press/" className="ticket_link" target="_blank">Press</a>
 						</div>
+						<div className="ticket_wrap">
+							<a href="http://www.shiftboard.com/MahaFestival" className="ticket_link" target="_blank">Volunteer</a>
+						</div>
 					</div>
 				</div>
 			</div>

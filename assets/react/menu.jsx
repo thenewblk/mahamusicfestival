@@ -8,13 +8,38 @@ var React = require('react'),
 	Tickets = require('./tickets.jsx'),
 	Festival = require('./festival.jsx');
 
+var Router = require('react-router');
+
+var bandSlugList = [
+		"modest-mouse",	
+		"atmosphere",
+		"purity-ring",
+		"wavves",
+		"alvvays",
+		"ex-hex",
+		"the-jayhawks",
+		"the-good-life",
+		"speedy-ortiz",
+		"freakabout",
+		"all-young-girls-are-machine-guns",
+		"both"
+	];
+
+
 var Menu = React.createClass({  
 	getInitialState: function(){
 		return { lineup: false, tickets: false, festival: false, content: null, windowWidth: window.innerWidth, opened_at: null};
 	},
 
 	componentWillMount: function(){
-	},
+		var self = this;
+		var name = self.props.name; 
+
+		var index = bandSlugList.indexOf(name);
+		if (bandSlugList.indexOf(name) > -1) {
+			self.toggleLineup(index);
+		}
+	}, 
 
 	componentDidMount: function(){
 		window.addEventListener('scroll', this.handleScroll);
@@ -23,7 +48,7 @@ var Menu = React.createClass({
 
 	componentWillReceiveProps: function(nextProps){
 		var self = this;
-		console.log('nextProps: ' + JSON.stringify(nextProps));
+		
 		if (nextProps.open == 'tickets') {
 			self.toggleTickets();  
 			self.props.clear_menu();
@@ -48,18 +73,17 @@ var Menu = React.createClass({
 			self.props.close_body();
 			self.setState({content: null, lineup: false, tickets: false, festival: false});
 			self.setState({ opened_at: null});
-
+			// window.location.href = "/#/";
 		}
 	}, 
 
 	closeTop: function(){ 
-		console.log("closeTop");
 		var self = this;
 		self.props.close_body();
 		self.setState({content: null, lineup: false, tickets: false, festival: false})
 	},
 
-	toggleLineup: function() {
+	toggleLineup: function(band) {
 		var self = this;
 		if ( self.state.lineup ) {
 			var content = null;
@@ -69,7 +93,7 @@ var Menu = React.createClass({
 			if ( !self.state.content ) {
 				self.props.open_body();
 			} 
-			var content = <Lineup lineup={self.toggleLineup}/>;
+			var content = <Lineup lineup={self.toggleLineup} band={band}/>;
 			self.setState({lineup: true, content: content, tickets: false, festival: false, opened_at: $(document).scrollTop()})
 		}
 	}, 
@@ -124,6 +148,8 @@ var Menu = React.createClass({
 				<Header lineup={self.toggleLineup} tickets={self.toggleTickets} festival={self.toggleFestival} close_top={self.closeTop} />
 
 				<div className={content_class}>{ content }</div>
+
+
 			</div>
 		)
 	}

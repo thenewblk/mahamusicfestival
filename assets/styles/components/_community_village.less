@@ -1,0 +1,116 @@
+.community-section {
+	background: url(/wp-content/themes/maha2015.v2.2/dist/images/maha-birds-pattern_3_percent.png), white;
+
+	.community-village_image {
+		width: 100%;
+		max-width: 500px;
+		margin: 50px auto;
+		display: table;
+	}
+	.cv-content {
+		.copy, .cv-right-copy, .cv-small {
+			max-width: 800px;
+			width: 100%;
+			margin: 10px auto;
+			text-align: center;
+			line-height: 1.5;
+			font-weight: 100;
+
+		}
+
+		.cv-small {
+			font-size: 14px;
+		}
+		.cv-big-left {
+			display: inline-block;
+			vertical-align: bottom;
+			text-align: right;
+			color: @pink;
+			margin-bottom: 7px;
+			h3 {
+				font-weight: 100;
+				font-size: 50px;
+				margin: 0;
+
+			} 
+		}
+		.cv-clearfix {
+			position: relative;
+			margin: 25px auto;
+			max-width: 1100px;
+		}
+		.cv-right-copy {
+			text-align: left;
+			display: inline-block;
+			max-width: 650px;
+			margin-left: 25px;
+			vertical-align: top;
+			p:last-child {
+				margin-bottom: 0;
+			}
+
+		}
+		.cv-bold-center {
+			text-align: center;
+			font-size: 30px;
+			margin-bottom: 0;
+			margin-top: 0;
+			line-height: 1.7;
+		}
+		.cv-faq-content {
+			max-height: 0px;
+			overflow: hidden;
+			width: 100%;
+			max-width: 1200px;
+			margin: 0 auto 50px;
+			position: relative;
+			transition: .3s ease-in-out;
+			&.opened {
+				max-height: 3500px;
+			}
+			.cv-faq-left, .cv-faq-right {
+				display: inline-block;
+				width: 100%;
+				vertical-align: top;
+				min-width: 300px;
+				max-width: 50%;
+				padding: 0 15px; 
+			}
+		}
+		.cv-buttons {
+			display: table;
+			margin: auto;
+		}
+		.cv-button {
+			display: inline-block;
+			border: 1px solid @pink;
+			text-align: center;
+			padding: 10px 20px;
+			margin: 10px;
+		}
+		.cv-faq-button {
+			width: 100%;
+			display: block;
+			max-width: 800px;
+			margin: auto;
+			color: @pink;
+			text-transform: uppercase;
+			font-weight: bold;
+			transition: 0.15s ease-out;
+			cursor: pointer;
+			&:hover {
+				opacity: 0.7;
+			}
+			&.opened {
+				background: @pink;
+				color: white;
+			}
+		}
+		.cv-faq-item {
+			.cv-faq-title {
+				color: @pink;
+				text-transform: uppercase;
+			}
+		}
+	}
+}

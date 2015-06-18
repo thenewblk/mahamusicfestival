@@ -6,6 +6,11 @@ var React = require('react'),
     request = require('superagent');
     ScrollMagic = require('scrollmagic');
 
+var Router = require('react-router');
+var Route = Router.Route;
+var DefaultRoute = Router.DefaultRoute;
+var RouteHandler = Router.RouteHandler;
+
 var Header = require('./header.jsx'),
 	Band = require('./band.jsx'),
 	Lineup = require('./lineup.jsx'),
@@ -13,6 +18,7 @@ var Header = require('./header.jsx'),
 	Festival = require('./festival.jsx'),
 	TopSection = require('./topsection.jsx'),
 	SummerSeries = require('./summerseries.jsx'),
+	CommunityVillage = require('./communityvillage.jsx'),
 	FYI = require('./fyi.jsx'),
 	Sponsors = require('./sponsors.jsx'),
 	Menu = require('./menu.jsx'),
@@ -22,12 +28,14 @@ var Header = require('./header.jsx'),
 
 var Website = React.createClass({  
 	getInitialState: function(){
-		return { body: false, menu: null, windowWidth: window.innerWidth }
+		return { body: false, menu: null, windowWidth: window.innerWidth, name: "" }
+	},
+	componentWillMount: function(){
+		var name = this.props.params.name;
+		this.setState({name: name});
 	},
 	componentDidMount: function(){
-		// window.addEventListener('scroll', this.handleScroll);
-		// window.addEventListener('resize', this.handleResize);
-
+		var self = this;
 		var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
 	    var top = new ScrollMagic.Scene({
 	                triggerElement: ".top-tape",
@@ -35,25 +43,21 @@ var Website = React.createClass({
 	            })
 	            .setClassToggle("body", "orange-open")
 	            .addTo(controller);  
+
+	    controller.scrollTo(function (newpos) {
+	      if(self.state.windowWidth > 480){
+	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105, autoKill:false }, ease:Power1.easeOut});
+	      } else {
+	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 50, autoKill:false }, ease:Power1.easeOut});
+	      }
+	    });
+
+	    if (self.state.name == "community-village") {
+	    	controller.scrollTo('#community-village');
+	    } else if (self.state.name == "fyi") {
+	    	controller.scrollTo('#fyi');
+	    }
 	},
-
-	// handleResize: function(e) {
-	// 	this.setState({windowWidth: window.innerWidth});
-	// },
-
-	// handleScroll: function(event) {
-		// var self = this;
-		// var node = React.findDOMNode(self.refs.website);
-		// console.log("node: " + JSON.stringify(node)); 
-		// console.log("node.scrollTop: " + node.scrollTop);
-		// console.log("node.scrollHeight: " + node.scrollHeight);
-		// console.log("$(document).scrollTop(): " + $(document).scrollTop());
-
-		// if (self.state.windowWidth > 480) {
-
-		// 	this.setState({menu: 'scrolled'});  
-		// }
-	// }, 
 
 	bodyClass: function(){
 		this.setState({body: !this.state.body});
@@ -80,7 +84,7 @@ var Website = React.createClass({
 		var body = self.state.body;
 
 		var menu = self.state.menu;
-
+		var name = self.state.name;
 		if (body) {
 			var body_class = "website topdrawer";
 		} else {
@@ -88,7 +92,7 @@ var Website = React.createClass({
 		}
 		return (
 			<div className={body_class} ref="website">
-				<Menu body={self.bodyClass} close_body={self.closeBody} open_body={self.openBody} open={ menu } clear_menu={ self.clearMenu }/>
+				<Menu body={self.bodyClass} close_body={self.closeBody} open_body={self.openBody} open={ menu } clear_menu={ self.clearMenu } name={name} />
 				<div className="orangebar">
 					<div className="orange-wrapper">
 						<img className="schnakel-black" src="/wp-content/themes/maha2015.v2.2/dist/images/schnakel-black.png" />
@@ -98,6 +102,7 @@ var Website = React.createClass({
 				<TopSection open_menu={ self.setMenu } />
 				<SummerSeries />
 				<InstagramFeed />
+				<CommunityVillage />
 				<FYI />
 				<Sponsors />
 				<GetInvolved />
@@ -112,10 +117,29 @@ var Website = React.createClass({
 	}
 });
 
+var App = React.createClass({
+	contextTypes: {
+	    router: React.PropTypes.func
+	},
+  render: function() {
+    return  <RouteHandler />; 
+  }
+});
+
+var routes = (
+  <Route handler={App} path="/">
+    <DefaultRoute handler={Website} />
+    <Route path=":name" handler={Website}/>
+  </Route>
+);
+
 function hasClass(ele,cls) {
      return ele.className.match(new RegExp('(\\s|^)'+cls+'(\\s|$)'));
 }
 
 if(hasClass(document.body, "home")){
-	React.render(<Website />, document.body);
+	// React.render(<Website />, document.body);
+	Router.run(routes, Router.HashLocation, function (Handler) {
+	  React.render(<Handler/>, document.body);
+	});
 }
