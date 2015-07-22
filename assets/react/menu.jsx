@@ -11,7 +11,7 @@ var React = require('react'),
 var Router = require('react-router');
 
 var bandSlugList = [
-		"modest-mouse",	
+		"modest-mouse",
 		"atmosphere",
 		"purity-ring",
 		"wavves",
@@ -26,20 +26,20 @@ var bandSlugList = [
 	];
 
 
-var Menu = React.createClass({  
+var Menu = React.createClass({
 	getInitialState: function(){
 		return { lineup: false, tickets: false, festival: false, content: null, windowWidth: window.innerWidth, opened_at: null};
 	},
 
 	componentWillMount: function(){
 		var self = this;
-		var name = self.props.name; 
+		var name = self.props.name;
 
 		var index = bandSlugList.indexOf(name);
 		if (bandSlugList.indexOf(name) > -1) {
 			self.toggleLineup(index);
 		}
-	}, 
+	},
 
 	componentDidMount: function(){
 		window.addEventListener('scroll', this.handleScroll);
@@ -48,9 +48,9 @@ var Menu = React.createClass({
 
 	componentWillReceiveProps: function(nextProps){
 		var self = this;
-		
+
 		if (nextProps.open == 'tickets') {
-			self.toggleTickets();  
+			self.toggleTickets();
 			self.props.clear_menu();
 		}
 		if (nextProps.open == 'scrolled') {
@@ -75,9 +75,9 @@ var Menu = React.createClass({
 			self.setState({ opened_at: null});
 			// window.location.href = "/#/";
 		}
-	}, 
+	},
 
-	closeTop: function(){ 
+	closeTop: function(){
 		var self = this;
 		self.props.close_body();
 		self.setState({content: null, lineup: false, tickets: false, festival: false})
@@ -92,14 +92,15 @@ var Menu = React.createClass({
 		} else {
 			if ( !self.state.content ) {
 				self.props.open_body();
-			} 
+			}
 			var content = <Lineup lineup={self.toggleLineup} band={band}/>;
 			self.setState({lineup: true, content: content, tickets: false, festival: false, opened_at: $(document).scrollTop()})
 		}
-	}, 
+	},
 
 	toggleTickets: function() {
 		var self = this;
+		var partner = self.props.partner;
 		if ( self.state.tickets ) {
 			var content = null;
 			self.props.close_body();
@@ -107,8 +108,8 @@ var Menu = React.createClass({
 		} else {
 			if ( !self.state.content ) {
 				self.props.open_body();
-			} 
-			var content = <Tickets tickets={self.toggleTickets}/>;
+			}
+			var content = <Tickets tickets={self.toggleTickets} partner={partner}/>;
 			self.setState({tickets: true, content: content, lineup: false, festival: false, opened_at: $(document).scrollTop()})
 		}
 	},
@@ -122,7 +123,7 @@ var Menu = React.createClass({
 		} else {
 			if ( !self.state.content ) {
 				self.props.open_body();
-			} 
+			}
 			var content = <Festival festival={self.toggleFestival} close_top={self.closeTop}/>;
 			self.setState({festival: true, content: content, lineup: false, tickets: false, opened_at: $(document).scrollTop()})
 		}
@@ -138,7 +139,7 @@ var Menu = React.createClass({
 		var content = self.state.content;
 		if (content) {
 			var content_class = "top_container";
-			
+
 		} else {
 			var content_class = "top_container hidden";
 		}
@@ -155,4 +156,4 @@ var Menu = React.createClass({
 	}
 });
 
-module.exports = Menu; 
+module.exports = Menu;

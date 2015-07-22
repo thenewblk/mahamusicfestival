@@ -5,24 +5,27 @@
 var React = require('react');
 
 
-var SummerSeries = React.createClass({  
+var SummerSeries = React.createClass({
 
 	render: function() {
 		return (
 			<div className="content-wrapper summer-series-section" id="about">
 				<div className="content-inner">
 					<div className="about-wrapper">
-						<img src="/wp-content/themes/maha2015.v2.2/dist/images/themahastory.svg" />
-						<p>The Maha Music Festival was formed in 2008 as a nonprofit organization by a group of area professionals interested in leveraging the vibrancy and national prestige of the local independent music scene to bring the Omaha area a new community event. Due to careful oversight by a dedicated board of directors, the hard work of over 300 volunteers, and collaboration with over 20 other nonprofits, Maha has been woven into the fabric of summer in Omaha. The festival is attended by music lovers from 32 states, and attendance surpassed 7000 in 2014. Past headliners include Death Cab for Cutie, The Flaming Lips, Garbage, Spoon, and Desaparecidos.</p>
+						<p><strong>The musical chimes of summer </strong> set our hearts a-flutter and our bare feet a-movin’. That’s just facts. Can you hear that last school bell ringing? The one before the doors burst open and we all stampede out into an impromptu end credits dance sequence from an 80s teen movie? Hey, where’d these wacky props come from? Who’s the guy in the gorilla suit? How did we all know when to bust out the same breakdancing move? Who cares? Because that’s the janglin’ of keys you just heard, keys to a cherry red Camaro that are somehow dangling from your fingertips. Don't ask questions, just slide into the driver’s seat, pop in the cassette, crank the volume, roll down the windows, and hit the gas in one fluid motion. Because summer is here, good people, and this is the soundtrack.</p>
 					</div>
 					<div className="lineup-video">
 						<div className="video-wrapper">
 							<iframe src="https://player.vimeo.com/video/124767658?color=ee5a4f&title=0&byline=0&portrait=0" width="853" height="480" frameBorder="0" allowFullScreen></iframe>
 						</div>
 					</div>
+					<div className="about-wrapper">
+						<img src="/wp-content/themes/maha2015.v2.2/dist/images/themahastory.svg" />
+						<p>Our story really begins with the story of Omaha. This is an under-the-radar kind of place, a hard-working river town in the American heartland. As the great poet Carl Sandburg once described it: "Omaha, the roughneck, feeds armies, eats and swears from a dirty face. Omaha works to get the world a breakfast." Home to a blossoming creative community, including a nationally-recognized independent music scene, Omaha has also been working hard to bring the world a generous helping of art, ideas, and innovation. In 2008, a group of young professionals came together with a collective realization: Omaha needs its own music festival. Maha was born and, we're very pleased to say, the community has rallied behind it. Showcasing emerging local artists and pulling in big national acts, the nonprofit Maha Music Festival continues to grow steadily each year. Basking in the late summer glow, Maha has drawn music fans from 32 states and counting. Our vision is to push beyond the parameters of a traditional music festival and continue to attract fans from all over the country, while celebrating the local community–the people and what they do, what they create and build, and the causes they champion.</p>
+					</div>
 					<div className="summer-series-wrapper">
 						<div className="summercontent-title">
-							<img src="/wp-content/themes/maha2015.v2.2/dist/images/summer_series_1.svg" /> 
+							<img src="/wp-content/themes/maha2015.v2.2/dist/images/summer_series_1.svg" />
 						</div>
 						<div className="summer-content">
 							<div className="summer-section">

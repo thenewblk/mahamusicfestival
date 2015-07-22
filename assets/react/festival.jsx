@@ -26,11 +26,11 @@ var Festival = React.createClass({
 			var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
 	    var top = new ScrollMagic.Scene({
 	                triggerElement: "#top",
-	                offset: 1 
+	                offset: 1
 	            })
 	            .setClassToggle("body", "scrolled")
-	            .addTo(controller); 
-	    
+	            .addTo(controller);
+
 	    controller.scrollTo(function (newpos) {
 	      if(self.state.windowWidth > 480){
 	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105, autoKill: false }, ease:Power1.easeOut});
@@ -45,13 +45,13 @@ var Festival = React.createClass({
 	      var id = $(this).attr("href");
 	      if ($(id).length > 0) {
 	        e.preventDefault();
-	 
+
 	        // trigger scroll
 	        controller.scrollTo(id);
 	        if(self.state.windowWidth <= 480){
-	          self.props.close_top(); 
+	          self.props.close_top();
 	        }
-	        
+
 	        // if supported by the browser we can even update the URL.
 	        // if (window.history && window.history.pushState) {
 	        //   history.pushState("", document.title, id);
@@ -59,7 +59,7 @@ var Festival = React.createClass({
 	      }
 	    });
 	},
-	
+
     render: function() {
 	  	var self = this;
 		    return (
@@ -72,22 +72,19 @@ var Festival = React.createClass({
 						<a href="#instafeed" className="scroll-link instagram">
 							<img src="/wp-content/themes/maha2015.v2.2/dist/images/hashtag.svg" />
 						</a>
-						<a href="#community-village" className="scroll-link community-village">
-							<img src="/wp-content/themes/maha2015.v2.2/assets/images/communityvillage-white.png" />
-						</a>
 						<a href="#fyi" className="scroll-link fyi">
 							<img src="/wp-content/themes/maha2015.v2.2/assets/images/fyi.svg" />
 						</a>
 						<a href="#sponsors" className="scroll-link sponsors">
 							<img src="/wp-content/themes/maha2015.v2.2/svg/sponsors.svg" />
 						</a>
-						<a href="#getinvolved" className="scroll-link getinvolved">
-							<img src="/wp-content/themes/maha2015.v2.2/dist/images/getinvolved.svg" />
+            <a href="#community-village" className="scroll-link community-village">
+							<img src="/wp-content/themes/maha2015.v2.2/dist/images/communityvillage-white.png" />
 						</a>
 					</div>
 				</div>
 		    )
     }
 });
- 
-module.exports = Festival; 
+
+module.exports = Festival;

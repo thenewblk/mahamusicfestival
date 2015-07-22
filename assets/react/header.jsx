@@ -37,41 +37,11 @@ var Header = React.createClass({
 		var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
     var top = new ScrollMagic.Scene({
                 triggerElement: "#top",
-                offset: 1 
+                offset: 1
             })
             .setClassToggle("body", "scrolled")
-            .addTo(controller); 
-    
-    // controller.scrollTo(function (newpos) {
-    //   if(self.state.windowWidth > 480){
-    //     TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105}, ease:Power1.easeOut});
-    //   } else {
-    //     TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 50}, ease:Power1.easeOut});
-    //   }
-    // });
+            .addTo(controller);
 
-    // $(document).on("click", "a[href^='#']", function (e) {
-    //   console.log("Festival Click");
-
-    //   var id = $(this).attr("href");
-    //   if ($(id).length > 0) {
-    //     e.preventDefault();
- 
-    //     // trigger scroll
-        
-    //     if(self.state.windowWidth <= 480){
-    //       self.props.close_top(); 
-    //       controller.scrollTo(id);
-    //     } else {
-    //       controller.scrollTo(id);
-    //     }
-        
-    //     // if supported by the browser we can even update the URL.
-    //     // if (window.history && window.history.pushState) {
-    //     //   history.pushState("", document.title, id);
-    //     // }
-    //   }
-    // });
 	},
 
   render: function() {

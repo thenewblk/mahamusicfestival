@@ -10,6 +10,7 @@ var Router = require('react-router');
 var Route = Router.Route;
 var DefaultRoute = Router.DefaultRoute;
 var RouteHandler = Router.RouteHandler;
+var NotFoundRoute = Router.NotFoundRoute;
 
 var Header = require('./header.jsx'),
 	Band = require('./band.jsx'),
@@ -18,31 +19,42 @@ var Header = require('./header.jsx'),
 	Festival = require('./festival.jsx'),
 	TopSection = require('./topsection.jsx'),
 	SummerSeries = require('./summerseries.jsx'),
-	CommunityVillage = require('./communityvillage.jsx'),
 	FYI = require('./fyi.jsx'),
 	Sponsors = require('./sponsors.jsx'),
 	Menu = require('./menu.jsx'),
-	GetInvolved = require('./getinvolved.jsx'),
+	Footer = require('./footer.jsx'),
 	OmahaGives = require('./omaha_gives.jsx'),
-	InstagramFeed = require('./instagramfeed.jsx');
+	InstagramFeed = require('./instagramfeed.jsx'),
+	CommunityVillage = require('./new_communityvillage.jsx');
 
-var Website = React.createClass({  
+var Website = React.createClass({
 	getInitialState: function(){
 		return { body: false, menu: null, windowWidth: window.innerWidth, name: "" }
 	},
+
 	componentWillMount: function(){
-		var name = this.props.params.name;
-		this.setState({name: name});
+    var self = this;
+		var name = self.props.params.name;
+    var partner_id = self.props.params.partner_id;
+    if (name) {
+      console.log("name: " + name);
+      self.setState({name: name});
+    }
+    if (partner_id) {
+      console.log("partner_id: " + partner_id);
+      self.setState({partner_id: partner_id});
+    }
 	},
+
 	componentDidMount: function(){
 		var self = this;
 		var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
 	    var top = new ScrollMagic.Scene({
 	                triggerElement: ".top-tape",
-	                offset: 100 
+	                offset: 100
 	            })
 	            .setClassToggle("body", "orange-open")
-	            .addTo(controller);  
+	            .addTo(controller);
 
 	    controller.scrollTo(function (newpos) {
 	      if(self.state.windowWidth > 480){
@@ -72,19 +84,21 @@ var Website = React.createClass({
 	},
 
 	setMenu: function(string){
-		this.setState({menu: string}); 
+		this.setState({menu: string});
 	},
 
 	clearMenu: function(){
 		this.setState({menu: null});
 	},
- 
+
 	render: function() {
 		var self = this;
 		var body = self.state.body;
 
 		var menu = self.state.menu;
 		var name = self.state.name;
+    var partner_id = self.state.partner_id;
+
 		if (body) {
 			var body_class = "website topdrawer";
 		} else {
@@ -92,7 +106,7 @@ var Website = React.createClass({
 		}
 		return (
 			<div className={body_class} ref="website">
-				<Menu body={self.bodyClass} close_body={self.closeBody} open_body={self.openBody} open={ menu } clear_menu={ self.clearMenu } name={name} />
+				<Menu body={self.bodyClass} close_body={self.closeBody} open_body={self.openBody} open={ menu } clear_menu={ self.clearMenu } name={name} partner={partner_id} />
 				<div className="orangebar">
 					<div className="orange-wrapper">
 						<img className="schnakel-black" src="/wp-content/themes/maha2015.v2.2/dist/images/schnakel-black.png" />
@@ -101,11 +115,11 @@ var Website = React.createClass({
 				</div>
 				<TopSection open_menu={ self.setMenu } />
 				<SummerSeries />
+        <CommunityVillage />
 				<InstagramFeed />
-				<CommunityVillage />
 				<FYI />
 				<Sponsors />
-				<GetInvolved />
+				<Footer />
 				<div className="social">
 					<a href="https://twitter.com/mahafestival" target="_blank" className="link"><img src="/wp-content/themes/maha2015.v2.2/dist/images/twitter-04.svg" /></a>
 					<a href="https://www.facebook.com/MahaMusicFestival" target="_blank" className="link"><img src="/wp-content/themes/maha2015.v2.2/dist/images/facebook-05.svg" /></a>
@@ -122,14 +136,17 @@ var App = React.createClass({
 	    router: React.PropTypes.func
 	},
   render: function() {
-    return  <RouteHandler />; 
+    return  <RouteHandler />;
   }
 });
 
 var routes = (
   <Route handler={App} path="/">
-    <DefaultRoute handler={Website} />
+    <Route path="/band/:name" handler={Website}/>
+    <Route path="/partner/:partner_id" handler={Website}/>
     <Route path=":name" handler={Website}/>
+    <DefaultRoute handler={Website} />
+    <NotFoundRoute handler={Website} />
   </Route>
 );
 
@@ -139,7 +156,7 @@ function hasClass(ele,cls) {
 
 if(hasClass(document.body, "home")){
 	// React.render(<Website />, document.body);
-	Router.run(routes, Router.HashLocation, function (Handler) {
+	Router.run(routes, Router.HistoryLocation, function (Handler) {
 	  React.render(<Handler/>, document.body);
 	});
 }

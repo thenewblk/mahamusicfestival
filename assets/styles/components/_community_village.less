@@ -1,11 +1,44 @@
 .community-section {
 	background: url(/wp-content/themes/maha2015.v2.2/dist/images/maha-birds-pattern_3_percent.png), white;
-
+	.content-inner {
+		padding: 0;
+	}
+	.community-header {
+		background-image: url(/wp-content/themes/maha2015.v2.2/dist/images/cv_bkgd.jpg);
+	  background-color: black;
+	  background-size: cover;
+	  background-position: center;
+		
+		.content-inner {
+			padding: 30px;
+		}
+		.community-village_centris {
+			display: table;
+			margin: 5px auto;
+		}
+		p {
+			text-align: center;
+			line-height: 2;
+			color: white;
+			width: 100%;
+			max-width: 750px;
+			margin: 0 auto;
+		}
+	}
+	.cv_list {
+		padding: 50px 0;
+		width: 100%;
+		max-width: 1200px;
+		margin: auto;
+	}
 	.community-village_image {
 		width: 100%;
 		max-width: 500px;
 		margin: 50px auto;
 		display: table;
+	}
+	.cv_list_container {
+		background: @tan;
 	}
 	.cv-content {
 		.copy, .cv-right-copy, .cv-small {
@@ -32,7 +65,7 @@
 				font-size: 50px;
 				margin: 0;
 
-			} 
+			}
 		}
 		.cv-clearfix {
 			position: relative;
@@ -74,7 +107,7 @@
 				vertical-align: top;
 				min-width: 300px;
 				max-width: 50%;
-				padding: 0 15px; 
+				padding: 0 15px;
 			}
 		}
 		.cv-buttons {
@@ -111,6 +144,35 @@
 				color: @pink;
 				text-transform: uppercase;
 			}
+		}
+	}
+	.cv_list_controller {
+		position: relative;
+		background: black;
+	}
+	.cv_partner_link {
+		display: inline-table;
+	  width: 33%;
+	  vertical-align: bottom;
+	  padding: 0 30px;
+	  margin: 10px 0;
+	  color: @pink;
+	  cursor: pointer;
+		transition: 0.15s ease-in;
+		&:hover {
+			color: black;
+		}
+	}
+	.partner_card {
+		width: 100%;
+		max-width: 700px;
+		margin: auto;
+		padding: 15px;
+		.partner_title {
+			text-transform: uppercase;
+			color: white;
+			font-size: 50px;
+			margin-bottom: 0px;
 		}
 	}
 }

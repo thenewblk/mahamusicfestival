@@ -1,20 +1,9 @@
 /**
  * @jsx React.DOM
- */ 
+ */
 
 var React = require('react'),
     request = require('superagent');
-
-function JSON_stringify(s, emit_unicode)
-{
-   var json = JSON.stringify(s);
-   return emit_unicode ? json : json.replace(/[\u007f-\uffff]/g,
-      function(c) { 
-        return '\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4);
-      }
-   ); 
-}
-
 
 var Band = React.createClass({
   componentWillMount: function(){
@@ -32,10 +21,10 @@ var Band = React.createClass({
       var news = self.props.news.map(function(object){
         return <div className="news_item">
                   <h3 className="news_title"><a href={object.meta.link_url} target="_blank" dangerouslySetInnerHTML={{__html: object.title}} ></a></h3>
-                  <h5 className="news_source">{object.meta.source_name}</h5> 
+                  <h5 className="news_source">{object.meta.source_name}</h5>
                 </div>;
 
-      }) 
+      })
 
       return (
         <div className="band_card">
@@ -68,4 +57,4 @@ var Band = React.createClass({
   }
 });
 
-module.exports = Band; 
+module.exports = Band;

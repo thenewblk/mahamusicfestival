@@ -1,7 +1,7 @@
 var React = require('react'),
     request = require('superagent');
 
-var Sponsors = React.createClass({  
+var Sponsors = React.createClass({
 	getInitialState: function(){
 		return { sponsors: [] };
 	},
@@ -24,7 +24,7 @@ var Sponsors = React.createClass({
 	      } else {
 	        console.log('Oh no! error ' + res.text);
 	      }
-	        }.bind(self));  
+	        }.bind(self));
 	  },
 
 	render: function() {
@@ -35,14 +35,14 @@ var Sponsors = React.createClass({
 		});
 
 		var tier = [];
-		for (var i=1; i < 8; i++) {
+		for (var i=1; i < 9; i++) {
 			tier[i] = self.state.sponsors.filter(function(object){
 				return object.meta.tier == i.toString();
 			});
 		}
 
 		var sponsors = [];
-		for (var i=1; i < 8; i++) {
+		for (var i=1; i < 9; i++) {
 			sponsors[i] = tier[i].map(function(object){
 				return <a href={object.meta.link} target="_blank"><img className="spimage" src={object.meta.image.url} /></a>
 			});
@@ -54,7 +54,7 @@ var Sponsors = React.createClass({
 					<div className="sponsors_list">
 						<img className="sponsors_title" src="/wp-content/themes/maha2015.v2.2/dist/images/sponsors.svg" />
 							<p className="sponsors_copy">We're grateful to our partners who make Maha possible. To join this mix and support the party that makes Omaha proud, contact us at <a href="mailto:sponsor@mahamusicfestival.com">sponsor@mahamusicfestival.com</a>. </p>
-						<div className="sponsors_tier">{ sponsors[1] }</div>
+						<div className="sponsors_tier schnackel_tier">{ sponsors[1] }</div>
 						<div className="sponsors_tier">{ sponsors[2] }</div>
 						<div className="sponsors_tier">{ sponsors[3] }</div>
 						<div className="sponsors_tier">{ sponsors[4] }</div>
@@ -62,6 +62,8 @@ var Sponsors = React.createClass({
 						<div className="sponsors_tier media-title">Production & Media</div>
 						<div className="sponsors_tier">{ sponsors[6] }</div>
 						<div className="sponsors_tier">{ sponsors[7] }</div>
+            <div className="sponsors_tier media-title">Beverage Partners</div>
+            <div className="sponsors_tier">{ sponsors[8] }</div>
 					</div>
 				</div>
 			</div>
