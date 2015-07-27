@@ -514,9 +514,7 @@ var Footer = React.createClass({displayName: "Footer",
 						React.createElement("div", {className: "footer-column"}, 
 							React.createElement("h3", {className: "footer-title"}, "Get Involved"), 
 							React.createElement("a", {href: "http://www.shiftboard.com/MahaFestival", className: "footer_link", target: "_blank"}, "Volunteer"), 
-							React.createElement("a", {href: "#sponsors", className: "footer_link", target: "_blank"}, "Become a Sponsor"), 
-							React.createElement("a", {href: "http://www.mahamusicfestival.com/food-vendors/", className: "footer_link", target: "_blank"}, "Food Vendor"), 
-							React.createElement("a", {href: "http://www.mahamusicfestival.com/non-food-vendors/", className: "footer_link", target: "_blank"}, "Non Food Vendor")
+							React.createElement("a", {href: "#sponsors", className: "footer_link", target: "_blank"}, "Become a Sponsor")
 						), 
 						React.createElement("div", {className: "footer-column"}, 
 							React.createElement("h3", {className: "footer-title"}, "Newsletter Signup"), 

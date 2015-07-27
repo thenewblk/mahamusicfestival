@@ -71,8 +71,6 @@ var Footer = React.createClass({
 							<h3 className="footer-title">Get Involved</h3>
 							<a href="http://www.shiftboard.com/MahaFestival" className="footer_link" target="_blank">Volunteer</a>
 							<a href="#sponsors" className="footer_link" target="_blank">Become a Sponsor</a>
-							<a href="http://www.mahamusicfestival.com/food-vendors/" className="footer_link" target="_blank">Food Vendor</a>
-							<a href="http://www.mahamusicfestival.com/non-food-vendors/" className="footer_link" target="_blank">Non Food Vendor</a>
 						</div>
 						<div className="footer-column">
 							<h3 className="footer-title">Newsletter Signup</h3>
