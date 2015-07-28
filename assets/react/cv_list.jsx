@@ -116,7 +116,7 @@ module.exports = React.createClass({
   	    return (
   	    	<div className="cv_list">
   				    {partners}
-  			</div>
+  			  </div>
   	    )
   	}
   }

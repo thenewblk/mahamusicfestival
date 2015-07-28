@@ -25,6 +25,8 @@ var Header = require('./header.jsx'),
 	Footer = require('./footer.jsx'),
 	OmahaGives = require('./omaha_gives.jsx'),
 	InstagramFeed = require('./instagramfeed.jsx'),
+	FoodVendors = require('./food_vendors.jsx'),
+	Venue = require('./venue.jsx'),
 	CommunityVillage = require('./new_communityvillage.jsx');
 
 var Website = React.createClass({
@@ -115,6 +117,8 @@ var Website = React.createClass({
 				</div>
 				<TopSection open_menu={ self.setMenu } />
 				<SummerSeries />
+        <Venue />
+        <FoodVendors />
         <CommunityVillage />
 				<InstagramFeed />
 				<FYI />
