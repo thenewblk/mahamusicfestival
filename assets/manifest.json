@@ -26,6 +26,6 @@
     }
   },
   "config": {
-    "devUrl": "http://localhost/"
+    "devUrl": "http://localhost:8888/"
   }
 }

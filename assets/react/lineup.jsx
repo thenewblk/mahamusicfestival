@@ -11,7 +11,7 @@ var Navigation = require('react-router').Navigation;
 var	Band = require('./band.jsx');
 
 var bandList = [
-		"Modest Mouse",	
+		"Modest Mouse",
 		"Atmosphere",
 		"Purity Ring",
 		"Wavves",
@@ -26,7 +26,7 @@ var bandList = [
 	];
 
 var bandSlugList = [
-		"modest-mouse",	
+		"modest-mouse",
 		"atmosphere",
 		"purity-ring",
 		"wavves",
@@ -41,7 +41,7 @@ var bandSlugList = [
 	];
 
 var Lineup = React.createClass({
-	
+
 	getInitialState: function(){
 		return { bands: [], news: [] };
 	},
@@ -52,7 +52,7 @@ var Lineup = React.createClass({
 
 		var index = bandList.indexOf(clicked_band);
 		this.setState({current_band: current_band[0]});
-	}, 
+	},
 
 	openBandIndex: function(index) {
 		var current_band = this.state.bands.filter(function(band){
@@ -60,25 +60,25 @@ var Lineup = React.createClass({
 		});
 
 		this.setState({current_band: current_band[0]});
-	}, 
+	},
 
 	closeBand: function(){
 		this.setState({current_band: null});
 	},
 
-	toggleLineup: function(){ 
+	toggleLineup: function(){
 		this.props.lineup();
 	},
-	
-	
+
+
 	componentWillMount: function(){
 		var self = this;
 		self.loadBands(self.props.band);
 		self.loadNews();
 	},
-	
+
 	loadBands: function(band){
-		var self = this; 
+		var self = this;
 	    request
 	      .get('http://www.mahamusicfestival.com/wp-json/posts')
 	      .query('type[]=band&filter[posts_per_page]=-1')
@@ -95,7 +95,7 @@ var Lineup = React.createClass({
 			} else {
 				console.log('Oh no! error ' + res.text);
 			}
-	      }.bind(self));  
+	      }.bind(self));
 	},
 
 	loadNews: function(){
@@ -112,7 +112,7 @@ var Lineup = React.createClass({
 	      } else {
 	        console.log('Oh no! error ' + res.text);
 	      }
-	        }.bind(self));  
+	        }.bind(self));
 	  },
 
 	  prevBand: function(){
@@ -126,7 +126,7 @@ var Lineup = React.createClass({
 	  	}
 	  	self.openBand(bandList[new_band]);
 	  },
-	  
+
 	  nextBand: function(){
 	  	var self = this;
 	  	var current_band = self.state.current_band;
@@ -134,7 +134,7 @@ var Lineup = React.createClass({
 	  	if (index == bandList.length-1) {
 	  		var new_band = 0;
 	  	} else {
-	  		var new_band = index + 1; 
+	  		var new_band = index + 1;
 	  	}
 	  	self.openBand(bandList[new_band]);
 	  },
@@ -146,7 +146,7 @@ var Lineup = React.createClass({
 
 		var current_news = self.state.news.filter(function(news){
 			return news.meta.band.ID == current_band.ID;
-		});  
+		});
 
 		return (
 			<div className="lineup_container">
@@ -1479,7 +1479,7 @@ var Lineup = React.createClass({
 							</g>
 							<rect x="8.1" y="338.3" width="414.3" height="84.7"/>
 						</g>
-						<g id="atmosphere" className="band_lineup_link tan" onClick={self.openBand.bind(this, "Atmosphere")}> 
+						<g id="atmosphere" className="band_lineup_link tan" onClick={self.openBand.bind(this, "Atmosphere")}>
 							<g>
 								<path d="M555.3,78.9c-0.6,0.6-0.9,1.3-1.6,1.3c-0.6-0.2-0.4-0.8-0.8-1.2c-0.3,0.2-0.6,0.5-1,0.6
 									c-0.3,0.1-0.7-0.1-1.1-0.1c-0.4-0.1-0.7-0.1-1.1-0.2c-0.3-0.3-0.5-0.6-0.8-0.8c-1.1,0.3-2.1,0.4-3.1-0.1c-0.5-0.3-1.1-0.6-1.2-1.3
@@ -2565,6 +2565,7 @@ var Lineup = React.createClass({
 							<rect x="499.7" y="352" width="377.5" height="69.5"/>
 						</g>
 					</svg>
+					<a className="listen_on_spotify" href="https://play.spotify.com/user/1236913530"><img src="/wp-content/themes/maha2015.v2.2/dist/images/listen_on_spotify-black.png" /></a>
 				</div>
 			</div>
 	    )
@@ -2572,4 +2573,4 @@ var Lineup = React.createClass({
   }
 });
 
-module.exports = Lineup; 
+module.exports = Lineup;

@@ -69,8 +69,8 @@ var Festival = React.createClass({
 						<a href="#about" className="scroll-link about">
 							<img src="/wp-content/themes/maha2015.v2.2/dist/images/story.svg" />
 						</a>
-						<a href="#instafeed" className="scroll-link instagram">
-							<img src="/wp-content/themes/maha2015.v2.2/dist/images/hashtag.svg" />
+						<a href="#venue" className="scroll-link venue">
+							<img src="/wp-content/themes/maha2015.v2.2/dist/images/venue_white.svg" />
 						</a>
 						<a href="#fyi" className="scroll-link fyi">
 							<img src="/wp-content/themes/maha2015.v2.2/assets/images/fyi.svg" />

@@ -12,6 +12,8 @@
 		width: 50%;
 	}
 }
+
+
 @media screen and (max-width: 768px) {
 	.fyi_left, .fyi_right {
 		display: none!important;
@@ -28,6 +30,39 @@
 		width: 100%;
 	}
 }
+
+@media screen and (max-width: 725px) {
+	.venue-legend {
+		&.desktop {
+			display: none;
+		}
+		&.mobile {
+			display: block;
+			width: 100%;
+		}
+	}
+	.venue-images {
+		width: 100%;
+		display: block;
+		.venue-title {
+			position: relative;
+			display: table;
+			margin: 30px auto;
+		}
+		.map-parking {
+			width: 100%;
+			float: none;
+		}
+
+	}
+	.venue-schedules {
+		.schedule-main, .schedule-comedy {
+			width: 100%;
+			display: block;
+		}
+	}
+}
+
 @media screen and (max-width: 480px) {
 	video {
 		display: none;

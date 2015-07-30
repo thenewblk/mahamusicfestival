@@ -5,7 +5,10 @@
 }
 .venue-legend {
   display: table-cell;
-  background: @tan;
+  &.mobile {
+    display: none;
+  }
+  background: #C0A479;
   width: 30%;
   padding: 50px 10px;
   vertical-align: top;
@@ -22,13 +25,70 @@
 }
 .venue-images {
   display: table-cell;
+  width: 70%;
+  overflow: hidden;
+  img.map-venue {
+    width: 101%;
+  }
   .venue-title {
     position:absolute;
-    width: 300px;
-    margin: 15px 50px;
+    width: 250px;
+    margin: 30px 50px;
   }
   .map-parking {
-    width: 500px;
+    width: 50%;
     float: right;
+  }
+}
+
+
+.venue-schedules {
+  padding: 0 15px;
+  max-width: 1200px;
+  margin: auto;
+  width: 100%;
+  .schedule-main {
+    .time, .band_event {
+      font-weight: bold;
+    }
+    .location {
+      text-align: center;
+      min-width: 125px;
+    }
+    width: 40%;
+    margin: 5%;
+    display: inline-block;
+    vertical-align: top;
+    table {
+      width: 100%;
+    }
+  }
+  .schedule-comedy {
+    width: 40%;
+    margin: 5%;
+    display: inline-block;
+    vertical-align: top;
+    .comedy-title {
+      font-weight: bold;
+      margin: 0;
+
+    }
+    .comedy-time {
+      color: @pink;
+      font-weight: bold;
+      margin: 0;
+    }
+    p {
+      margin: 0;
+    }
+  }
+  .schedule-title {
+    color: @pink;
+    font-size: 25px;
+  }
+  .event-list {
+    margin-top: 0;
+    padding-left: 0;
+    list-style: none;
   }
 }
