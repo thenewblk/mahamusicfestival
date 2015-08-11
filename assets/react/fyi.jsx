@@ -4,7 +4,7 @@
 
 var React = require('react');
 
-var FYI = React.createClass({  
+var FYI = React.createClass({
 
 	render: function() {
 
@@ -25,7 +25,7 @@ var FYI = React.createClass({
 							</div>
 							<div className="fyi-item">
 								<h3 className="fyi-title">WHERE CAN I PARK?</h3>
-								<p className="fyi-copy">Aksarben Village has reserved FREE a parking garage and large parking lot for the exclusive use of Maha attendees so there will be plenty of space for everyone!</p>
+								<p className="fyi-copy">Aksarben Village has reserved a FREE parking garage and large parking lot for the exclusive use of Maha attendees so there will be plenty of space for everyone!</p>
 							</div>
 							<div className="fyi-item">
 								<h3 className="fyi-title">WHAT IS WEATHER LIKE IN MID-AUGUST?</h3>
@@ -41,7 +41,15 @@ var FYI = React.createClass({
 							</div>
 							<div className="fyi-item">
 								<h3 className="fyi-title">What can I bring?</h3>
-								<p className="fyi-copy">Lawn chairs and blankets are allowed, tents are not. Sunscreen, sunglasses, hats and/or visors are suggested to let you enjoy the day without any sun-related discomfort. We reserve the right to inspect all bags, purses, backpacks, etc. before allowing entry to the Festival. And, no, couches are not allowed. Seriously.</p>
+								<p className="fyi-copy">Lawn chairs and blankets are allowed, tents and umbrellas are not allowed. Sunscreen, sunglasses, hats and/or visors are suggested to let you enjoy the day without any sun-related discomfort. We reserve the right to inspect all bags, purses, backpacks, etc. before allowing entry to the Festival. And, no, couches are not allowed. Seriously.</p>
+							</div>
+							<div className="fyi-item">
+								<h3 className="fyi-title">Can I leave and come back?</h3>
+								<p className="fyi-copy">Yes, but here’s what you need to know if you plan to go home and let your dog out.
+Maha will be offering re-entry vouchers until 6:30 pm. If you leave the park, you must collect a re-entry voucher from our volunteers at the exit. In order to return to the park, you must present your Maha ticket AND re-entry voucher. IF YOU DO NOT HAVE BOTH ITEMS, YOU WILL NOT BE ALLOWED TO RE-ENTER THE FESTIVAL WITHOUT PURCHASING A NEW TICKET.</p>
+								<p className="fyi-copy">If you leave the festival after 6:30 pm, you will not be permitted to re-enter. (Remember that part about needing a ticket AND a voucher for re-entry? We stop handing out vouchers at 6:30 pm.)</p>
+								<p className="fyi-copy">If you leave the park before 6:30 pm, you can return at any time as long as you have your voucher AND your ticket. Volunteers collect vouchers upon re-entry, so you are only permitted to re-enter once after 6:30 pm.</p>
+								<p className="fyi-copy">Attendees with VIP wristbands have unlimited re-entry.</p>
 							</div>
 						</div>
 						<div className="fyi-right">
@@ -52,30 +60,34 @@ var FYI = React.createClass({
 							<div className="fyi-item">
 								<h3 className="fyi-title">Water Bottles</h3>
 								<p className="fyi-copy">You may bring in one empty water bottle per person. We offer a water refill station in the park. When you arrive if you have one, sealed, packaged water bottle, that’s fine too. If it’s not sealed we ask you empty it before entering the park.</p>
-							</div>							
+							</div>
 							<div className="fyi-item">
 								<h3 className="fyi-title">What food and drink will be available?</h3>
 								<p className="fyi-copy">There will be a wide variety of local food & drink.</p>
-							</div>							
+							</div>
 							<div className="fyi-item">
 								<h3 className="fyi-title">Will cameras or recorders be allowed?</h3>
 								<p className="fyi-copy">Small or disposable cameras will be allowed. Professional cameras will NOT be allowed. Essentially, if it has a removable lens, it’s a no go. Video and audio recording are NOT allowed.</p>
-							</div>							
+							</div>
 							<div className="fyi-item">
 								<h3 className="fyi-title">What about event security?</h3>
 								<p className="fyi-copy">Event security will be located throughout the grounds for the entire duration of the event. If you have an emergency, find a staff person with a radio, go to an information or medical tent, or tell one of the security personnel.</p>
-							</div>							
+							</div>
 							<div className="fyi-item">
 								<h3 className="fyi-title">I’m from out of town, where can I stay?</h3>
 								<p className="fyi-copy">Omaha is a very friendly town. You can probably find someone willing to share a floor with you. If you’d prefer more private accommodations, Maha has negotiated “Maha Rates” with the Aksarben Marriott. It’s a short walk to the festival from here. <a target="_blank" href="http:/www.marriott.com/hotels/travel/omawt-courtyard-omaha-aksarben-village/">Marriott Web Page Here</a></p>
 							</div>
+							<div className="fyi-item">
+								<h3 className="fyi-title">What about smoking?</h3>
+								<p className="fyi-copy">Smoking on festival grounds is not allowed outside of the three designated cigarette smoking areas located throughout the park.</p>
+							</div>
 
 							<img className="boombox" src="/wp-content/themes/maha2015.v2.2/assets/images/boombox.png" />
-								
+
 
 						</div>
 					</div>
-					
+
 				</div>
 			</div>
 		)

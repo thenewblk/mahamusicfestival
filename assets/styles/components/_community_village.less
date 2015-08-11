@@ -189,3 +189,26 @@
 .food_vendor_title {
 	margin: 100px auto;
 }
+.vendors {
+	display: flex;
+	flex-direction: row;
+	margin: 10px 0 50px;
+	.vendor_list {
+		flex: 1;
+		.vendor_title {
+			color: black;
+	    font-size: 20px;
+	    text-align: center;
+		}
+		.vendor_link {
+			padding: 0 30px;
+			margin: 10px 0;
+			color: @pink;
+			cursor: pointer;
+			transition: .15s ease-in;
+			&:hover {
+				color: black
+			}
+		}
+	}
+}

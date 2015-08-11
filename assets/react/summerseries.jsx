@@ -67,7 +67,7 @@ var SummerSeries = React.createClass({
 							</div>
 							<div className="summer-section">
 								<img src="/wp-content/themes/maha2015.v2.2/assets/images/bridge-beats.png" />
-								<p>SAT. AUG 7  6PM</p>
+								<p>FRI. AUG 7  6PM</p>
 								<p>BOB KERREY</p>
 								<p>PEDESTRIAN BRIDGE</p>
 								<p className="small">PERFORMANCES BY</p>

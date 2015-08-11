@@ -18,7 +18,7 @@ module.exports = React.createClass({
   							<img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-medical.svg" /> Nebraska Medicine First Aid + Security
   						</p>
   						<p className="legend-item">
-  							<img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-water.svg" /> DiVentures Water Stations
+  							<img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-water.svg" /> DiVentures Water Station
   						</p>
   						<p className="legend-item">
   							<img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-atm.svg" /> ATM
@@ -87,7 +87,7 @@ module.exports = React.createClass({
   							<img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-17.svg" /> Werner Wheel
   						</p>
               <p className="legend-item">
-                <img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-18.svg" /> [18 THING!!!!]
+                <img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-18.svg" /> The Globe
               </p>
   					</div>
   					<div className="venue-images">
@@ -169,7 +169,7 @@ module.exports = React.createClass({
                 <img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-17.svg" /> Werner Wheel
               </p>
               <p className="legend-item">
-                <img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-18.svg" /> [18 THING!!!!]
+                <img className="item-icon" src="/wp-content/themes/maha2015.v2.2/dist/images/icons-18.svg" /> The Globe
               </p>
             </div>
 			  	</div>
@@ -212,7 +212,12 @@ module.exports = React.createClass({
                   <td className="location">Javlin Stage</td>
                   <td className="band_event">All Young Girls Are Machine Guns</td>
                 </tr>
-                <tr>
+								<tr>
+                  <td className="time">4:35</td>
+                  <td className="location">Javlin Stage</td>
+                  <td className="band_event">Vintage Paisley (Omaha Girls Rock)</td>
+                </tr>
+								<tr>
                   <td className="time">4:50</td>
                   <td className="location">Weitz Stage</td>
                   <td className="band_event">Wavves</td>

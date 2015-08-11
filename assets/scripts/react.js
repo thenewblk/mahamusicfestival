@@ -5,616 +5,6 @@
 
 var React = require('react'),
     request = require('superagent');
-
-var Band = React.createClass({displayName: "Band",
-  componentWillMount: function(){
-    this.setState({ band: this.props.band });
-  },
-  render: function() {
-  	var self = this;
-    if (!this.state.band) {
-        return React.createElement("div", null, "Loading...");
-    } else {
-      var topImage = {
-        backgroundImage: 'url(' + self.state.band.meta.background_image.url + ')',
-      };
-
-      var news = self.props.news.map(function(object){
-        return React.createElement("div", {className: "news_item"}, 
-                  React.createElement("h3", {className: "news_title"}, React.createElement("a", {href: object.meta.link_url, target: "_blank", dangerouslySetInnerHTML: {__html: object.title}})), 
-                  React.createElement("h5", {className: "news_source"}, object.meta.source_name)
-                );
-
-      })
-
-      return (
-        React.createElement("div", {className: "band_card"}, 
-        	React.createElement("div", {className: "band_top", style: topImage}, 
-        		React.createElement("img", {className: "band_name", src: self.state.band.meta.band_image.url})
-        	), 
-        	React.createElement("div", {className: "band_content"}, 
-        		React.createElement("div", {className: "info"}, 
-        			 self.state.band.meta.genre ? React.createElement("p", null, self.state.band.meta.genre) : null, 
-        			 self.state.band.meta.record_label ? React.createElement("p", null, self.state.band.meta.record_label) : null, 
-        			 self.state.band.meta.hometown ? React.createElement("p", null, self.state.band.meta.hometown) : null, 
-        			 (self.state.band.meta.url_link && self.state.band.meta.url_title) ? React.createElement("p", {className: "band_link"}, React.createElement("a", {href: self.state.band.meta.url_link}, self.state.band.meta.url_title)) : null
-        		), 
-             self.state.band.meta.video_link ?
-          		React.createElement("div", {className: "video"}, 
-                React.createElement("div", {className: "video-wrapper"}, 
-                  React.createElement("iframe", {src: self.state.band.meta.video_link, frameBorder: "0", allowfullscreen: true})
-                )
-          		)
-            : null, 
-             news ?
-          		React.createElement("div", {className: "news"}, 
-          			news
-          		)
-            : null
-        	)
-        )
-      )
-    }
-  }
-});
-
-module.exports = Band;
-
-},{"react":220,"superagent":222}],2:[function(require,module,exports){
-/**
- * @jsx React.DOM
- */
-
-var React = require('react'),
-    request = require('superagent');
-
-var Router = require('react-router');
-var Navigation = require('react-router').Navigation;
-
-var	Partner = require('./partner.jsx');
-
-module.exports = React.createClass({displayName: "exports",
-
-	getInitialState: function(){
-		return { partners: [] };
-	},
-	openPartner: function(clicked_partner) {
-    console.log("openPartner: " + clicked_partner);
-		var current_partner = this.state.partners.filter(function(partner){
-			return partner.title == clicked_partner;
-		});
-
-		this.setState({current_partner: current_partner[0]});
-	},
-
-	closePartner: function(){
-		this.setState({current_partner: null});
-	},
-
-	toggleLineup: function(){
-		this.props.cv_list();
-	},
-
-
-	componentWillMount: function(){
-		var self = this;
-		self.loadPartners();
-	},
-
-	loadPartners: function(){
-		var self = this;
-	    request
-	      .get('http://www.mahamusicfestival.com/wp-json/posts')
-	      .query('type[]=cv_partner&filter[posts_per_page]=-1')
-	      .end(function(err, res) {
-			if (res.ok) {
-				var partners = res.body;
-
-				self.setState({partners: partners});
-
-			} else {
-				console.log('Oh no! error ' + res.text);
-			}
-	      }.bind(self));
-	},
-
-	  prevPartner: function(){
-	  	var self = this;
-	  	var current_partner = self.state.current_partner;
-	  	var index = self.state.partners.indexOf(current_partner);
-	  	if (index == 0) {
-	  		var new_partner = self.state.partners.length-1;
-	  	} else {
-	  		var new_partner = index - 1;
-	  	}
-	  	self.openPartner(self.state.partners[new_partner].title);
-	  },
-
-	  nextPartner: function(){
-	  	var self = this;
-	  	var current_partner = self.state.current_partner;
-      var index = self.state.partners.indexOf(current_partner);
-	  	if (index == self.state.partners.length-1) {
-	  		var new_partner = 0;
-	  	} else {
-	  		var new_partner = index + 1;
-	  	}
-	  	self.openPartner(self.state.partners[new_partner].title);
-	  },
-
-  render: function() {
-  	var self = this;
-    var partners = self.state.partners.map(function(object){
-      return React.createElement("h4", {className: "cv_partner_link", onClick: self.openPartner.bind(this, object.title), dangerouslySetInnerHTML: {__html: object.title}})
-    });
-
-  	if (self.state.current_partner) {
-  		var current_partner = self.state.current_partner;
-
-  		return (
-  			React.createElement("div", {className: "cv_list_container"}, 
-  				React.createElement("div", {className: "cv_list_controller"}, 
-  					React.createElement("span", {className: "previous_band", onClick: self.prevPartner}, 
-  						React.createElement("svg", {x: "0px", y: "0px", viewBox: "0 0 22.3 10.9", "enable-background": "new 0 0 22.3 10.9"}, 
-  							React.createElement("g", null, 
-  								React.createElement("path", {d: "M0,5.4c0,0.2,10.8,5.8,11.2,5.4c0.4-0.4,0.2-10.7,0-10.9"}), 
-  								React.createElement("path", {d: "M22.1,0c-0.2-0.2-11.2,5.2-11.2,5.4c0,0.2,10.8,5.8,11.2,5.4C22.5,10.5,22.2,0.2,22.1,0"})
-  							)
-  						)
-  					), 
-  					React.createElement("span", {className: "close_band", onClick: self.closePartner}, "×"), 
-  					React.createElement("span", {className: "next_band", onClick: self.nextPartner}, 
-  						React.createElement("svg", {x: "0px", y: "0px", viewBox: "0 0 19.2 9.4", "enable-background": "new 0 0 19.2 9.4"}, 
-  							React.createElement("g", null, 
-  								React.createElement("path", {d: "M9.6,0c0.2-0.2,9.6,4.5,9.6,4.7s-9.3,5-9.6,4.7C9.2,9,9.4,0.2,9.6,0z"}), 
-  								React.createElement("path", {d: "M0.2,0c0.2-0.2,9.6,4.5,9.6,4.7s-9.3,5-9.6,4.7C-0.1,9,0,0.2,0.2,0z"})
-  							)
-  						)
-  					)
-  				), 
-  		  	React.createElement(Partner, {partner: current_partner, key: current_partner.title})
-  	  	)
-    		)
-  	} else {
-  	    return (
-  	    	React.createElement("div", {className: "cv_list"}, 
-  				    partners
-  			  )
-  	    )
-  	}
-  }
-});
-
-},{"./partner.jsx":14,"react":220,"react-router":51,"superagent":222}],3:[function(require,module,exports){
-/**
- * @jsx React.DOM
- */
-
-var React = require('react'),
-    ScrollMagic = require('scrollmagic'),
-    request = require('superagent');
-
-var Festival = React.createClass({displayName: "Festival",
-	getInitialState: function() {
-		return {windowWidth: window.innerWidth};
-	},
-	toggleFestival: function(){
-		this.props.festival();
-	},
-
-	handleResize: function(e) {
-		this.setState({windowWidth: window.innerWidth});
-	},
-
-	componentDidMount: function(){
-		window.addEventListener('resize', this.handleResize);
-
-	    var self = this;
-	    var tween = TweenMax.from("#animate", 0.5, {autoAlpha: 0, scale: 0.7});
-			var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
-	    var top = new ScrollMagic.Scene({
-	                triggerElement: "#top",
-	                offset: 1
-	            })
-	            .setClassToggle("body", "scrolled")
-	            .addTo(controller);
-
-	    controller.scrollTo(function (newpos) {
-	      if(self.state.windowWidth > 480){
-	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105, autoKill: false }, ease:Power1.easeOut});
-	      } else {
-	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 50, autoKill: false }, ease:Power1.easeOut});
-	      }
-	    });
-
-	    $(document).on("click", "a[href^='#']", function (e) {
-	      console.log("Festival Click");
-
-	      var id = $(this).attr("href");
-	      if ($(id).length > 0) {
-	        e.preventDefault();
-
-	        // trigger scroll
-	        controller.scrollTo(id);
-	        if(self.state.windowWidth <= 480){
-	          self.props.close_top();
-	        }
-
-	        // if supported by the browser we can even update the URL.
-	        // if (window.history && window.history.pushState) {
-	        //   history.pushState("", document.title, id);
-	        // }
-	      }
-	    });
-	},
-
-    render: function() {
-	  	var self = this;
-		    return (
-		    	React.createElement("div", {className: "tickets_container"}, 
-		    		React.createElement("span", {className: "close_band", onClick: self.toggleFestival}, "×"), 
-					React.createElement("div", {className: "festival_wrap"}, 
-						React.createElement("a", {href: "#about", className: "scroll-link about"}, 
-							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/dist/images/story.svg"})
-						), 
-						React.createElement("a", {href: "#venue", className: "scroll-link venue"}, 
-							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/dist/images/venue_white.svg"})
-						), 
-						React.createElement("a", {href: "#fyi", className: "scroll-link fyi"}, 
-							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/assets/images/fyi.svg"})
-						), 
-						React.createElement("a", {href: "#sponsors", className: "scroll-link sponsors"}, 
-							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/svg/sponsors.svg"})
-						), 
-            React.createElement("a", {href: "#community-village", className: "scroll-link community-village"}, 
-							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/dist/images/communityvillage-white.png"})
-						)
-					)
-				)
-		    )
-    }
-});
-
-module.exports = Festival;
-
-},{"react":220,"scrollmagic":221,"superagent":222}],4:[function(require,module,exports){
-/**
- * @jsx React.DOM
- */
-
-var React = require('react'),
-  request = require('superagent');
-
-var Router = require('react-router');
-var Navigation = require('react-router').Navigation;
-
-
-module.exports = React.createClass({displayName: "exports",
-  getInitialState: function(){
-    return { partners: [] };
-  },
-
-
-  componentWillMount: function(){
-    var self = this;
-    self.loadPartners();
-  },
-
-  loadPartners: function(){
-    var self = this;
-      request
-        .get('http://www.mahamusicfestival.com/wp-json/posts')
-        .query('type[]=food_partner&filter[posts_per_page]=-1')
-        .end(function(err, res) {
-      if (res.ok) {
-        var partners = res.body;
-
-        self.setState({partners: partners});
-
-      } else {
-        console.log('Oh no! error ' + res.text);
-      }
-        }.bind(self));
-  },
-
-	render: function() {
-		var self = this;
-    var partners = self.state.partners.map(function(object){
-      return React.createElement("a", {href: object.meta.link}, React.createElement("h4", {className: "cv_partner_link", dangerouslySetInnerHTML: {__html: object.title}}))
-    });
-    if (partners.length) {
-  		return (
-  			React.createElement("div", {className: "community-section", id: "food_vendors"}, 
-  				React.createElement("div", {className: "community-header food_vendor_header"}, 
-  					React.createElement("div", {className: "content-wrapper"}, 
-  						React.createElement("div", {className: "content-inner"}, 
-  							React.createElement("h1", {className: "food_vendor_title"}, "FOOD, DRINK & MORE")
-  						)
-  					)
-  				), 
-  				React.createElement("div", {className: "content-wrapper"}, 
-  					React.createElement("div", {className: "content-inner"}, 
-  						React.createElement("div", {className: "cv-content"}, 
-                React.createElement("div", {className: "cv_list"}, 
-                    partners
-                )
-  						)
-  					)
-  				)
-  			)
-  		)
-    } else {
-      return (null)
-    }
-	}
-});
-
-},{"react":220,"react-router":51,"superagent":222}],5:[function(require,module,exports){
-/**
- * @jsx React.DOM
- */
-
-var React = require('react');
-
-var Footer = React.createClass({displayName: "Footer",
-	getInitialState: function() {
-		return {windowWidth: window.innerWidth};
-	},
-
-	handleResize: function(e) {
-		this.setState({windowWidth: window.innerWidth});
-	},
-
-	componentDidMount: function(){
-		window.addEventListener('resize', this.handleResize);
-
-	    var self = this;
-	    var tween = TweenMax.from("#animate", 0.5, {autoAlpha: 0, scale: 0.7});
-			var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
-
-	    controller.scrollTo(function (newpos) {
-	      if(self.state.windowWidth > 480){
-	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105, autoKill: false }, ease:Power1.easeOut});
-	      } else {
-	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 50, autoKill: false }, ease:Power1.easeOut});
-	      }
-	    });
-
-	    $(document).on("click", "a[href^='#']", function (e) {
-
-	      var id = $(this).attr("href");
-	      if ($(id).length > 0) {
-	        e.preventDefault();
-
-	        // trigger scroll
-	        controller.scrollTo(id);
-	        if(self.state.windowWidth <= 480){
-	          self.props.close_top();
-	        }
-
-	        // if supported by the browser we can even update the URL.
-	        // if (window.history && window.history.pushState) {
-	        //   history.pushState("", document.title, id);
-	        // }
-	      }
-	    });
-	},
-	render: function() {
-
-		return (
-			React.createElement("div", {className: "content-wrapper footer-section", id: "footer"}, 
-				React.createElement("div", {className: "content-inner"}, 
-					React.createElement("div", {className: "footer-content"}, 
-						React.createElement("div", {className: "footer-column"}, 
-							React.createElement("h3", {className: "footer-title"}, "Connect"), 
-							React.createElement("p", {className: "link_title"}, "Want to Play at Maha 2016"), 
-							React.createElement("a", {href: "mailto:play@mahamusicfestival.com", className: "footer_link email", target: "_blank"}, React.createElement("strong", null, "play"), "@mahamusicfestival.com"), 
-							React.createElement("p", {className: "link_title"}, "Lost & Found"), 
-							React.createElement("a", {href: "mailto:lost@mahamusicfestival.com", className: "footer_link email", target: "_blank"}, React.createElement("strong", null, "lost"), "@mahamusicfestival.com"), 
-							React.createElement("p", {className: "link_title"}, "General"), 
-							React.createElement("a", {href: "mailto:info@mahamusicfestival.com", className: "footer_link email", target: "_blank"}, React.createElement("strong", null, "info"), "@mahamusicfestival.com")
-						), 
-						React.createElement("div", {className: "footer-column"}, 
-							React.createElement("h3", {className: "footer-title"}, "Press"), 
-							React.createElement("a", {href: "http://www.mahamusicfestival.com/press/", className: "footer_link", target: "_blank"}, "Request a Press ", React.createElement("br", null), "or Photography Pass"), 
-							React.createElement("a", {href: "http://www.mahamusicfestival.com/wp-content/themes/maha2015.v2.2/dist/Maha.Media.Toolkit.2015.zip", className: "footer_link", target: "_blank"}, "Media Toolkit")
-						), 
-						React.createElement("div", {className: "footer-column"}, 
-							React.createElement("h3", {className: "footer-title"}, "Get Involved"), 
-							React.createElement("a", {href: "http://www.shiftboard.com/MahaFestival", className: "footer_link", target: "_blank"}, "Volunteer"), 
-							React.createElement("a", {href: "#sponsors", className: "footer_link", target: "_blank"}, "Become a Sponsor")
-						), 
-						React.createElement("div", {className: "footer-column"}, 
-							React.createElement("h3", {className: "footer-title"}, "Newsletter Signup"), 
-
-							React.createElement("div", {id: "mc_embed_signup"}, 
-								React.createElement("form", {action: "//mahamusicfestival.us2.list-manage.com/subscribe/post?u=6492ff0ff4eaa019a43eedf50&id=5942231c0f", method: "post", id: "mc-embedded-subscribe-form", name: "mc-embedded-subscribe-form", className: "validate", target: "_blank", novalidate: true}, 
-							    React.createElement("div", {id: "mc_embed_signup_scroll"}, 
-										React.createElement("input", {type: "email", name: "EMAIL", className: "email", id: "mce-EMAIL", placeholder: "1234@mail.com", required: true}), 
-							    	React.createElement("div", {className: "lefty"}, React.createElement("input", {type: "text", name: "b_6492ff0ff4eaa019a43eedf50_5942231c0f", tabindex: "-1", value: ""})), 
-							    	React.createElement("div", {className: "clear"}, React.createElement("input", {type: "submit", value: "Sign up", name: "subscribe", id: "mc-embedded-subscribe", className: "button"}))
-							    )
-								)
-							)
-
-						), 
-						React.createElement("p", {className: "copyright"}, "©2015 All Rights Reserved | YFC, Inc. d/b/a The Maha Music Festival, PO Box 24173, Omaha, NE 68124")
-					)
-				)
-			)
-		)
-	}
-});
-
-module.exports = Footer;
-
-},{"react":220}],6:[function(require,module,exports){
-/**
- * @jsx React.DOM
- */
-
-var React = require('react');
-
-var FYI = React.createClass({displayName: "FYI",  
-
-	render: function() {
-
-
-		return (
-			React.createElement("div", {className: "content-wrapper fyi-section", id: "fyi"}, 
-				React.createElement("div", {className: "content-inner"}, 
-					React.createElement("div", {className: "fyi-content-title"}, 
-						React.createElement("img", {className: "fyi_left", src: "/wp-content/themes/maha2015.v2.2/dist/images/doodle-left.svg"}), 
-						React.createElement("img", {className: "fyi_image", src: "/wp-content/themes/maha2015.v2.2/dist/images/fyi.svg"}), 
-						React.createElement("img", {className: "fyi_right", src: "/wp-content/themes/maha2015.v2.2/dist/images/doodle-right.svg"})
-					), 
-					React.createElement("div", {className: "fyi-content"}, 
-						React.createElement("div", {className: "fyi-left"}, 
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "WHAT IS THE MAHA MUSIC FESTIVAL?"), 
-								React.createElement("p", {className: "fyi-copy"}, "Maha is a day-long nonprofit music festival on Saturday, August 15, 2015, bringing together national, regional and local indie and rock artists for a day of food, community and, of course, music.")
-							), 
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "WHERE CAN I PARK?"), 
-								React.createElement("p", {className: "fyi-copy"}, "Aksarben Village has reserved FREE a parking garage and large parking lot for the exclusive use of Maha attendees so there will be plenty of space for everyone!")
-							), 
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "WHAT IS WEATHER LIKE IN MID-AUGUST?"), 
-								React.createElement("p", {className: "fyi-copy"}, "The average high temperature in Omaha in August is 85 degrees with light humidity and light winds. We recommend you bring sun block, even if it’s a little overcast early in the day. Midwest weather is known for its quick shifts!")
-							), 
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "What if it rains?"), 
-								React.createElement("p", {className: "fyi-copy"}, "Maha will continue rain or shine.  No refunds.")
-							), 
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "Can I bring my kids?"), 
-								React.createElement("p", {className: "fyi-copy"}, "Yes, anyone with a ticket is welcome to join the fun. All ages are welcome and children ages 10 and under do not need a ticket as long as they are accompanied by a paying adult! Things might get a bit rowdy up front, and as a general rule, the area directly in front of the stage is rarely kid-friendly. However, there’s plenty of space for everyone in much calmer areas.")
-							), 
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "What can I bring?"), 
-								React.createElement("p", {className: "fyi-copy"}, "Lawn chairs and blankets are allowed, tents are not. Sunscreen, sunglasses, hats and/or visors are suggested to let you enjoy the day without any sun-related discomfort. We reserve the right to inspect all bags, purses, backpacks, etc. before allowing entry to the Festival. And, no, couches are not allowed. Seriously.")
-							)
-						), 
-						React.createElement("div", {className: "fyi-right"}, 
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "Can I bring a cooler?"), 
-								React.createElement("p", {className: "fyi-copy"}, "You can not. No outside food or drink is allowed…except for one factory-sealed water bottle. See below.")
-							), 
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "Water Bottles"), 
-								React.createElement("p", {className: "fyi-copy"}, "You may bring in one empty water bottle per person. We offer a water refill station in the park. When you arrive if you have one, sealed, packaged water bottle, that’s fine too. If it’s not sealed we ask you empty it before entering the park.")
-							), 							
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "What food and drink will be available?"), 
-								React.createElement("p", {className: "fyi-copy"}, "There will be a wide variety of local food & drink.")
-							), 							
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "Will cameras or recorders be allowed?"), 
-								React.createElement("p", {className: "fyi-copy"}, "Small or disposable cameras will be allowed. Professional cameras will NOT be allowed. Essentially, if it has a removable lens, it’s a no go. Video and audio recording are NOT allowed.")
-							), 							
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "What about event security?"), 
-								React.createElement("p", {className: "fyi-copy"}, "Event security will be located throughout the grounds for the entire duration of the event. If you have an emergency, find a staff person with a radio, go to an information or medical tent, or tell one of the security personnel.")
-							), 							
-							React.createElement("div", {className: "fyi-item"}, 
-								React.createElement("h3", {className: "fyi-title"}, "I’m from out of town, where can I stay?"), 
-								React.createElement("p", {className: "fyi-copy"}, "Omaha is a very friendly town. You can probably find someone willing to share a floor with you. If you’d prefer more private accommodations, Maha has negotiated “Maha Rates” with the Aksarben Marriott. It’s a short walk to the festival from here. ", React.createElement("a", {target: "_blank", href: "http:/www.marriott.com/hotels/travel/omawt-courtyard-omaha-aksarben-village/"}, "Marriott Web Page Here"))
-							), 
-
-							React.createElement("img", {className: "boombox", src: "/wp-content/themes/maha2015.v2.2/assets/images/boombox.png"})
-								
-
-						)
-					)
-					
-				)
-			)
-		)
-	}
-});
-
-module.exports = FYI;
-
-},{"react":220}],7:[function(require,module,exports){
-/**
- * @jsx React.DOM
- */
-
-var React = require('react'),
-    request = require('superagent'),
-    ScrollMagic = require('scrollmagic'),
-    TweenMax = require('../scripts/tweenmax.js');
-
-require('../scripts/scrollTo.js');
-
-var Header = React.createClass({displayName: "Header",
-  getInitialState: function() {
-    return {windowWidth: window.innerWidth};
-  },
-
-	toggleLineup: function(){
-		this.props.lineup();
-	},
-	toggleDonate: function(){},
-
-	toggleTickets: function(){
-		this.props.tickets();
-	},
-	toggleFestival: function(){
-		this.props.festival();
-	},
-
-  handleResize: function(e) {
-    this.setState({windowWidth: window.innerWidth});
-  },
-
-	componentDidMount: function(){
-    window.addEventListener('resize', this.handleResize);
-    var self = this;
-    var tween = TweenMax.from("#animate", 0.5, {autoAlpha: 0, scale: 0.7});
-		var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
-    var top = new ScrollMagic.Scene({
-                triggerElement: "#top",
-                offset: 1
-            })
-            .setClassToggle("body", "scrolled")
-            .addTo(controller);
-
-	},
-
-  render: function() {
-    return (
-      React.createElement("div", {className: "header"}, 
-      	React.createElement("div", {className: "header_container"}, 
-      		React.createElement("span", {className: "left_header"}, 
-	      		React.createElement("span", {onClick: this.toggleFestival, className: "link"}, "Festival"), 
-	      		React.createElement("span", {onClick: this.toggleLineup, className: "link"}, "Lineup")
-      		), 
-      		React.createElement("img", {className: "small_bird_logo", src: "/wp-content/themes/maha2015.v2.2/dist/images/bird_logo.svg"}), 
-      		React.createElement("span", {className: "right_header"}, 
-	      		React.createElement("span", {className: "link", onClick: this.toggleTickets}, "Tickets"), 
-	      		React.createElement("a", {href: "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=DQB5Y344TCR84", className: "link", target: "_blank"}, "Donate")
-      		), 
-          React.createElement("span", {className: "mobile_header"}, 
-            React.createElement("span", {onClick: this.toggleFestival, className: "link"}, "Festival"), 
-            React.createElement("span", {onClick: this.toggleLineup, className: "link"}, "Lineup"), 
-            React.createElement("span", {className: "link", onClick: this.toggleTickets}, "Tickets")
-          )
-      	)
-      )
-    )
-  }
-});
-
-module.exports = Header;
-
-},{"../scripts/scrollTo.js":21,"../scripts/tweenmax.js":22,"react":220,"scrollmagic":221,"superagent":222}],8:[function(require,module,exports){
-/**
- * @jsx React.DOM
- */
-
-var React = require('react'),
-    request = require('superagent');
     ScrollMagic = require('scrollmagic');
 
 var Router = require('react-router');
@@ -776,7 +166,681 @@ if(hasClass(document.body, "home")){
 	});
 }
 
-},{"./band.jsx":1,"./festival.jsx":3,"./food_vendors.jsx":4,"./footer.jsx":5,"./fyi.jsx":6,"./header.jsx":7,"./instagramfeed.jsx":9,"./lineup.jsx":10,"./menu.jsx":11,"./new_communityvillage.jsx":12,"./omaha_gives.jsx":13,"./sponsors.jsx":15,"./summerseries.jsx":16,"./tickets.jsx":17,"./topsection.jsx":18,"./venue.jsx":19,"react":220,"react-router":51,"scrollmagic":221,"superagent":222}],9:[function(require,module,exports){
+},{"./band.jsx":2,"./festival.jsx":4,"./food_vendors.jsx":5,"./footer.jsx":6,"./fyi.jsx":7,"./header.jsx":8,"./instagramfeed.jsx":9,"./lineup.jsx":10,"./menu.jsx":11,"./new_communityvillage.jsx":12,"./omaha_gives.jsx":13,"./sponsors.jsx":15,"./summerseries.jsx":16,"./tickets.jsx":17,"./topsection.jsx":18,"./venue.jsx":19,"react":220,"react-router":51,"scrollmagic":221,"superagent":222}],2:[function(require,module,exports){
+/**
+ * @jsx React.DOM
+ */
+
+var React = require('react'),
+    request = require('superagent');
+
+var Band = React.createClass({displayName: "Band",
+  componentWillMount: function(){
+    this.setState({ band: this.props.band });
+  },
+  render: function() {
+  	var self = this;
+    if (!this.state.band) {
+        return React.createElement("div", null, "Loading...");
+    } else {
+      var topImage = {
+        backgroundImage: 'url(' + self.state.band.meta.background_image.url + ')',
+      };
+
+      var news = self.props.news.map(function(object){
+        return React.createElement("div", {className: "news_item"}, 
+                  React.createElement("h3", {className: "news_title"}, React.createElement("a", {href: object.meta.link_url, target: "_blank", dangerouslySetInnerHTML: {__html: object.title}})), 
+                  React.createElement("h5", {className: "news_source"}, object.meta.source_name)
+                );
+
+      })
+
+      return (
+        React.createElement("div", {className: "band_card"}, 
+        	React.createElement("div", {className: "band_top", style: topImage}, 
+        		React.createElement("img", {className: "band_name", src: self.state.band.meta.band_image.url})
+        	), 
+        	React.createElement("div", {className: "band_content"}, 
+        		React.createElement("div", {className: "info"}, 
+        			 self.state.band.meta.genre ? React.createElement("p", null, self.state.band.meta.genre) : null, 
+        			 self.state.band.meta.record_label ? React.createElement("p", null, self.state.band.meta.record_label) : null, 
+        			 self.state.band.meta.hometown ? React.createElement("p", null, self.state.band.meta.hometown) : null, 
+        			 (self.state.band.meta.url_link && self.state.band.meta.url_title) ? React.createElement("p", {className: "band_link"}, React.createElement("a", {href: self.state.band.meta.url_link}, self.state.band.meta.url_title)) : null
+        		), 
+             self.state.band.meta.video_link ?
+          		React.createElement("div", {className: "video"}, 
+                React.createElement("div", {className: "video-wrapper"}, 
+                  React.createElement("iframe", {src: self.state.band.meta.video_link, frameBorder: "0", allowfullscreen: true})
+                )
+          		)
+            : null, 
+             news ?
+          		React.createElement("div", {className: "news"}, 
+          			news
+          		)
+            : null
+        	)
+        )
+      )
+    }
+  }
+});
+
+module.exports = Band;
+
+},{"react":220,"superagent":222}],3:[function(require,module,exports){
+/**
+ * @jsx React.DOM
+ */
+
+var React = require('react'),
+    request = require('superagent');
+
+var Router = require('react-router');
+var Navigation = require('react-router').Navigation;
+
+var	Partner = require('./partner.jsx');
+
+module.exports = React.createClass({displayName: "exports",
+
+	getInitialState: function(){
+		return { partners: [] };
+	},
+	openPartner: function(clicked_partner) {
+    console.log("openPartner: " + clicked_partner);
+		var current_partner = this.state.partners.filter(function(partner){
+			return partner.title == clicked_partner;
+		});
+
+		this.setState({current_partner: current_partner[0]});
+	},
+
+	closePartner: function(){
+		this.setState({current_partner: null});
+	},
+
+	toggleLineup: function(){
+		this.props.cv_list();
+	},
+
+
+	componentWillMount: function(){
+		var self = this;
+		self.loadPartners();
+	},
+
+	loadPartners: function(){
+		var self = this;
+	    request
+	      .get('http://www.mahamusicfestival.com/wp-json/posts')
+	      .query('type[]=cv_partner&filter[posts_per_page]=-1')
+	      .end(function(err, res) {
+			if (res.ok) {
+				var partners = res.body;
+
+				self.setState({partners: partners});
+
+			} else {
+				console.log('Oh no! error ' + res.text);
+			}
+	      }.bind(self));
+	},
+
+	  prevPartner: function(){
+	  	var self = this;
+	  	var current_partner = self.state.current_partner;
+	  	var index = self.state.partners.indexOf(current_partner);
+	  	if (index == 0) {
+	  		var new_partner = self.state.partners.length-1;
+	  	} else {
+	  		var new_partner = index - 1;
+	  	}
+	  	self.openPartner(self.state.partners[new_partner].title);
+	  },
+
+	  nextPartner: function(){
+	  	var self = this;
+	  	var current_partner = self.state.current_partner;
+      var index = self.state.partners.indexOf(current_partner);
+	  	if (index == self.state.partners.length-1) {
+	  		var new_partner = 0;
+	  	} else {
+	  		var new_partner = index + 1;
+	  	}
+	  	self.openPartner(self.state.partners[new_partner].title);
+	  },
+
+  render: function() {
+  	var self = this;
+    var partners = self.state.partners.map(function(object){
+      return React.createElement("h4", {className: "cv_partner_link", onClick: self.openPartner.bind(this, object.title), dangerouslySetInnerHTML: {__html: object.title}})
+    });
+
+  	if (self.state.current_partner) {
+  		var current_partner = self.state.current_partner;
+
+  		return (
+  			React.createElement("div", {className: "cv_list_container"}, 
+  				React.createElement("div", {className: "cv_list_controller"}, 
+  					React.createElement("span", {className: "previous_band", onClick: self.prevPartner}, 
+  						React.createElement("svg", {x: "0px", y: "0px", viewBox: "0 0 22.3 10.9", "enable-background": "new 0 0 22.3 10.9"}, 
+  							React.createElement("g", null, 
+  								React.createElement("path", {d: "M0,5.4c0,0.2,10.8,5.8,11.2,5.4c0.4-0.4,0.2-10.7,0-10.9"}), 
+  								React.createElement("path", {d: "M22.1,0c-0.2-0.2-11.2,5.2-11.2,5.4c0,0.2,10.8,5.8,11.2,5.4C22.5,10.5,22.2,0.2,22.1,0"})
+  							)
+  						)
+  					), 
+  					React.createElement("span", {className: "close_band", onClick: self.closePartner}, "×"), 
+  					React.createElement("span", {className: "next_band", onClick: self.nextPartner}, 
+  						React.createElement("svg", {x: "0px", y: "0px", viewBox: "0 0 19.2 9.4", "enable-background": "new 0 0 19.2 9.4"}, 
+  							React.createElement("g", null, 
+  								React.createElement("path", {d: "M9.6,0c0.2-0.2,9.6,4.5,9.6,4.7s-9.3,5-9.6,4.7C9.2,9,9.4,0.2,9.6,0z"}), 
+  								React.createElement("path", {d: "M0.2,0c0.2-0.2,9.6,4.5,9.6,4.7s-9.3,5-9.6,4.7C-0.1,9,0,0.2,0.2,0z"})
+  							)
+  						)
+  					)
+  				), 
+  		  	React.createElement(Partner, {partner: current_partner, key: current_partner.title})
+  	  	)
+    		)
+  	} else {
+  	    return (
+  	    	React.createElement("div", {className: "cv_list"}, 
+  				    partners
+  			  )
+  	    )
+  	}
+  }
+});
+
+},{"./partner.jsx":14,"react":220,"react-router":51,"superagent":222}],4:[function(require,module,exports){
+/**
+ * @jsx React.DOM
+ */
+
+var React = require('react'),
+    ScrollMagic = require('scrollmagic'),
+    request = require('superagent');
+
+var Festival = React.createClass({displayName: "Festival",
+	getInitialState: function() {
+		return {windowWidth: window.innerWidth};
+	},
+	toggleFestival: function(){
+		this.props.festival();
+	},
+
+	handleResize: function(e) {
+		this.setState({windowWidth: window.innerWidth});
+	},
+
+	componentDidMount: function(){
+		window.addEventListener('resize', this.handleResize);
+
+	    var self = this;
+	    var tween = TweenMax.from("#animate", 0.5, {autoAlpha: 0, scale: 0.7});
+			var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
+	    var top = new ScrollMagic.Scene({
+	                triggerElement: "#top",
+	                offset: 1
+	            })
+	            .setClassToggle("body", "scrolled")
+	            .addTo(controller);
+
+	    controller.scrollTo(function (newpos) {
+	      if(self.state.windowWidth > 480){
+	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105, autoKill: false }, ease:Power1.easeOut});
+	      } else {
+	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 50, autoKill: false }, ease:Power1.easeOut});
+	      }
+	    });
+
+	    $(document).on("click", "a[href^='#']", function (e) {
+	      console.log("Festival Click");
+
+	      var id = $(this).attr("href");
+	      if ($(id).length > 0) {
+	        e.preventDefault();
+
+	        // trigger scroll
+	        controller.scrollTo(id);
+	        if(self.state.windowWidth <= 480){
+	          self.props.close_top();
+	        }
+
+	        // if supported by the browser we can even update the URL.
+	        // if (window.history && window.history.pushState) {
+	        //   history.pushState("", document.title, id);
+	        // }
+	      }
+	    });
+	},
+
+    render: function() {
+	  	var self = this;
+		    return (
+		    	React.createElement("div", {className: "tickets_container"}, 
+		    		React.createElement("span", {className: "close_band", onClick: self.toggleFestival}, "×"), 
+					React.createElement("div", {className: "festival_wrap"}, 
+						React.createElement("a", {href: "#about", className: "scroll-link about"}, 
+							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/dist/images/story.svg"})
+						), 
+						React.createElement("a", {href: "#venue", className: "scroll-link venue"}, 
+							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/dist/images/venue_white.svg"})
+						), 
+						React.createElement("a", {href: "#fyi", className: "scroll-link fyi"}, 
+							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/assets/images/fyi.svg"})
+						), 
+						React.createElement("a", {href: "#sponsors", className: "scroll-link sponsors"}, 
+							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/svg/sponsors.svg"})
+						), 
+            React.createElement("a", {href: "#community-village", className: "scroll-link community-village"}, 
+							React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/dist/images/communityvillage-white.png"})
+						)
+					)
+				)
+		    )
+    }
+});
+
+module.exports = Festival;
+
+},{"react":220,"scrollmagic":221,"superagent":222}],5:[function(require,module,exports){
+/**
+ * @jsx React.DOM
+ */
+
+var React = require('react'),
+  request = require('superagent');
+
+var Router = require('react-router');
+var Navigation = require('react-router').Navigation;
+
+
+module.exports = React.createClass({displayName: "exports",
+  getInitialState: function(){
+    return { food: [], drink: [], more: [] };
+  },
+
+
+  componentWillMount: function(){
+    var self = this;
+    self.loadFood();
+    self.loadDrink();
+    self.loadMore();
+  },
+
+  loadFood: function(){
+    var self = this;
+      request
+        .get('http://www.mahamusicfestival.com/wp-json/posts')
+        .query('type[]=food_vendor&filter[posts_per_page]=-1')
+        .end(function(err, res) {
+      if (res.ok) {
+        var food = res.body;
+
+        self.setState({food: food});
+
+      } else {
+        console.log('Oh no! error ' + res.text);
+      }
+        }.bind(self));
+  },
+
+  loadDrink: function(){
+    var self = this;
+      request
+        .get('http://www.mahamusicfestival.com/wp-json/posts')
+        .query('type[]=drink_vendor&filter[posts_per_page]=-1')
+        .end(function(err, res) {
+      if (res.ok) {
+        var drink = res.body;
+
+        self.setState({drink: drink});
+
+      } else {
+        console.log('Oh no! error ' + res.text);
+      }
+        }.bind(self));
+  },
+
+  loadMore: function(){
+    var self = this;
+      request
+        .get('http://www.mahamusicfestival.com/wp-json/posts')
+        .query('type[]=more_vendor&filter[posts_per_page]=-1')
+        .end(function(err, res) {
+      if (res.ok) {
+        var more = res.body;
+
+        self.setState({more: more});
+
+      } else {
+        console.log('Oh no! error ' + res.text);
+      }
+        }.bind(self));
+  },
+
+	render: function() {
+		var self = this;
+    var food = self.state.food.map(function(object){
+      return React.createElement("a", {href: object.meta.link}, React.createElement("h4", {className: "vendor_link", dangerouslySetInnerHTML: {__html: object.title}}))
+    });
+
+    var drink = self.state.drink.map(function(object){
+      return React.createElement("a", {href: object.meta.link}, React.createElement("h4", {className: "vendor_link", dangerouslySetInnerHTML: {__html: object.title}}))
+    });
+
+    var more = self.state.more.map(function(object){
+      return React.createElement("a", {href: object.meta.link}, React.createElement("h4", {className: "vendor_link", dangerouslySetInnerHTML: {__html: object.title}}))
+    });
+
+  		return (
+  			React.createElement("div", {className: "community-section", id: "food_vendors"}, 
+  				React.createElement("div", {className: "community-header food_vendor_header"}, 
+  					React.createElement("div", {className: "content-wrapper"}, 
+  						React.createElement("div", {className: "content-inner"}, 
+  							React.createElement("h1", {className: "food_vendor_title"}, "FOOD, DRINK & MORE")
+  						)
+  					)
+  				), 
+  				React.createElement("div", {className: "content-wrapper"}, 
+  					React.createElement("div", {className: "content-inner"}, 
+  						React.createElement("div", {className: "cv-content"}, 
+                React.createElement("div", {className: "vendors"}, 
+                  React.createElement("div", {className: "vendor_list"}, 
+                    React.createElement("h4", {className: "vendor_title"}, "Food"), 
+                    food
+                  ), 
+                  React.createElement("div", {className: "vendor_list"}, 
+                    React.createElement("h4", {className: "vendor_title"}, "Drink"), 
+                    drink
+                  ), 
+                  React.createElement("div", {className: "vendor_list"}, 
+                    React.createElement("h4", {className: "vendor_title"}, "More"), 
+                    more
+                  )
+                )
+  						)
+  					)
+  				)
+  			)
+  		)
+	}
+});
+
+},{"react":220,"react-router":51,"superagent":222}],6:[function(require,module,exports){
+/**
+ * @jsx React.DOM
+ */
+
+var React = require('react');
+
+var Footer = React.createClass({displayName: "Footer",
+	getInitialState: function() {
+		return {windowWidth: window.innerWidth};
+	},
+
+	handleResize: function(e) {
+		this.setState({windowWidth: window.innerWidth});
+	},
+
+	componentDidMount: function(){
+		window.addEventListener('resize', this.handleResize);
+
+	    var self = this;
+	    var tween = TweenMax.from("#animate", 0.5, {autoAlpha: 0, scale: 0.7});
+			var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
+
+	    controller.scrollTo(function (newpos) {
+	      if(self.state.windowWidth > 480){
+	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 105, autoKill: false }, ease:Power1.easeOut});
+	      } else {
+	        TweenMax.to(window, 1.5, {scrollTo: {y: newpos - 50, autoKill: false }, ease:Power1.easeOut});
+	      }
+	    });
+
+	    $(document).on("click", "a[href^='#']", function (e) {
+
+	      var id = $(this).attr("href");
+	      if ($(id).length > 0) {
+	        e.preventDefault();
+
+	        // trigger scroll
+	        controller.scrollTo(id);
+	        if(self.state.windowWidth <= 480){
+	          self.props.close_top();
+	        }
+
+	        // if supported by the browser we can even update the URL.
+	        // if (window.history && window.history.pushState) {
+	        //   history.pushState("", document.title, id);
+	        // }
+	      }
+	    });
+	},
+	render: function() {
+
+		return (
+			React.createElement("div", {className: "content-wrapper footer-section", id: "footer"}, 
+				React.createElement("div", {className: "content-inner"}, 
+					React.createElement("div", {className: "footer-content"}, 
+						React.createElement("div", {className: "footer-column"}, 
+							React.createElement("h3", {className: "footer-title"}, "Connect"), 
+							React.createElement("p", {className: "link_title"}, "Want to Play at Maha 2016"), 
+							React.createElement("a", {href: "mailto:play@mahamusicfestival.com", className: "footer_link email", target: "_blank"}, React.createElement("strong", null, "play"), "@mahamusicfestival.com"), 
+							React.createElement("p", {className: "link_title"}, "Lost & Found"), 
+							React.createElement("a", {href: "mailto:lost@mahamusicfestival.com", className: "footer_link email", target: "_blank"}, React.createElement("strong", null, "lost"), "@mahamusicfestival.com"), 
+							React.createElement("p", {className: "link_title"}, "General"), 
+							React.createElement("a", {href: "mailto:info@mahamusicfestival.com", className: "footer_link email", target: "_blank"}, React.createElement("strong", null, "info"), "@mahamusicfestival.com")
+						), 
+						React.createElement("div", {className: "footer-column"}, 
+							React.createElement("h3", {className: "footer-title"}, "Press"), 
+							React.createElement("a", {href: "http://www.mahamusicfestival.com/press/", className: "footer_link", target: "_blank"}, "Request a Press ", React.createElement("br", null), "or Photography Pass"), 
+							React.createElement("a", {href: "http://www.mahamusicfestival.com/wp-content/themes/maha2015.v2.2/dist/Maha.Media.Toolkit.2015.zip", className: "footer_link", target: "_blank"}, "Media Toolkit")
+						), 
+						React.createElement("div", {className: "footer-column"}, 
+							React.createElement("h3", {className: "footer-title"}, "Get Involved"), 
+							React.createElement("a", {href: "http://www.shiftboard.com/MahaFestival", className: "footer_link", target: "_blank"}, "Volunteer"), 
+							React.createElement("a", {href: "#sponsors", className: "footer_link", target: "_blank"}, "Become a Sponsor")
+						), 
+						React.createElement("div", {className: "footer-column"}, 
+							React.createElement("h3", {className: "footer-title"}, "Newsletter Signup"), 
+
+							React.createElement("div", {id: "mc_embed_signup"}, 
+								React.createElement("form", {action: "//mahamusicfestival.us2.list-manage.com/subscribe/post?u=6492ff0ff4eaa019a43eedf50&id=5942231c0f", method: "post", id: "mc-embedded-subscribe-form", name: "mc-embedded-subscribe-form", className: "validate", target: "_blank", novalidate: true}, 
+							    React.createElement("div", {id: "mc_embed_signup_scroll"}, 
+										React.createElement("input", {type: "email", name: "EMAIL", className: "email", id: "mce-EMAIL", placeholder: "1234@mail.com", required: true}), 
+							    	React.createElement("div", {className: "lefty"}, React.createElement("input", {type: "text", name: "b_6492ff0ff4eaa019a43eedf50_5942231c0f", tabindex: "-1", value: ""})), 
+							    	React.createElement("div", {className: "clear"}, React.createElement("input", {type: "submit", value: "Sign up", name: "subscribe", id: "mc-embedded-subscribe", className: "button"}))
+							    )
+								)
+							)
+
+						), 
+						React.createElement("p", {className: "copyright"}, "©2015 All Rights Reserved | YFC, Inc. d/b/a The Maha Music Festival, PO Box 24173, Omaha, NE 68124")
+					)
+				)
+			)
+		)
+	}
+});
+
+module.exports = Footer;
+
+},{"react":220}],7:[function(require,module,exports){
+/**
+ * @jsx React.DOM
+ */
+
+var React = require('react');
+
+var FYI = React.createClass({displayName: "FYI",
+
+	render: function() {
+
+
+		return (
+			React.createElement("div", {className: "content-wrapper fyi-section", id: "fyi"}, 
+				React.createElement("div", {className: "content-inner"}, 
+					React.createElement("div", {className: "fyi-content-title"}, 
+						React.createElement("img", {className: "fyi_left", src: "/wp-content/themes/maha2015.v2.2/dist/images/doodle-left.svg"}), 
+						React.createElement("img", {className: "fyi_image", src: "/wp-content/themes/maha2015.v2.2/dist/images/fyi.svg"}), 
+						React.createElement("img", {className: "fyi_right", src: "/wp-content/themes/maha2015.v2.2/dist/images/doodle-right.svg"})
+					), 
+					React.createElement("div", {className: "fyi-content"}, 
+						React.createElement("div", {className: "fyi-left"}, 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "WHAT IS THE MAHA MUSIC FESTIVAL?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Maha is a day-long nonprofit music festival on Saturday, August 15, 2015, bringing together national, regional and local indie and rock artists for a day of food, community and, of course, music.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "WHERE CAN I PARK?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Aksarben Village has reserved a FREE parking garage and large parking lot for the exclusive use of Maha attendees so there will be plenty of space for everyone!")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "WHAT IS WEATHER LIKE IN MID-AUGUST?"), 
+								React.createElement("p", {className: "fyi-copy"}, "The average high temperature in Omaha in August is 85 degrees with light humidity and light winds. We recommend you bring sun block, even if it’s a little overcast early in the day. Midwest weather is known for its quick shifts!")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "What if it rains?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Maha will continue rain or shine.  No refunds.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "Can I bring my kids?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Yes, anyone with a ticket is welcome to join the fun. All ages are welcome and children ages 10 and under do not need a ticket as long as they are accompanied by a paying adult! Things might get a bit rowdy up front, and as a general rule, the area directly in front of the stage is rarely kid-friendly. However, there’s plenty of space for everyone in much calmer areas.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "What can I bring?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Lawn chairs and blankets are allowed, tents and umbrellas are not allowed. Sunscreen, sunglasses, hats and/or visors are suggested to let you enjoy the day without any sun-related discomfort. We reserve the right to inspect all bags, purses, backpacks, etc. before allowing entry to the Festival. And, no, couches are not allowed. Seriously.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "Can I leave and come back?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Yes, but here’s what you need to know if you plan to go home and let your dog out." + ' ' +
+"Maha will be offering re-entry vouchers until 6:30 pm. If you leave the park, you must collect a re-entry voucher from our volunteers at the exit. In order to return to the park, you must present your Maha ticket AND re-entry voucher. IF YOU DO NOT HAVE BOTH ITEMS, YOU WILL NOT BE ALLOWED TO RE-ENTER THE FESTIVAL WITHOUT PURCHASING A NEW TICKET."), 
+								React.createElement("p", {className: "fyi-copy"}, "If you leave the festival after 6:30 pm, you will not be permitted to re-enter. (Remember that part about needing a ticket AND a voucher for re-entry? We stop handing out vouchers at 6:30 pm.)"), 
+								React.createElement("p", {className: "fyi-copy"}, "If you leave the park before 6:30 pm, you can return at any time as long as you have your voucher AND your ticket. Volunteers collect vouchers upon re-entry, so you are only permitted to re-enter once after 6:30 pm."), 
+								React.createElement("p", {className: "fyi-copy"}, "Attendees with VIP wristbands have unlimited re-entry.")
+							)
+						), 
+						React.createElement("div", {className: "fyi-right"}, 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "Can I bring a cooler?"), 
+								React.createElement("p", {className: "fyi-copy"}, "You can not. No outside food or drink is allowed…except for one factory-sealed water bottle. See below.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "Water Bottles"), 
+								React.createElement("p", {className: "fyi-copy"}, "You may bring in one empty water bottle per person. We offer a water refill station in the park. When you arrive if you have one, sealed, packaged water bottle, that’s fine too. If it’s not sealed we ask you empty it before entering the park.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "What food and drink will be available?"), 
+								React.createElement("p", {className: "fyi-copy"}, "There will be a wide variety of local food & drink.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "Will cameras or recorders be allowed?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Small or disposable cameras will be allowed. Professional cameras will NOT be allowed. Essentially, if it has a removable lens, it’s a no go. Video and audio recording are NOT allowed.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "What about event security?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Event security will be located throughout the grounds for the entire duration of the event. If you have an emergency, find a staff person with a radio, go to an information or medical tent, or tell one of the security personnel.")
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "I’m from out of town, where can I stay?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Omaha is a very friendly town. You can probably find someone willing to share a floor with you. If you’d prefer more private accommodations, Maha has negotiated “Maha Rates” with the Aksarben Marriott. It’s a short walk to the festival from here. ", React.createElement("a", {target: "_blank", href: "http:/www.marriott.com/hotels/travel/omawt-courtyard-omaha-aksarben-village/"}, "Marriott Web Page Here"))
+							), 
+							React.createElement("div", {className: "fyi-item"}, 
+								React.createElement("h3", {className: "fyi-title"}, "What about smoking?"), 
+								React.createElement("p", {className: "fyi-copy"}, "Smoking on festival grounds is not allowed outside of the three designated cigarette smoking areas located throughout the park.")
+							), 
+
+							React.createElement("img", {className: "boombox", src: "/wp-content/themes/maha2015.v2.2/assets/images/boombox.png"})
+
+
+						)
+					)
+
+				)
+			)
+		)
+	}
+});
+
+module.exports = FYI;
+
+},{"react":220}],8:[function(require,module,exports){
+/**
+ * @jsx React.DOM
+ */
+
+var React = require('react'),
+    request = require('superagent'),
+    ScrollMagic = require('scrollmagic'),
+    TweenMax = require('../scripts/tweenmax.js');
+
+require('../scripts/scrollTo.js');
+
+var Header = React.createClass({displayName: "Header",
+  getInitialState: function() {
+    return {windowWidth: window.innerWidth};
+  },
+
+	toggleLineup: function(){
+		this.props.lineup();
+	},
+	toggleDonate: function(){},
+
+	toggleTickets: function(){
+		this.props.tickets();
+	},
+	toggleFestival: function(){
+		this.props.festival();
+	},
+
+  handleResize: function(e) {
+    this.setState({windowWidth: window.innerWidth});
+  },
+
+	componentDidMount: function(){
+    window.addEventListener('resize', this.handleResize);
+    var self = this;
+    var tween = TweenMax.from("#animate", 0.5, {autoAlpha: 0, scale: 0.7});
+		var controller = new ScrollMagic.Controller({ globalSceneOptions: {triggerHook: 0}});
+    var top = new ScrollMagic.Scene({
+                triggerElement: "#top",
+                offset: 1
+            })
+            .setClassToggle("body", "scrolled")
+            .addTo(controller);
+
+	},
+
+  render: function() {
+    return (
+      React.createElement("div", {className: "header"}, 
+      	React.createElement("div", {className: "header_container"}, 
+      		React.createElement("span", {className: "left_header"}, 
+	      		React.createElement("span", {onClick: this.toggleFestival, className: "link"}, "Festival"), 
+	      		React.createElement("span", {onClick: this.toggleLineup, className: "link"}, "Lineup")
+      		), 
+      		React.createElement("img", {className: "small_bird_logo", src: "/wp-content/themes/maha2015.v2.2/dist/images/bird_logo.svg"}), 
+      		React.createElement("span", {className: "right_header"}, 
+	      		React.createElement("span", {className: "link", onClick: this.toggleTickets}, "Tickets"), 
+	      		React.createElement("a", {href: "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=DQB5Y344TCR84", className: "link", target: "_blank"}, "Donate")
+      		), 
+          React.createElement("span", {className: "mobile_header"}, 
+            React.createElement("span", {onClick: this.toggleFestival, className: "link"}, "Festival"), 
+            React.createElement("span", {onClick: this.toggleLineup, className: "link"}, "Lineup"), 
+            React.createElement("span", {className: "link", onClick: this.toggleTickets}, "Tickets")
+          )
+      	)
+      )
+    )
+  }
+});
+
+module.exports = Header;
+
+},{"../scripts/scrollTo.js":21,"../scripts/tweenmax.js":22,"react":220,"scrollmagic":221,"superagent":222}],9:[function(require,module,exports){
 /**
  * @jsx React.DOM
  */
@@ -3456,7 +3520,7 @@ var Lineup = React.createClass({displayName: "Lineup",
 
 module.exports = Lineup;
 
-},{"./band.jsx":1,"react":220,"react-router":51,"superagent":222}],11:[function(require,module,exports){
+},{"./band.jsx":2,"react":220,"react-router":51,"superagent":222}],11:[function(require,module,exports){
 /**
  * @jsx React.DOM
  */
@@ -3617,7 +3681,7 @@ var Menu = React.createClass({displayName: "Menu",
 
 module.exports = Menu;
 
-},{"./festival.jsx":3,"./header.jsx":7,"./lineup.jsx":10,"./tickets.jsx":17,"react":220,"react-router":51}],12:[function(require,module,exports){
+},{"./festival.jsx":4,"./header.jsx":8,"./lineup.jsx":10,"./tickets.jsx":17,"react":220,"react-router":51}],12:[function(require,module,exports){
 /**
  * @jsx React.DOM
  */
@@ -3665,7 +3729,7 @@ module.exports = React.createClass({displayName: "exports",
 	}
 });
 
-},{"./cv_list.jsx":2,"react":220}],13:[function(require,module,exports){
+},{"./cv_list.jsx":3,"react":220}],13:[function(require,module,exports){
 /**
  * @jsx React.DOM
  */
@@ -3892,7 +3956,7 @@ var SummerSeries = React.createClass({displayName: "SummerSeries",
 							), 
 							React.createElement("div", {className: "summer-section"}, 
 								React.createElement("img", {src: "/wp-content/themes/maha2015.v2.2/assets/images/bridge-beats.png"}), 
-								React.createElement("p", null, "SAT. AUG 7  6PM"), 
+								React.createElement("p", null, "FRI. AUG 7  6PM"), 
 								React.createElement("p", null, "BOB KERREY"), 
 								React.createElement("p", null, "PEDESTRIAN BRIDGE"), 
 								React.createElement("p", {className: "small"}, "PERFORMANCES BY"), 
@@ -3939,8 +4003,7 @@ var Tickets = React.createClass({displayName: "Tickets",
 		    	React.createElement("div", {className: "tickets_container"}, 
 		    		React.createElement("span", {className: "close_band", onClick: self.toggleTickets}, "×"), 
   					React.createElement("div", {className: "tickets_wrap"}, 
-  						React.createElement("a", {href: "http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=4383595&partner_id="+self.props.partner, className: "ticket_link", target: "_blank"}, React.createElement("img", {className: "price", src: "/wp-content/themes/maha2015.v2.2/dist/images/50.svg"}), " General Admission"), 
-  						React.createElement("a", {href: "http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=6262115&partner_id="+self.props.partner, className: "ticket_link", target: "_blank"}, React.createElement("img", {className: "price", src: "/wp-content/themes/maha2015.v2.2/dist/images/175.svg"}), " Broadmoor​ VIP Package")
+  						React.createElement("a", {href: "http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=4383595&partner_id="+self.props.partner, className: "ticket_link", target: "_blank"}, React.createElement("img", {className: "price", src: "/wp-content/themes/maha2015.v2.2/dist/images/50.svg"}), " General Admission")
   					)
   				)
 		    )
@@ -3949,8 +4012,7 @@ var Tickets = React.createClass({displayName: "Tickets",
 		    	React.createElement("div", {className: "tickets_container"}, 
 		    		React.createElement("span", {className: "close_band", onClick: self.toggleTickets}, "×"), 
   					React.createElement("div", {className: "tickets_wrap"}, 
-  						React.createElement("a", {href: "http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=4383595&partner_id=376", className: "ticket_link", target: "_blank"}, React.createElement("img", {className: "price", src: "/wp-content/themes/maha2015.v2.2/dist/images/50.svg"}), " General Admission"), 
-  						React.createElement("a", {href: "http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=6262115&partner_id=376", className: "ticket_link", target: "_blank"}, React.createElement("img", {className: "price", src: "/wp-content/themes/maha2015.v2.2/dist/images/175.svg"}), " Broadmoor​ VIP Package")
+  						React.createElement("a", {href: "http://www.etix.com/ticket/online/performanceSearch.jsp?performance_id=4383595&partner_id=376", className: "ticket_link", target: "_blank"}, React.createElement("img", {className: "price", src: "/wp-content/themes/maha2015.v2.2/dist/images/50.svg"}), " General Admission")
   					)
   				)
 		    )
@@ -4027,7 +4089,7 @@ module.exports = React.createClass({displayName: "exports",
   							React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-medical.svg"}), " Nebraska Medicine First Aid + Security"
   						), 
   						React.createElement("p", {className: "legend-item"}, 
-  							React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-water.svg"}), " DiVentures Water Stations"
+  							React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-water.svg"}), " DiVentures Water Station"
   						), 
   						React.createElement("p", {className: "legend-item"}, 
   							React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-atm.svg"}), " ATM"
@@ -4096,7 +4158,7 @@ module.exports = React.createClass({displayName: "exports",
   							React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-17.svg"}), " Werner Wheel"
   						), 
               React.createElement("p", {className: "legend-item"}, 
-                React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-18.svg"}), " [18 THING!!!!]"
+                React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-18.svg"}), " The Globe"
               )
   					), 
   					React.createElement("div", {className: "venue-images"}, 
@@ -4178,7 +4240,7 @@ module.exports = React.createClass({displayName: "exports",
                 React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-17.svg"}), " Werner Wheel"
               ), 
               React.createElement("p", {className: "legend-item"}, 
-                React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-18.svg"}), " [18 THING!!!!]"
+                React.createElement("img", {className: "item-icon", src: "/wp-content/themes/maha2015.v2.2/dist/images/icons-18.svg"}), " The Globe"
               )
             )
 			  	), 
@@ -4221,7 +4283,12 @@ module.exports = React.createClass({displayName: "exports",
                   React.createElement("td", {className: "location"}, "Javlin Stage"), 
                   React.createElement("td", {className: "band_event"}, "All Young Girls Are Machine Guns")
                 ), 
-                React.createElement("tr", null, 
+								React.createElement("tr", null, 
+                  React.createElement("td", {className: "time"}, "4:35"), 
+                  React.createElement("td", {className: "location"}, "Javlin Stage"), 
+                  React.createElement("td", {className: "band_event"}, "Vintage Paisley (Omaha Girls Rock)")
+                ), 
+								React.createElement("tr", null, 
                   React.createElement("td", {className: "time"}, "4:50"), 
                   React.createElement("td", {className: "location"}, "Weitz Stage"), 
                   React.createElement("td", {className: "band_event"}, "Wavves")
@@ -4280,7 +4347,7 @@ module.exports = React.createClass({displayName: "exports",
 								React.createElement("li", null, "Theresa Woods")
 							), 
 							React.createElement("h3", {className: "comedy-title"}, "OK Party Comedy"), 
-						  React.createElement("p", {className: "comedy-time"}, "2:05 - 3:35 PM & 4:45 - 6:15 PM"), 
+							React.createElement("p", {className: "comedy-time"}, "2:05 - 3:35 PM & 4:45 - 6:15 PM"), 
 							React.createElement("ul", {className: "event-list"}, 
 								React.createElement("li", null, "Headliner – Dave Ross (Los Angeles)"), 
 								React.createElement("li", null, "Ian Douglas Terry (Denver)"), 
@@ -4742,7 +4809,7 @@ process.nextTick = function (fun) {
         }
     }
     queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
+    if (!draining) {
         setTimeout(drainQueue, 0);
     }
 };
@@ -32151,4 +32218,4 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}]},{},[8]);
+},{}]},{},[1]);
